@@ -28,7 +28,14 @@ try {
 } finally {
     [Environment]::SetEnvironmentVariable('PreferredToolArchitecture', $previousHost, 'Process')
 }
-$output = (Join-Path $dependencyRoot $identity.Fingerprint) + '\'
+$output = (Join-Path $dependencyRoot $identity.Fingerprint.Substring(0,16)) + '\'
+$directoryIdentity=Join-Path $output 'RedMonitor.restore-fingerprint.txt'
+if(Test-Path -LiteralPath $directoryIdentity){
+    if([IO.File]::ReadAllText($directoryIdentity).Trim() -cne $identity.Fingerprint){throw 'Short DxUi output fingerprint collision; existing outputs were preserved.'}
+}else{
+    New-Item -ItemType Directory -Force -Path $output|Out-Null
+    [IO.File]::WriteAllText($directoryIdentity,$identity.Fingerprint)
+}
 & (Join-Path $source 'vcpkg-install.ps1') -Platform $Platform -OutputRoot $output
 if ($LASTEXITCODE -ne 0) { throw 'DxUi dependency restore failed.' }
 $properties = [ordered]@{

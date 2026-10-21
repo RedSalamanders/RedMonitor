@@ -30,3 +30,13 @@ These console tests neither activate a window nor open the clipboard. No real-fo
 ARM64 results are cross-build evidence only. Viewer UI/WARP/device-loss/clean-dirty-hidden resource tests, controlled
 performance, native ARM64 execution, RedSalamander integrated Full/package/launch/preferences acceptance and the other
 three application adapters remain separate gates. Hosted CI is never inferred from a local pass.
+
+Hosted CI run [39678111476](https://github.com/RedSalamanders/RedMonitor/actions/runs/39678111476) failed before
+any job step. GitHub's annotation says recent account payments failed or the spending limit must be increased.
+This is an account scheduling block, not a successful CI run or a compiler/test result.
+
+The first real nested consumer restore at pin b4025b4 exposed a Windows path-length failure in vcpkg's
+DxUi baseline checkout. The complete log remains in RedSalamander `.build/logs/redmonitor-debug-consumption.log`.
+The canonical restore now uses a 16-character output directory key, retains the full fingerprint in the
+identity JSON, and rejects a mismatched existing directory stamp. A fresh exact-pin nested restore is the
+acceptance witness; developer-root success alone did not establish consumer relocatability.

@@ -287,5 +287,6 @@ Only source-free compatibility vcxproj files remain at the old RedSalamander mon
 narrower transition than physically removing those directories, because the paths are public solution,
 IDE and installer entrypoints. The detailed plan preserves the same native source ownership goal.
 The other applications' unrelated dirty work was not edited. Consumer cutover, native ARM64 runtime,
-UI/focus/IME/AT, controlled performance and release gates remain open. Hosted CI is pending until an actual
+UI/focus/IME/AT, controlled performance and release gates remain open. Hosted CI is currently account-blocked before any steps; its initial run is failed, not passed. Qualification remains pending until an actual
 successful run exists. See `Measurements/Extraction_2026-10-21/README.md` for scope and receipts.
+Nested consumer restore exposed a long vcpkg baseline path at the first published pin. Source restore now keeps a short output key with the full fingerprint retained and collision-checked. Fresh nested consumption remains a required witness.
