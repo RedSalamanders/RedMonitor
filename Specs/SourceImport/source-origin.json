@@ -67,19 +67,19 @@
     },
     {
       "source": "RedSalamanderMonitor/RedSalamanderMonitor.cpp",
-      "destination": "src/RedSalamanderMonitor.cpp",
+      "destination": "src/RedMonitor.cpp",
       "sha256": "317af0dc5f2617b7277be82590b85aa944eeed2b6c808002c0f30544d7bfa0cf",
       "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
     },
     {
       "source": "RedSalamanderMonitor/RedSalamanderMonitor.h",
-      "destination": "src/RedSalamanderMonitor.h",
+      "destination": "src/RedMonitor.h",
       "sha256": "245ff9031a96ef2ffade37bd506c2cf3e602747e29b80a41cb2be9f3c9691154",
       "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
     },
     {
       "source": "RedSalamanderMonitor/RedSalamanderMonitor.rc",
-      "destination": "src/RedSalamanderMonitor.rc",
+      "destination": "src/RedMonitor.rc",
       "sha256": "cd98ee920c5fca7993a810f582a93828c10861100e1ac4c339b08ecc19a0c8dc",
       "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
     },
@@ -412,6 +412,82 @@
       "destination": "src/res/toolbar.png",
       "sha256": "8df42317da57b86bd47c17708cee53e6af1d0512231016d03c1996d2cc9a3663",
       "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "Tests/MonitorTest/Monitor.Tests.Runner.cpp",
+      "destination": "Tests/Monitor.Tests.Runner.cpp",
+      "sha256": "ec276dbbcf90eaa2f7b0db7d46844ba8b0f0bd37d077af8907028af7039c170c",
+      "disposition": "native test/support moved with original MIT attribution"
+    },
+    {
+      "source": "Tests/TestSupport/TestSupport.Tests.FailureReports.h",
+      "destination": "Tests/TestSupport/TestSupport.Tests.FailureReports.h",
+      "sha256": "1031cf5894aa3174718eb19e2ad65f37ff6ba93210f38973517aa823f2f8ab45",
+      "disposition": "native test/support moved with original MIT attribution"
+    }
+  ],
+  "toolingImports": [
+    {
+      "repository": "https://github.com/RedSalamanders/DxUi",
+      "commit": "f65e4a4b9311370b3e3070088e2a8abe29adcb27",
+      "path": "vcpkg-install.ps1",
+      "sha256": "be905aeb852327bf4823d8ce82c6e3cf10103980767f9044ce6675ad67207fec",
+      "disposition": "adapted standalone bootstrap helper"
+    },
+    {
+      "repository": "https://github.com/RedSalamanders/DxUi",
+      "commit": "f65e4a4b9311370b3e3070088e2a8abe29adcb27",
+      "path": "Tools/VisualStudio.psm1",
+      "sha256": "bf2ac054c30feaea2b8cc1322fc1d67854660e90fc2dcce17e26ee21ad6071fd",
+      "disposition": "adapted standalone bootstrap helper"
+    },
+    {
+      "repository": "https://github.com/RedSalamanders/DxUi",
+      "commit": "f65e4a4b9311370b3e3070088e2a8abe29adcb27",
+      "path": "Tools/VcpkgTriplet.psm1",
+      "sha256": "7bb17cc7dd2377e1eb4cc62de710b7ecff9e614ff7b6dc31cd32ccc47af488b7",
+      "disposition": "adapted standalone bootstrap helper"
+    },
+    {
+      "repository": "https://github.com/RedSalamanders/RedTilde",
+      "commit": "cfa1a18bc273877cf050e9baa21835624326391c",
+      "path": "restore-dxui.ps1",
+      "sha256": "d1b88e470ffc71a160d420c8f5a6b4bdb5c01622ca4b5db1ef5ce0e2f4864e6c",
+      "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
+    },
+    {
+      "repository": "https://github.com/RedSalamanders/RedTilde",
+      "commit": "cfa1a18bc273877cf050e9baa21835624326391c",
+      "path": "Tools/Fold-Changelog.ps1",
+      "sha256": "8b84956ab9920d54f5081edf46e021fda7fc27dc287d9c72e29faa916dee47ba",
+      "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
+    },
+    {
+      "repository": "https://github.com/RedSalamanders/RedTilde",
+      "commit": "cfa1a18bc273877cf050e9baa21835624326391c",
+      "path": "Tools/Test-Changelog.ps1",
+      "sha256": "6e457ddf10c2386f7b02f43e703472eaf9801b3684d091a0ab7c726b8026ae18",
+      "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
+    },
+    {
+      "repository": "https://github.com/RedSalamanders/RedTilde",
+      "commit": "cfa1a18bc273877cf050e9baa21835624326391c",
+      "path": "Tools/Test-ChangelogWorkflow.ps1",
+      "sha256": "e351c7e3d6f11373e6284b523c5561306814598556f30f8b7af4fdf2cd879e94",
+      "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
+    },
+    {
+      "repository": "https://github.com/RedSalamanders/RedTilde",
+      "commit": "cfa1a18bc273877cf050e9baa21835624326391c",
+      "path": "Tools/Modules/Documentation/Changelog.psm1",
+      "sha256": "3e90fec9835c8df3669da0395a76065cc933f4dbd1910c5bfb05b9700390df1d",
+      "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
+    },
+    {
+      "repository": "https://github.com/DualTail/RedSalamander",
+      "commit": "95f7114b892484414dd9daac7f3a89c1d1fd68ae",
+      "path": "Tools/GenerateDebugIcons.ps1",
+      "disposition": "icon generation algorithm retained; source/output policy belongs to this independent repository"
     }
   ]
 }

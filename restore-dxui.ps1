@@ -23,7 +23,7 @@ Import-Module (Join-Path $source 'Tools/ConsumerBuild.psm1') -Force
 $msbuild = Get-RedMonitorMSBuild
 $previousHost = [Environment]::GetEnvironmentVariable('PreferredToolArchitecture', 'Process')
 try {
-    $env:PreferredToolArchitecture = 'x64'
+    $env:PreferredToolArchitecture = if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') { 'arm64' } else { 'x64' }
     $identity = Get-DxUiConsumerBuildIdentity -DxUiRoot $source -MSBuildPath $msbuild -Platform $Platform
 } finally {
     [Environment]::SetEnvironmentVariable('PreferredToolArchitecture', $previousHost, 'Process')

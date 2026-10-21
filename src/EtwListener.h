@@ -43,7 +43,8 @@ public:
 
     // Start listening for events with the given callback
     // Returns true on success, false if session couldn't start
-    bool Start(EventCallback callback);
+    // Normal viewer startup is asynchronous. Tests can request a bounded provider-enable barrier.
+    bool Start(EventCallback callback, ULONG enableTimeoutMs = 0);
 
     // Stop listening and clean up resources
     void Stop();
@@ -74,8 +75,8 @@ public:
 private:
     struct CallbackState;
 
-    static constexpr wchar_t kSessionName[] = L"RedSalamanderMonitor_ETW_Session";
-    static constexpr GUID kProviderGuid     = {0x440c70f6, 0x6c6b, 0x4ff7, {0x9a, 0x3f, 0x0b, 0x7d, 0xb4, 0x11, 0xb3, 0x1a}};
+    std::wstring _sessionName;
+    static constexpr GUID kProviderGuid = {0x440c70f6, 0x6c6b, 0x4ff7, {0x9a, 0x3f, 0x0b, 0x7d, 0xb4, 0x11, 0xb3, 0x1a}};
 
     // ETW callback functions
     static ULONG WINAPI BufferCallback(PEVENT_TRACE_LOGFILEW logfile);

@@ -83,7 +83,7 @@ bool EnsureCurrentWindowsVersionSupported(HWND owner, UnsupportedVersionNotifica
     ::OutputDebugStringW(kUnsupportedWindowsMessage);
     if (notification == UnsupportedVersionNotification::MessageBox)
     {
-        static_cast<void>(::MessageBoxW(owner, kUnsupportedWindowsMessage, L"RedSalamander", MB_OK | MB_ICONERROR));
+        static_cast<void>(::MessageBoxW(owner, kUnsupportedWindowsMessage, L"RedMonitor", MB_OK | MB_ICONERROR));
     }
     return false;
 }

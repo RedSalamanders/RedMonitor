@@ -36,6 +36,15 @@ $repoRoot = Split-Path -Parent $PSCommandPath
 Import-Module (Join-Path $repoRoot 'Tools/VisualStudio.psm1') -Force
 Import-Module (Join-Path $repoRoot 'Tools/VcpkgTriplet.psm1') -Force
 $buildRoot = if ($OutputRoot) { [IO.Path]::GetFullPath($OutputRoot) } else { Join-Path $repoRoot '.build' }
+$allowedRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot '.build'))
+if ($buildRoot -ine $allowedRoot -and -not $buildRoot.StartsWith($allowedRoot+'\', [StringComparison]::OrdinalIgnoreCase)) {
+    throw "RedMonitor dependency outputs must remain beneath '$allowedRoot'."
+}
+for ($component=[IO.DirectoryInfo]::new($buildRoot); $component; $component=$component.Parent) {
+    if ($component.Exists -and ($component.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw "Dependency output contains a reparse point: $($component.FullName)"
+    }
+}
 $toolRoot = Join-Path $buildRoot 'vcpkg-tool'
 $toolStampPath = Join-Path $buildRoot 'vcpkg-tool.commit'
 $toolIdentityPath = Join-Path $repoRoot 'vcpkg-tool.json'
@@ -121,7 +130,7 @@ if (-not (Test-Path -LiteralPath $vcpkg -PathType Leaf) -or $stampedCommit -ne $
 $platforms = if ($Platform -eq 'All') { @('x64', 'ARM64') } else { @($Platform) }
 foreach ($targetPlatform in $platforms) {
     $platformScope = $targetPlatform
-    $triplet = if ($targetPlatform -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
+    $triplet = if ($targetPlatform -eq 'ARM64') { 'arm64-windows-static-md' } else { 'x64-windows-static-md' }
     $installRoot = Join-Path $buildRoot "vcpkg_installed\$platformScope"
     $buildTreesRoot = Join-Path $buildRoot "vcpkg_buildtrees\$platformScope"
     $packagesRoot = Join-Path $buildRoot "vcpkg_packages\$platformScope"

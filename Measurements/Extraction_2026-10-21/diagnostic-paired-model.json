@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "scope": "Release combined document/file/lifetime scenario only; concurrent compilation; diagnostic comparison, not a performance qualification",
+  "baselineCommit": "f9819e708b3134e3c76e4cecf4d2ab092494fc31",
+  "candidateSourceIdentity": "b0745ec6251d7189c0f9c67e9f1c4e32b4283ccad6260d377fa26f8179732da9",
+  "rows": [
+    {
+      "pair": 0,
+      "name": "baseline",
+      "elapsedMs": 125.6499,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "E9FFFA54ECD2284211F4C2D58674C90B0BB27EB88716DB6546BD422C36BD7202",
+      "output": ""
+    },
+    {
+      "pair": 0,
+      "name": "candidate",
+      "elapsedMs": 112.947,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "A969255DEE7D4539B742E491C8760B5E5A9B1A4A258A6398C415847DE3BFA269",
+      "output": ""
+    },
+    {
+      "pair": 1,
+      "name": "candidate",
+      "elapsedMs": 133.6765,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "A969255DEE7D4539B742E491C8760B5E5A9B1A4A258A6398C415847DE3BFA269",
+      "output": ""
+    },
+    {
+      "pair": 1,
+      "name": "baseline",
+      "elapsedMs": 107.1104,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "E9FFFA54ECD2284211F4C2D58674C90B0BB27EB88716DB6546BD422C36BD7202",
+      "output": ""
+    },
+    {
+      "pair": 2,
+      "name": "baseline",
+      "elapsedMs": 91.7394,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "E9FFFA54ECD2284211F4C2D58674C90B0BB27EB88716DB6546BD422C36BD7202",
+      "output": ""
+    },
+    {
+      "pair": 2,
+      "name": "candidate",
+      "elapsedMs": 121.8513,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "A969255DEE7D4539B742E491C8760B5E5A9B1A4A258A6398C415847DE3BFA269",
+      "output": ""
+    },
+    {
+      "pair": 3,
+      "name": "candidate",
+      "elapsedMs": 105.7441,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "A969255DEE7D4539B742E491C8760B5E5A9B1A4A258A6398C415847DE3BFA269",
+      "output": ""
+    },
+    {
+      "pair": 3,
+      "name": "baseline",
+      "elapsedMs": 107.2929,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "E9FFFA54ECD2284211F4C2D58674C90B0BB27EB88716DB6546BD422C36BD7202",
+      "output": ""
+    },
+    {
+      "pair": 4,
+      "name": "baseline",
+      "elapsedMs": 107.2437,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "E9FFFA54ECD2284211F4C2D58674C90B0BB27EB88716DB6546BD422C36BD7202",
+      "output": ""
+    },
+    {
+      "pair": 4,
+      "name": "candidate",
+      "elapsedMs": 107.5099,
+      "exitCode": 0,
+      "peakWorkingSetBytes": null,
+      "binarySha256": "A969255DEE7D4539B742E491C8760B5E5A9B1A4A258A6398C415847DE3BFA269",
+      "output": ""
+    }
+  ]
+}

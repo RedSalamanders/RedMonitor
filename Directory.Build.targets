@@ -4,11 +4,4 @@
     <Error Condition="'$(Configuration)'!='Debug' and '$(Configuration)'!='Release' and '$(Configuration)'!='ASan Debug'" Text="Invalid RedMonitor configuration." />
     <Error Condition="!Exists('$(RedMonitorPackages)include\wil\resource.h')" Text="Run restore.ps1 before building RedMonitor." />
   </Target>
-  <Target Name="RedMonitorStageJsonRuntime" AfterTargets="Build" Condition="'$(ConfigurationType)'=='Application'">
-    <PropertyGroup>
-      <_RedMonitorJsonRuntime Condition="'$(Configuration)'=='Release'">$(RedMonitorPackages)bin\yyjson.dll</_RedMonitorJsonRuntime>
-      <_RedMonitorJsonRuntime Condition="'$(Configuration)'!='Release'">$(RedMonitorPackages)debug\bin\yyjson.dll</_RedMonitorJsonRuntime>
-    </PropertyGroup>
-    <Copy SourceFiles="$(_RedMonitorJsonRuntime)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
-  </Target>
 </Project>

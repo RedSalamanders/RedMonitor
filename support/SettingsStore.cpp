@@ -5605,7 +5605,9 @@ void MaybeStallSettingsRecoveryBeforeBackupForTest() noexcept
 [[nodiscard]] std::wstring GetVersionedSettingsFileName(std::wstring_view appId)
 {
     std::wstring fileName(appId);
-    fileName += std::format(L"-{}.{}", VERSINFO_MAJOR, VERSINFO_MINOR);
+    // Extraction keeps RedSalamander Preferences' existing storage contract until S4 migration.
+    // The independent viewer product version must not silently select another settings file.
+    fileName += appId == L"RedSalamanderMonitor" ? L"-7.0" : std::format(L"-{}.{}", VERSINFO_MAJOR, VERSINFO_MINOR);
     fileName += L".settings.json";
     return fileName;
 }

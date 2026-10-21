@@ -3,7 +3,10 @@ Set-StrictMode -Version Latest
 function Get-RedMonitorMSBuild {
     Import-Module (Join-Path $PSScriptRoot '../Tools/VisualStudio.psm1') -Force
     $installation = Get-RedMonitorVisualStudioInstallation
-    $path = Join-Path $installation 'MSBuild/Current/Bin/MSBuild.exe'
+    $relative = if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') {
+        'MSBuild/Current/Bin/arm64/MSBuild.exe'
+    } else { 'MSBuild/Current/Bin/MSBuild.exe' }
+    $path = Join-Path $installation $relative
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "MSBuild missing: $path" }
     return $path
 }
@@ -47,4 +50,20 @@ function Get-RedMonitorSourceIdentity {
     return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes(($rows -join "`n")))).ToLowerInvariant()
 }
 
-Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceIdentity
+function Enter-RedMonitorOperation {
+    param([Parameter(Mandatory)][string]$Scope)
+    $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..')).ToLowerInvariant()
+    $digest=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes("$root|$Scope")))
+    $mutex=[Threading.Mutex]::new($false,"Local\RedMonitor-$digest")
+    try {
+        if(-not $mutex.WaitOne(1800000)){throw "Timed out waiting for RedMonitor operation $Scope"}
+    } catch [Threading.AbandonedMutexException] {
+        $mutex.ReleaseMutex();$mutex.Dispose()
+        throw "Interrupted RedMonitor operation $Scope. Inspect its outputs before retrying."
+    } catch {
+        $mutex.Dispose();throw
+    }
+    return $mutex
+}
+
+Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation

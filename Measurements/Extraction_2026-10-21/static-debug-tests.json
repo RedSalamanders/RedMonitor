@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "passed": true,
+  "sourceIdentity": "837d64d2f10f300fcd26f1ad009bd56af48a901b085d1ff48596409b2e3cecf2",
+  "platform": "x64",
+  "configuration": "Debug",
+  "buildReceiptSha256": "A556E3816F89A717942E6969C77555F77399DCEFA4BC4FE72AD9FFD2839C5126",
+  "scenarios": [
+    {
+      "scenario": "diagnostics-gate",
+      "exitCode": 0,
+      "passed": true,
+      "expectedAsanDetection": false,
+      "elapsedMs": 46.3131
+    },
+    {
+      "scenario": "scrollbar-model",
+      "exitCode": 0,
+      "passed": true,
+      "expectedAsanDetection": false,
+      "elapsedMs": 22.8477
+    },
+    {
+      "scenario": "document-model",
+      "exitCode": 0,
+      "passed": true,
+      "expectedAsanDetection": false,
+      "elapsedMs": 403.8067
+    },
+    {
+      "scenario": "client-contract",
+      "exitCode": 0,
+      "passed": true,
+      "expectedAsanDetection": false,
+      "elapsedMs": 36.661
+    },
+    {
+      "scenario": "transport-roundtrip",
+      "exitCode": 0,
+      "passed": true,
+      "expectedAsanDetection": false,
+      "elapsedMs": 2057.4488
+    }
+  ],
+  "liveEtwRequested": true,
+  "startedUtc": "2026-10-21T21:13:34.6690580Z",
+  "finishedUtc": "2026-10-21T21:13:37.2638881Z",
+  "interactive": false
+}

@@ -15,8 +15,10 @@ if($Explain){
     if($Mode -ne 'Affected'){Write-Host 'Also x64 Release/ASan runtime and all three ARM64 cross-builds. Native/manual/UI/performance gates remain separate.'}
     return
 }
+if($Mode -in 'Full','PrePush'){& (Join-Path $PSScriptRoot 'Tools/Fold-Changelog.ps1') -Check}
 & (Join-Path $PSScriptRoot 'validate.ps1')
 & (Join-Path $PSScriptRoot 'format.ps1') -Check
+& (Join-Path $PSScriptRoot 'Tests/Tooling.Tests.ps1')
 $configs=if($Mode -eq 'Affected'){@('Debug')}else{@('Debug','Release','ASan Debug')}
 foreach($configuration in $configs){& (Join-Path $PSScriptRoot 'test.ps1') -Configuration $configuration}
 if($Mode -ne 'Affected'){

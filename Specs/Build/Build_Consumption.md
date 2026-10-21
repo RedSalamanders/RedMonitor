@@ -7,7 +7,7 @@ ASan configurations require compiler instrumentation, matching runtime and a rea
 `restore.ps1` restores the pinned vcpkg manifest/tool and exact DxUi lock into `.build`.
 No source lookup falls back to Z:\src or another consumer. DxUi uses its public consumer imports,
 one archive and isolated source/compiler/SDK/CRT fingerprint outputs. No consumer enumerates its sources.
-The viewer support library is static; yyjson and the selected ASan runtime are staged application-local.
+The viewer support library is static; yyjson is linked statically through the windows-static-md triplets. Only the selected ASan runtime is staged application-local.
 
 `build.ps1` builds RedMonitor.proj, which owns the viewer, model tests and four resource-only satellites.
 Generated outputs stay under `.build/<platform>/<configuration>` and are never committed. Build receipts
@@ -15,7 +15,7 @@ bind source/dependency/profile/tool/artifact identities and never claim runtime 
 
 Consumers pin RedMonitor by repository URL, exact 40-character commit and API revision. Restore rejects
 dirty managed sources and mismatched pins. Headers come only from include/RedMonitor. Optional viewer
-packaging carries the full reviewed closure: executable, yyjson, satellites, schema, themes/notices and
+packaging carries the full reviewed closure: executable, satellites, schema, themes/notices and
 ASan runtime where selected. Client SDK use does not require installing or starting the viewer.
 
 RedSalamander initially uses thin compatibility build projects under Build, stages the pinned artifact

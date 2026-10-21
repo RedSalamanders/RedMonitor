@@ -10,10 +10,12 @@ x64 runtime target. ARM64 requires a native ARM64 host.
 Debug, Release or ASan Debug.
 .PARAMETER SkipBuild
 Reuse only a source-compatible successful build receipt.
+.PARAMETER IncludeLiveEtw
+Require a real ETW producer/listener roundtrip; permission denial fails this requested gate.
 #>
 [CmdletBinding()]
 param([ValidateSet('x64','ARM64')][string]$Platform='x64',
-      [ValidateSet('Debug','Release','ASan Debug')][string]$Configuration='Debug',[switch]$SkipBuild)
+      [ValidateSet('Debug','Release','ASan Debug')][string]$Configuration='Debug',[switch]$SkipBuild,[switch]$IncludeLiveEtw)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
@@ -21,6 +23,8 @@ if($Platform -eq 'ARM64' -and [Runtime.InteropServices.RuntimeInformation]::OSAr
     throw 'ARM64 runtime tests require a native ARM64 host.'
 }
 if(-not $SkipBuild){& (Join-Path $PSScriptRoot 'build.ps1') -Platform $Platform -Configuration $Configuration}
+$lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
+try {
 $output=Join-Path $PSScriptRoot ".build/$Platform/$Configuration"
 $build=Get-Content -LiteralPath (Join-Path $output 'build-receipt.json') -Raw|ConvertFrom-Json
 $identity=Get-RedMonitorSourceIdentity
@@ -38,9 +42,19 @@ $rows=[Collections.Generic.List[object]]::new()
 $started=[DateTime]::UtcNow
 try{
     $env:REDMONITOR_TEST_ROOT=$run
-    foreach($scenario in @('diagnostics-gate','scrollbar-model','document-model')){
-        $start=[Diagnostics.ProcessStartInfo]::new((Join-Path $output 'MonitorTest.exe'))
-        $start.ArgumentList.Add("--$scenario-selftest")
+    $scenarios=@(
+        @{name='diagnostics-gate';exe='MonitorTest.exe';argument='--diagnostics-gate-selftest'},
+        @{name='scrollbar-model';exe='MonitorTest.exe';argument='--scrollbar-model-selftest'},
+        @{name='document-model';exe='MonitorTest.exe';argument='--document-model-selftest'},
+        @{name='client-contract';exe='ClientContractTests.exe';argument=$null},
+        @{name='settings-contract';exe='SettingsContractTests.exe';argument=$null})
+    if($IncludeLiveEtw){$scenarios+=@{name='transport-roundtrip';exe='TransportRoundtripTests.exe';argument=$null}}
+    $asanProbe=$Configuration -eq 'ASan Debug'
+    if($asanProbe){$scenarios+=@{name='asan-detection';exe='AsanProbe.exe';argument='--detect';expectedAsan=$true}}
+    foreach($entry in $scenarios){
+        $scenario=$entry.name
+        $start=[Diagnostics.ProcessStartInfo]::new((Join-Path $output $entry.exe))
+        if($entry.argument){$start.ArgumentList.Add($entry.argument)}
         $start.UseShellExecute=$false;$start.CreateNoWindow=$true
         $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
         $process=[Diagnostics.Process]::new();$process.StartInfo=$start
@@ -51,17 +65,22 @@ try{
             if(-not $process.WaitForExit(180000)){$process.Kill($true);$process.WaitForExit();throw "Owned test process timed out: $scenario"}
             $text=$stdout.GetAwaiter().GetResult()+$stderr.GetAwaiter().GetResult()
             [IO.File]::WriteAllText((Join-Path $run "$scenario.log"),$text)
-            $rows.Add([ordered]@{scenario=$scenario;exitCode=$process.ExitCode;elapsedMs=$timer.Elapsed.TotalMilliseconds})
-            Write-Host "$scenario : exit $($process.ExitCode), $([math]::Round($timer.Elapsed.TotalMilliseconds,2)) ms"
+            $expectedAsan=$entry.ContainsKey('expectedAsan') -and $entry.expectedAsan
+            $scenarioPassed=if($expectedAsan){$process.ExitCode -ne 0 -and $text -match 'AddressSanitizer: heap-buffer-overflow'}else{$process.ExitCode -eq 0}
+            $rows.Add([pscustomobject][ordered]@{scenario=$scenario;exitCode=$process.ExitCode;passed=$scenarioPassed;expectedAsanDetection=[bool]$expectedAsan;elapsedMs=$timer.Elapsed.TotalMilliseconds})
+            Write-Host "$scenario : exit $($process.ExitCode), passed=$scenarioPassed, $([math]::Round($timer.Elapsed.TotalMilliseconds,2)) ms"
         }finally{$process.Dispose()}
     }
 }finally{
     [Environment]::SetEnvironmentVariable('REDMONITOR_TEST_ROOT',$previousRoot,'Process')
-    $passed=$rows.Count -eq 3 -and @($rows|Where-Object exitCode -ne 0).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
+    $expected=if($IncludeLiveEtw){6}else{5}
+    if($Configuration -eq 'ASan Debug'){$expected++}
+    $passed=$rows.Count -eq $expected -and @($rows|Where-Object passed -eq $false).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
     [ordered]@{schemaVersion=1;passed=$passed;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;
         buildReceiptSha256=(Get-FileHash -LiteralPath (Join-Path $output 'build-receipt.json')).Hash;
-        scenarios=@($rows.ToArray());startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');interactive=$false}|
+        scenarios=@($rows.ToArray());liveEtwRequested=[bool]$IncludeLiveEtw;startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');interactive=$false}|
         ConvertTo-Json -Depth 8|Set-Content -LiteralPath (Join-Path $run 'receipt.json') -Encoding utf8
     Write-Host "Evidence: $run"
 }
 if(-not $passed){throw 'One or more RedMonitor scenarios failed; see the retained receipt.'}
+} finally {$lease.ReleaseMutex();$lease.Dispose()}

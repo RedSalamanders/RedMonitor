@@ -39,7 +39,7 @@ EtwListener::~EtwListener()
     Stop();
 }
 
-bool EtwListener::Start(EventCallback callback)
+bool EtwListener::Start(EventCallback callback, ULONG enableTimeoutMs)
 {
     _lastErrorCode = ERROR_SUCCESS;
     _lastError.clear();
@@ -60,13 +60,11 @@ bool EtwListener::Start(EventCallback callback)
 
     auto callbackState = std::make_shared<CallbackState>(std::move(callback));
 
-    // Stop any existing session with the same name
-    std::vector<BYTE> sessionBuffer(sizeof(EVENT_TRACE_PROPERTIES) + (wcslen(kSessionName) + 1) * sizeof(wchar_t));
-    auto* props                    = reinterpret_cast<PEVENT_TRACE_PROPERTIES>(sessionBuffer.data());
-    props->Wnode.BufferSize        = static_cast<ULONG>(sessionBuffer.size());
-    props->LoggerNameOffset        = sizeof(EVENT_TRACE_PROPERTIES);
-    const ULONG stopExistingResult = ControlTrace(0, kSessionName, props, EVENT_TRACE_CONTROL_STOP);
-
+    // Each instance owns a unique session. Never stop a session merely because its name matches.
+    static std::atomic<unsigned long> nextSession{0};
+    _sessionName = std::format(L"RedMonitor_{}_{}", GetCurrentProcessId(), nextSession.fetch_add(1));
+    std::vector<BYTE> sessionBuffer(sizeof(EVENT_TRACE_PROPERTIES) + (_sessionName.size() + 1) * sizeof(wchar_t));
+    auto* props = reinterpret_cast<PEVENT_TRACE_PROPERTIES>(sessionBuffer.data());
     // Create new session properties with optimized buffer configuration
     // Buffer settings tuned for high-frequency event generation:
     //   MinimumBuffers: 8 (vs. default 4) for better baseline capacity
@@ -84,25 +82,17 @@ bool EtwListener::Start(EventCallback callback)
     props->MinimumBuffers      = 8;   // Increased from 4
     props->MaximumBuffers      = 128; // Increased from 64
     props->FlushTimer          = 1;   // Flush every second
-    wcscpy_s(reinterpret_cast<wchar_t*>(sessionBuffer.data() + props->LoggerNameOffset), wcslen(kSessionName) + 1, kSessionName);
+    wcscpy_s(reinterpret_cast<wchar_t*>(sessionBuffer.data() + props->LoggerNameOffset), _sessionName.size() + 1, _sessionName.c_str());
 
     // Start the trace session
-    ULONG result = StartTrace(&_sessionHandle, kSessionName, props);
+    ULONG result = StartTrace(&_sessionHandle, _sessionName.c_str(), props);
     if (result != ERROR_SUCCESS)
     {
         _lastErrorCode = result;
 
         if (result == ERROR_ALREADY_EXISTS)
         {
-            if (stopExistingResult == ERROR_ACCESS_DENIED)
-            {
-                _lastErrorCode = ERROR_ACCESS_DENIED;
-                _lastError     = L"Existing ETW session could not be stopped (access denied)";
-            }
-            else
-            {
-                _lastError = L"ETW session already exists (another instance may be running)";
-            }
+            _lastError = L"ETW session already exists; the existing session was left untouched";
         }
         else if (result == ERROR_ACCESS_DENIED)
         {
@@ -123,7 +113,7 @@ bool EtwListener::Start(EventCallback callback)
                             TRACE_LEVEL_VERBOSE,
                             0xFFFFFFFFFFFFFFFF, // Match any keyword
                             0,                  // Match all keywords
-                            0,                  // Timeout (use default)
+                            enableTimeoutMs,    // Zero is asynchronous; a nonzero test budget waits for provider callbacks.
                             nullptr);
 
     if (result != ERROR_SUCCESS)
@@ -137,7 +127,7 @@ bool EtwListener::Start(EventCallback callback)
 
     // Open the trace for processing
     EVENT_TRACE_LOGFILE logfile{};
-    logfile.LoggerName          = const_cast<wchar_t*>(kSessionName);
+    logfile.LoggerName          = const_cast<wchar_t*>(_sessionName.c_str());
     logfile.ProcessTraceMode    = PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
     logfile.EventRecordCallback = EventRecordCallback;
     logfile.BufferCallback      = BufferCallback;
@@ -259,11 +249,11 @@ void EtwListener::Stop()
     // Stop the trace session
     if (_sessionHandle != INVALID_PROCESSTRACE_HANDLE)
     {
-        std::vector<BYTE> sessionBuffer(sizeof(EVENT_TRACE_PROPERTIES) + (wcslen(kSessionName) + 1) * sizeof(wchar_t));
+        std::vector<BYTE> sessionBuffer(sizeof(EVENT_TRACE_PROPERTIES) + (_sessionName.size() + 1) * sizeof(wchar_t));
         auto* props             = reinterpret_cast<PEVENT_TRACE_PROPERTIES>(sessionBuffer.data());
         props->Wnode.BufferSize = static_cast<ULONG>(sessionBuffer.size());
         props->LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
-        ControlTrace(_sessionHandle, kSessionName, props, EVENT_TRACE_CONTROL_STOP);
+        ControlTrace(_sessionHandle, nullptr, props, EVENT_TRACE_CONTROL_STOP);
         _sessionHandle = INVALID_PROCESSTRACE_HANDLE;
     }
 }

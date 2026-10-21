@@ -3,6 +3,26 @@
   "apiRevision": 1,
   "product": "RedMonitor",
   "status": "extraction-in-progress",
-  "implemented": ["imported bounded log model", "DirectX viewer", "legacy ETW schema", "Unicode file import/export", "legacy settings compatibility"],
-  "pending": ["producer client qualification", "RedSalamander cutover qualification", "independent settings", "RedPrism adapter", "RedXe adapter", "RedTilde adapter", "native ARM64 runtime", "performance and release qualification"]
+  "implemented": [
+    "imported bounded log model",
+    "DirectX viewer",
+    "legacy ETW schema",
+    "Unicode file import/export",
+    "legacy settings compatibility",
+    "header-only producer client API 1",
+    "static independent support and yyjson",
+    "source-bound noninteractive tests",
+    "four localization satellites"
+  ],
+  "pending": [
+    "RedSalamander cutover qualification",
+    "independent settings",
+    "RedPrism adapter",
+    "RedXe adapter",
+    "RedTilde adapter",
+    "native ARM64 runtime",
+    "performance and release qualification",
+    "cross-process and per-module producer qualification",
+    "deterministic viewer UI and resource qualification"
+  ]
 }

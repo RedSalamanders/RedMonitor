@@ -12,11 +12,11 @@ delivery item does not close the independent runtime, platform, performance or r
 
 - [x] S0: inspect the source, consumers, ownership, license and local working trees.
 - [x] S0: record imported source commit and original SHA-256 values.
-- [ ] S1: create the standalone project, private support closure, pinned dependencies and scripts.
-- [ ] S1: build and run the unchanged extracted model as the retained baseline.
-- [ ] S2: add the minimal public client and prove its wire compatibility.
-- [ ] S2: run standalone behavioral tests and all six build configurations.
-- [ ] S3: create `RedSalamanders/RedMonitor` on GitHub with initial source and CI.
+- [x] S1: create the standalone project, private support closure, pinned dependencies and scripts.
+- [x] S1: build and run the unchanged extracted model as the retained baseline.
+- [x] S2: add the minimal public client and prove its wire compatibility.
+- [x] S2: run standalone behavioral tests and all six build configurations.
+- [x] S3: create `RedSalamanders/RedMonitor` on GitHub with initial source and CI.
 - [ ] S3: remove the owned monitor source from RedSalamander and consume an exact RedMonitor pin.
 - [ ] S3: preserve legacy executable, satellites, schema, themes and installer behavior.
 - [ ] S3: qualify the RedSalamander launch, preferences, selftests and clean package extraction.
@@ -153,12 +153,12 @@ Exit: tested compatibility, a frozen minimal API fixture, explicit version/capab
 2. Commit an exact `Dependencies/RedMonitor.lock.json` in RedSalamander. Restore to the consumer's
    generated tree; validate repository/commit/API and dirty state. Fail before compilation for a bad pin.
 3. Replace the old monitor and MonitorTest native projects with thin external-build compatibility
-   projects outside the removed source directory. Update solution, installer project references,
+   projects at the documented legacy paths. Update solution, installer project references,
    build routing and source inventories. Consumers never enumerate RedMonitor `.cpp` files.
 4. Stage external EXE as the old filename plus PDB, MonitorTest executable, four satellites, themes,
-   schema, notices, yyjson and ASan runtime where applicable. Include the external lock/artifact closure
+   schema, notices and ASan runtime where applicable. Include the external lock/artifact closure
    in build evidence. Reject unknown/missing outputs; avoid broad overwrite of consumer DLLs.
-5. Remove `RedSalamanderMonitor/` and native MonitorTest implementation only after the new pin is
+5. Remove the native implementation/resources from `RedSalamanderMonitor/` and MonitorTest only after the new pin is
    published and compatibility builds pass. Keep historical specs/reviews/test evidence intact.
    Change active monitor specs/docs to describe the external owner and remaining cutover gates.
 6. Update tooling inventory/help/tests and normatively document compatibility names. Reconcile
@@ -272,3 +272,20 @@ the deterministic harness with invented data, provenance and non-activating wind
 Closeout requires successful source-bound evidence, updated active contracts/docs, generated changelog
 folding, all per-consumer acceptance rows and release handoff. GitHub creation, a successful compile or
 a focused test is never the completion criterion for the full migration.
+
+### Initial implementation checkpoint (2026-10-21)
+
+The source import has a retained Release baseline at commit `f9819e7`. Standalone native builds passed in
+all six profiles; x64 Debug/Release/ASan console suites and real ETW roundtrips passed, with the deliberate
+ASan overflow detected. A failed asynchronous-enable ASan roundtrip is preserved beside later corrected
+receipts; the test now requests a bounded synchronous provider-enable barrier. Normal viewer startup keeps
+its asynchronous behavior. Static yyjson linkage avoids a measured binary mismatch with RedSalamander's DLL.
+The legacy settings filename is explicitly fixed at 7.0 independently of RedMonitor's 0.1 product version;
+Debug keeps the existing debug filename. A no-write settings contract fixture protects that boundary.
+
+Only source-free compatibility vcxproj files remain at the old RedSalamander monitor paths. This is a
+narrower transition than physically removing those directories, because the paths are public solution,
+IDE and installer entrypoints. The detailed plan preserves the same native source ownership goal.
+The other applications' unrelated dirty work was not edited. Consumer cutover, native ARM64 runtime,
+UI/focus/IME/AT, controlled performance and release gates remain open. Hosted CI is pending until an actual
+successful run exists. See `Measurements/Extraction_2026-10-21/README.md` for scope and receipts.

@@ -20,10 +20,10 @@
 
 #define VERSINFO_COPYRIGHT VERSINFO_TEXT("Copyright (c) 2026 RedSalamander Authors")
 #define VERSINFO_COMPANY VERSINFO_TEXT("RedSalamander")
-#define VERSINFO_PRODUCTNAME VERSINFO_TEXT("RedSalamander")
+#define VERSINFO_PRODUCTNAME VERSINFO_TEXT("RedMonitor")
 
-#define VERSINFO_DESCRIPTION VERSINFO_TEXT("RedSalamander, File Manager")
-#define VERSINFO_COMMENT VERSINFO_TEXT("A two-pane file manager with plugin architecture.")
+#define VERSINFO_DESCRIPTION VERSINFO_TEXT("RedMonitor, Diagnostics Viewer")
+#define VERSINFO_COMMENT VERSINFO_TEXT("Independent Windows diagnostics viewer.")
 
 // Human-maintained product line. CI supplies the build number.
 //
@@ -35,8 +35,8 @@
 //   incremental builds keep the same version stamp until the caller supplies a new number.
 // - CI builds use GITHUB_RUN_NUMBER unless the caller supplies an explicit build number.
 // This keeps git clean while making CI the source of truth for release numbering.
-#define VERSINFO_MAJOR 7
-#define VERSINFO_MINOR 0
+#define VERSINFO_MAJOR 0
+#define VERSINFO_MINOR 1
 
 // Conversion macros num->str / num->wide-str.
 #define VERSINFO_STR_IMPL(s) #s

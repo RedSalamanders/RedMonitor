@@ -17,6 +17,8 @@ param([ValidateSet('x64','ARM64')][string] $Platform='x64',
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
+$lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
+try {
 $output=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ".build/$Platform/$Configuration")
 Assert-RedMonitorOutputNotRunning $output
 if (-not $SkipRestore) { & (Join-Path $PSScriptRoot 'restore.ps1') -Platform $Platform }
@@ -29,7 +31,10 @@ $started=[DateTime]::UtcNow
 & $msbuild (Join-Path $PSScriptRoot 'RedMonitor.proj') /nologo /m:4 /v:minimal "/p:Platform=$Platform" "/p:Configuration=$Configuration" "/flp:LogFile=$output/build.log;Verbosity=normal"
 if($LASTEXITCODE -ne 0){throw "RedMonitor build failed: $output/build.log"}
 if($identity -cne (Get-RedMonitorSourceIdentity)){throw 'Source changed during build; no receipt published.'}
-$artifacts=@(Get-ChildItem -LiteralPath $output -Recurse -File | Where-Object Extension -in '.exe','.dll','.pdb' | ForEach-Object {
+$artifacts=@(Get-ChildItem -LiteralPath $output -Recurse -File | Where-Object {
+    ($_.DirectoryName -ieq $output -and $_.Extension -in '.exe','.dll','.pdb' -and $_.Name -ne 'yyjson.dll') -or
+    $_.Name -eq 'SettingsStore.schema.json' -or $_.FullName -match '[\\/](Lang|Themes)[\\/]'
+} | ForEach-Object {
     [ordered]@{path=[IO.Path]::GetRelativePath($output,$_.FullName);sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}
 })
 [ordered]@{schemaVersion=1;passed=$true;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;
@@ -38,3 +43,4 @@ $artifacts=@(Get-ChildItem -LiteralPath $output -Recurse -File | Where-Object Ex
   startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');runtimeExecuted=$false}|
   ConvertTo-Json -Depth 8|Set-Content -LiteralPath $receipt -Encoding utf8
 Write-Host "Built RedMonitor: $output/RedMonitor.exe"
+} finally {$lease.ReleaseMutex();$lease.Dispose()}
