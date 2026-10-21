@@ -1,0 +1,24 @@
+# Validation and evidence
+
+Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush explicitly account for
+x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
+boundaries and required repository surfaces. format.ps1 -Check verifies native formatting.
+
+The imported MonitorTest flags cover diagnostics opt-in, scrollbar model, document batching/filtering,
+retention, immutable snapshots, strict/bounded file read, atomic export/fault/cancel, clipboard rejection
+without opening the clipboard, and bounded ETW consumer lifetime. test.ps1 supplies a unique repository-local
+test root and never cleans existing data. A failed native process must produce a failed receipt.
+
+Headless console cases do not take desktop focus. UI keyboard/clipboard/IME/AT fixtures require agreement
+to the time and a desktop lease with verified restoration. Screenshots are deterministic application
+harness captures with invented data and source/build/scenario provenance; never desktop screenshots.
+
+Keep build and runtime results separate; cross-builds cannot close native ARM64 runtime. A successful
+artifact identity is necessary for evidence reuse. Source/pin/binary/toolchain/environment/scenario must
+all match; pending CI, private repair receipts and focused runs cannot be promoted to Full acceptance.
+
+Release performance uses paired/alternating baseline and candidate on the same fixture and machine.
+Record append/filter/retention/export snapshot latency, frame p95/p99, private bytes, working set,
+handles, CPU, wakeups and event loss. An unpaired measurement is diagnostic only. Investigate repeatable
+>5% regressions before advice; never silently change the baseline. Required viewer gates include WARP,
+device loss and clean/dirty/hidden resource behavior. The WIP matrix owns remaining execution.

@@ -1,0 +1,23 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+ <ItemGroup Label="ProjectConfigurations"><ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+<ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+<ProjectConfiguration Include="ASan Debug|x64"><Configuration>ASan Debug</Configuration><Platform>x64</Platform></ProjectConfiguration>
+<ProjectConfiguration Include="Debug|ARM64"><Configuration>Debug</Configuration><Platform>ARM64</Platform></ProjectConfiguration>
+<ProjectConfiguration Include="Release|ARM64"><Configuration>Release</Configuration><Platform>ARM64</Platform></ProjectConfiguration>
+<ProjectConfiguration Include="ASan Debug|ARM64"><Configuration>ASan Debug</Configuration><Platform>ARM64</Platform></ProjectConfiguration></ItemGroup>
+ <PropertyGroup Label="Globals"><ProjectGuid>{39EAC2DA-7968-4826-B162-1926D496064F}</ProjectGuid><RootNamespace>RedMonitor</RootNamespace><VCProjectVersion>18.0</VCProjectVersion></PropertyGroup>
+ <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+ <PropertyGroup Label="Configuration"><ConfigurationType>Application</ConfigurationType><UseDebugLibraries Condition="'$(Configuration)'!='Release'">true</UseDebugLibraries><UseDebugLibraries Condition="'$(Configuration)'=='Release'">false</UseDebugLibraries></PropertyGroup>
+ <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+ <PropertyGroup><GenerateManifest>false</GenerateManifest></PropertyGroup>
+ <Import Project="..\Build\RedMonitor.DxUi.props" />
+ <ItemDefinitionGroup><ClCompile><PreprocessorDefinitions>ENABLE_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile><Link><SubSystem>Windows</SubSystem><AdditionalDependencies>yyjson.lib;shcore.lib;comdlg32.lib;windowscodecs.lib;%(AdditionalDependencies)</AdditionalDependencies></Link></ItemDefinitionGroup>
+ <ItemGroup><ClCompile Include="ColorTextView.cpp" /><ClCompile Include="Configuration.cpp" /><ClCompile Include="Document.cpp" /><ClCompile Include="EtwListener.cpp" /><ClCompile Include="MonitorFileExporter.cpp" /><ClCompile Include="MonitorFileReader.cpp" /><ClCompile Include="RedMonitor.cpp" /><ResourceCompile Include="RedMonitor.rc"/><Manifest Include="res\exe.manifest"/></ItemGroup>
+ <ItemGroup><ProjectReference Include="..\support\RedMonitorSupport.vcxproj"/></ItemGroup>
+ <Target Name="StageMonitorData" AfterTargets="Build">
+  <ItemGroup><MonitorThemes Include="$(RedMonitorRoot)Specs\Themes\**\*"/></ItemGroup>
+  <Copy SourceFiles="@(MonitorThemes)" DestinationFiles="@(MonitorThemes->'$(OutDir)Themes\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true"/>
+  <Copy SourceFiles="$(RedMonitorRoot)Specs\SettingsStore.schema.json" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true"/>
+ </Target>
+ <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+<Import Project="..\Build\RedMonitor.DxUi.targets" /></Project>

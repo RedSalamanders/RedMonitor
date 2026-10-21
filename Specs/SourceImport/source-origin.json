@@ -1,0 +1,417 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/DualTail/RedSalamander",
+  "commit": "95f7114b892484414dd9daac7f3a89c1d1fd68ae",
+  "license": "MIT",
+  "importDate": "2026-10-21",
+  "files": [
+    {
+      "source": "Common/Common/LocalizationManager.cpp",
+      "destination": "support/LocalizationManager.cpp",
+      "sha256": "e42d745f8c0c8abd00c7b60adfa7467d7870aa7970e5f9c56b98dc50cc78f079",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "RedSalamanderMonitor/EtwListener.h",
+      "destination": "src/EtwListener.h",
+      "sha256": "399cf6cd3098cb31cfcd188a91a35b09cd02f7f111eb4d32c31036bdb9f936c0",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/framework.h",
+      "destination": "src/framework.h",
+      "sha256": "7bb45541cd4279f4936f47497f900e74e91690e75dd81ebd8b14dada6abfcaf8",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/InvalidRectVisualization.h",
+      "destination": "src/InvalidRectVisualization.h",
+      "sha256": "d0c5f5e07f1d82edcbe146e5ded117023d63f01b21dbbd59bdaf440546207303",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/MonitorDiagnostics.h",
+      "destination": "src/MonitorDiagnostics.h",
+      "sha256": "14a13c000e832aa4173e19154a601e67317362df80a19973e2b84f81016cd18b",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/MonitorFileExporter.cpp",
+      "destination": "src/MonitorFileExporter.cpp",
+      "sha256": "7e52c5972a0bb655cd6ab59aef15a23a2b467444d9e8e88f76609bd60ecb8183",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/MonitorFileExporter.h",
+      "destination": "src/MonitorFileExporter.h",
+      "sha256": "6353cf9498972369045828d0d364f671af6a325c9afa5219b0b648b6690b6422",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/MonitorFileReader.cpp",
+      "destination": "src/MonitorFileReader.cpp",
+      "sha256": "02725f9138aa3e36818c7e5a6cd4dc2c0c1f7fa8cb1ccac7f3dd0b46f38006b9",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/MonitorFileReader.h",
+      "destination": "src/MonitorFileReader.h",
+      "sha256": "bfb064b30633b440733bf8c62e1e5f358f76b7329102e78f528a1c5dce2dcb83",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/MonitorTextSnapshot.h",
+      "destination": "src/MonitorTextSnapshot.h",
+      "sha256": "51f2f7457ef5a6a8bd99b7b821ca3da7e0f3123bbf2bc18953b0ad17de106ab1",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/RedSalamanderMonitor.cpp",
+      "destination": "src/RedSalamanderMonitor.cpp",
+      "sha256": "317af0dc5f2617b7277be82590b85aa944eeed2b6c808002c0f30544d7bfa0cf",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/RedSalamanderMonitor.h",
+      "destination": "src/RedSalamanderMonitor.h",
+      "sha256": "245ff9031a96ef2ffade37bd506c2cf3e602747e29b80a41cb2be9f3c9691154",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/RedSalamanderMonitor.rc",
+      "destination": "src/RedSalamanderMonitor.rc",
+      "sha256": "cd98ee920c5fca7993a810f582a93828c10861100e1ac4c339b08ecc19a0c8dc",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/RedSalamanderMonitor.vcxproj",
+      "destination": "src/RedSalamanderMonitor.vcxproj",
+      "sha256": "52268c8e18a79156c5a48e0d219350ec4b02037f3e3d0ef9b37c8d25aa6ec1f9",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/RedSalamanderMonitor.vcxproj.filters",
+      "destination": "src/RedSalamanderMonitor.vcxproj.filters",
+      "sha256": "f6f6e343267000997e7376043dd075427594dc30d43f6a564fe9480dd0030997",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/EtwListener.cpp",
+      "destination": "src/EtwListener.cpp",
+      "sha256": "613c4cbeb15c468d838b00932bd3ded747667294f76a52fab70906137ea75508",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/resource.h",
+      "destination": "src/resource.h",
+      "sha256": "19cd11f6821ae17bb8f54c8bc275f059ceb62f2cff184169caca61a9bfd8c310",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Lang/cs-CZ/RedSalamanderMonitor-cs-CZ.rc",
+      "destination": "src/Lang/cs-CZ/RedSalamanderMonitor-cs-CZ.rc",
+      "sha256": "522c88df01fb45a0ec7af181a5fba99f7a09478d1d9781251e35dad9e98ba92b",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Lang/cs-CZ/RedSalamanderMonitor-cs-CZ.vcxproj",
+      "destination": "src/Lang/cs-CZ/RedSalamanderMonitor-cs-CZ.vcxproj",
+      "sha256": "8283c959f9dac277f0fab9e9f71e3dc8abd1bdfa087028bc9e720ecb3bd2d858",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Lang/fr-FR/RedSalamanderMonitor-fr-FR.rc",
+      "destination": "src/Lang/fr-FR/RedSalamanderMonitor-fr-FR.rc",
+      "sha256": "11b4f4caadc8f3248a2e6e5a8bd6b1edf3a7e34eff2b3c5b7b1fdd0bfb53e5b5",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Lang/fr-FR/RedSalamanderMonitor-fr-FR.vcxproj",
+      "destination": "src/Lang/fr-FR/RedSalamanderMonitor-fr-FR.vcxproj",
+      "sha256": "9557a91a0447333320d709ac1622f3f2bce586f9f2fd0c8b983b58d2e8d7e19a",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Lang/ja-JP/RedSalamanderMonitor-ja-JP.rc",
+      "destination": "src/Lang/ja-JP/RedSalamanderMonitor-ja-JP.rc",
+      "sha256": "8a4c2895b76b819d8794832323d119e9e45f0e6cc79ab99983b7757c215eca58",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Lang/ja-JP/RedSalamanderMonitor-ja-JP.vcxproj",
+      "destination": "src/Lang/ja-JP/RedSalamanderMonitor-ja-JP.vcxproj",
+      "sha256": "ea0ac01f1575518b805935f80e0d93e240fae1c846a56508d9917afeaabded32",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Lang/sk-SK/RedSalamanderMonitor-sk-SK.rc",
+      "destination": "src/Lang/sk-SK/RedSalamanderMonitor-sk-SK.rc",
+      "sha256": "b5d8233be05f748cac11ed91ada66fd16513edbc80b40aff9fee5519e0dfd99f",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Lang/sk-SK/RedSalamanderMonitor-sk-SK.vcxproj",
+      "destination": "src/Lang/sk-SK/RedSalamanderMonitor-sk-SK.vcxproj",
+      "sha256": "cc5f941ca3bd392a4a66c7779c90fd01201f59d915a89f7eff9fa3160627fa43",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/res/exe.manifest",
+      "destination": "src/res/exe.manifest",
+      "sha256": "5181604054dd1b5de4745a5f6b2f88b7f9640374b51c5a521d48ae2efd741265",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/res/logo_background_debug.ico",
+      "destination": "src/res/logo_background_debug.ico",
+      "sha256": "a0e72b90fe6ca06ac0d0a499a8b9ea48da1396a299498e152bc449f2f3f4992d",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/res/logo_background.ico",
+      "destination": "src/res/logo_background.ico",
+      "sha256": "ac2405a7bdcb462dbd11c94b71fae08b21d8bd460e4120ad84639653b76fa7c2",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/res/RedSalamanderMonitor.ico",
+      "destination": "src/res/RedSalamanderMonitor.ico",
+      "sha256": "ac2405a7bdcb462dbd11c94b71fae08b21d8bd460e4120ad84639653b76fa7c2",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/res/small.ico",
+      "destination": "src/res/small.ico",
+      "sha256": "ac2405a7bdcb462dbd11c94b71fae08b21d8bd460e4120ad84639653b76fa7c2",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/res/toolbar_big.bmp",
+      "destination": "src/res/toolbar_big.bmp",
+      "sha256": "a54981462303b181c713752a0ff8d08324dae7e8821911276bd7647cf09ae347",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/targetver.h",
+      "destination": "src/targetver.h",
+      "sha256": "b059253e78437c226fc3d30a68ee73742f9100cd1fe6f8bdc22d7d965ea3d2f6",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Document.h",
+      "destination": "src/Document.h",
+      "sha256": "672e16e0e9814e83ab464ab81483f8f164fb194f8ccbc41f558985b7d4c30e1a",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Document.cpp",
+      "destination": "src/Document.cpp",
+      "sha256": "bb9bc39fe3a46eb7ae74b928c08bcd2066fe194c9da8f4706652aafd9f0752f4",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/Configuration.h",
+      "destination": "src/Configuration.h",
+      "sha256": "e6116311f1183310c4313d0099910d1af9a650da9adbf423caba2d49ee2a6dff",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "Common/Common/PerfJsonl.cpp",
+      "destination": "support/PerfJsonl.cpp",
+      "sha256": "be88bcde6b53ebae90a0dbf6a56c85708380f27d75b6d648eedbd45b707490ef",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/Common/SettingsStore.cpp",
+      "destination": "support/SettingsStore.cpp",
+      "sha256": "46a63490b417fe756552538f8a462ce275d8f81704b489c9ff41fbe3e6bfab4d",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/Common/ThemeDefinitionIo.cpp",
+      "destination": "support/ThemeDefinitionIo.cpp",
+      "sha256": "39955dce49d4468c50a4b35b47bd19f5de5c03fc9b5ed201381b4db3e3dd7fd2",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/Common/ThemeExpression.cpp",
+      "destination": "support/ThemeExpression.cpp",
+      "sha256": "1a9d45b8e9dbaa26e0efb4b8e40b7d7d4e3dfd85be3a47bba43accebeb4dc23d",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/MinimumOsVersion.cpp",
+      "destination": "support/MinimumOsVersion.cpp",
+      "sha256": "6c1a1cd55a164a985f55ae7a9c0f66c610db434b61e4a3f6559151ce0dba515d",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/Version.h",
+      "destination": "support/Version.h",
+      "sha256": "07991b28a09d5d8f344056c19832cdbddd27f4679894100935889458bb3f7c07",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/RequireAddressSanitizer.h",
+      "destination": "support/RequireAddressSanitizer.h",
+      "sha256": "b055a92ca705fe3931329fbd85ea824ef6dc634921ada0277959f03dfc5f1fdb",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/LocalizationManager.h",
+      "destination": "support/LocalizationManager.h",
+      "sha256": "011d20daa723822f36d0bd7262824f922eba803499c633e6123baf630ac3c870",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/Helpers.h",
+      "destination": "support/Helpers.h",
+      "sha256": "2a496fe0203f50c02339ed9c4f7fb9724d5bcb783501aa08666f6c637bec06fb",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/Common.Tests.PerfJsonl.h",
+      "destination": "support/Common.Tests.PerfJsonl.h",
+      "sha256": "c9c6a7ed222e4a1b5a518780faddd353b195bf2e293e2839443fc6f06f8bc4bb",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/HandleIo.h",
+      "destination": "support/HandleIo.h",
+      "sha256": "95ea0608c99d515b7dc26536f0b05144967504ec280eeee10d6765b01cf2fe03",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/SettingsStore.h",
+      "destination": "support/SettingsStore.h",
+      "sha256": "2fa656751a3c886df8603788e7c7cbaa495764a519014eef9d724ae32f592ed1",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/Common.Tests.SandboxPath.h",
+      "destination": "support/Common.Tests.SandboxPath.h",
+      "sha256": "9c95ffb26169736653e42d77cc964505d1841aa9bd5de742b2bbf06482c57ef2",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/LocalFileTransaction.h",
+      "destination": "support/LocalFileTransaction.h",
+      "sha256": "2bedf5c73aeb9c474499933dbab5f3803dca9134beb21a664ea145a3162c4283",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/PathUtils.h",
+      "destination": "support/PathUtils.h",
+      "sha256": "dd6ca7efa13d4af3c4ccd4ede5d27e4ee4d17febcf32a066f111a42036115d1a",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/ThemeDefinitionIo.h",
+      "destination": "support/ThemeDefinitionIo.h",
+      "sha256": "1c5d2b02d3f39b7c448a7259f2adff14a912a22dd2ea83d1f9ff20ac36072afc",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/ThemeExpression.h",
+      "destination": "support/ThemeExpression.h",
+      "sha256": "39f81f44f295132257cbd66ee5363aa0a720f8ed9ba7da1bc53d10ce98276d20",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "RedSalamanderMonitor/Configuration.cpp",
+      "destination": "src/Configuration.cpp",
+      "sha256": "e29ebe086add17f97aad347767b6fb560eec3bdad823cbb1b39770d681abfa75",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/ColorTextView.h",
+      "destination": "src/ColorTextView.h",
+      "sha256": "b2afda6fdc2c26a24bf65783fe93f5a676470d6b37ab6d7ef5740defa8a5c490",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/ColorTextView.cpp",
+      "destination": "src/ColorTextView.cpp",
+      "sha256": "34f2da0b452e2539690cce4a1d1f01e27a06823eec7aacc01aec2c588b873ac1",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "RedSalamanderMonitor/ColorTextScrollBars.h",
+      "destination": "src/ColorTextScrollBars.h",
+      "sha256": "38d227c8b371d8767ad33ef95de4da23596f6a6b7829ef44b49337d51d4b6bea",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "Common/SettingsThumbnail.h",
+      "destination": "support/SettingsThumbnail.h",
+      "sha256": "40a397256dbbb473cd210aa23600b77b9c5155b61edac9138cb4f0b7ac642b98",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/Keyboard.h",
+      "destination": "support/Keyboard.h",
+      "sha256": "8fe1d875c303bdb53acd97200235c4dd553d3c90eb532180d6dd7bb140c7715d",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "RedSalamanderMonitor/res/Toolbar.bmp",
+      "destination": "src/res/Toolbar.bmp",
+      "sha256": "8b1196b0bee0681246b55330f6f432db811cd960fbd683b0c59eb7c866cb4eee",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    },
+    {
+      "source": "Common/Win32CallbackHelpers.h",
+      "destination": "support/Win32CallbackHelpers.h",
+      "sha256": "9de9783dad76de81c637c7c4d85687a8c89fa2902c01836a90ec12e9d6ad568c",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/WindowSizing.h",
+      "destination": "support/WindowSizing.h",
+      "sha256": "72f777af4297762116a663bc727bf91f49cb877bb0155f986f5b1d19cbb79d5b",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/WindowBackdropPolicy.h",
+      "destination": "support/WindowBackdropPolicy.h",
+      "sha256": "8be7b1335b73903788ad674212444a6784e3f3724a932b71b04919cc47124c60",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/ExceptionHelpers.h",
+      "destination": "support/ExceptionHelpers.h",
+      "sha256": "eab36bcc02fb4df29e4497aaec45d858066e077dacd4179e8ec5841f336e970f",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/WindowMessages.h",
+      "destination": "support/WindowMessages.h",
+      "sha256": "86b993d3cfa577afe41ecbbe333ef220b9b4271a5bb7d5c587fda1734690d497",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/UnicodeClipboard.h",
+      "destination": "support/UnicodeClipboard.h",
+      "sha256": "2ff4bdc0966e30fe40de84b5ed17301a3249e2ce5048c0d8a69523a996967194",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/MinimumOsVersion.h",
+      "destination": "support/MinimumOsVersion.h",
+      "sha256": "e7a51a7859355837dcb29d41508f79993ec3eb7315330010f60c19524adf0e0b",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "Common/StringConversion.h",
+      "destination": "support/StringConversion.h",
+      "sha256": "f43aa9c452055ca6fcbddf009ecd9247de85ee926980c3bf3a3fe87f1a3c23f0",
+      "disposition": "support snapshot; private to RedMonitor"
+    },
+    {
+      "source": "RedSalamanderMonitor/res/toolbar.png",
+      "destination": "src/res/toolbar.png",
+      "sha256": "8df42317da57b86bd47c17708cee53e6af1d0512231016d03c1996d2cc9a3663",
+      "disposition": "canonical source moved to RedMonitor; upstream deleted after integration"
+    }
+  ]
+}

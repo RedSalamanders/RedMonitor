@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "apiRevision": 1,
+  "product": "RedMonitor",
+  "status": "extraction-in-progress",
+  "implemented": ["imported bounded log model", "DirectX viewer", "legacy ETW schema", "Unicode file import/export", "legacy settings compatibility"],
+  "pending": ["producer client qualification", "RedSalamander cutover qualification", "independent settings", "RedPrism adapter", "RedXe adapter", "RedTilde adapter", "native ARM64 runtime", "performance and release qualification"]
+}
