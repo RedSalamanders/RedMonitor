@@ -40,3 +40,9 @@ DxUi baseline checkout. The complete log remains in RedSalamander `.build/logs/r
 The canonical restore now uses a 16-character output directory key, retains the full fingerprint in the
 identity JSON, and rejects a mismatched existing directory stamp. A fresh exact-pin nested restore is the
 acceptance witness; developer-root success alone did not establish consumer relocatability.
+
+The complete nested consumer fix also shortened RedSalamander's managed RedMonitor source name, retaining the
+full commit check before reuse. Pin f48fd05 then restored from GitHub, built and staged successfully in Debug.
+Direct legacy monitor/test project builds and the normal RedSalamander build entrypoint passed. Its targeted
+artifact receipt was `8adad172115919da1823ff56081c10197d48a025c490419af8be082d0a1c38d8`; staged model/file/lifetime
+flags passed in its marked sandbox. This does not promote the checkpoint to integrated Full or release acceptance.

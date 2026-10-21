@@ -17,7 +17,7 @@ delivery item does not close the independent runtime, platform, performance or r
 - [x] S2: add the minimal public client and prove its wire compatibility.
 - [x] S2: run standalone behavioral tests and all six build configurations.
 - [x] S3: create `RedSalamanders/RedMonitor` on GitHub with initial source and CI.
-- [ ] S3: remove the owned monitor source from RedSalamander and consume an exact RedMonitor pin.
+- [x] S3: remove the owned monitor source from RedSalamander and consume an exact RedMonitor pin.
 - [ ] S3: preserve legacy executable, satellites, schema, themes and installer behavior.
 - [ ] S3: qualify the RedSalamander launch, preferences, selftests and clean package extraction.
 - [ ] S4: migrate independent RedMonitor settings and remove the broad legacy support snapshot.
@@ -290,3 +290,14 @@ The other applications' unrelated dirty work was not edited. Consumer cutover, n
 UI/focus/IME/AT, controlled performance and release gates remain open. Hosted CI is currently account-blocked before any steps; its initial run is failed, not passed. Qualification remains pending until an actual
 successful run exists. See `Measurements/Extraction_2026-10-21/README.md` for scope and receipts.
 Nested consumer restore exposed a long vcpkg baseline path at the first published pin. Source restore now keeps a short output key with the full fingerprint retained and collision-checked. Fresh nested consumption remains a required witness.
+
+### RedSalamander boundary checkpoint
+
+The consumer now pins implementation commit `f48fd0543d768cffee91e9bed1d561dc2f48c8d0`. Its fresh GitHub clone,
+Debug build and staging passed after moving its managed source to a compact, full-HEAD-verified directory
+beneath `.build/rm`. Both legacy project entrypoints and the normal product build wrapper passed. The normal
+wrapper issued a source-bound targeted artifact receipt with zero warnings/errors. Staged diagnostics,
+scrollbar and document/file/lifetime tests passed in the consumer's marked sandbox. The consumer migration
+remains unmerged on `ej/extract-redmonitor-20261021`; launch/preferences, integrated Full/Release/packages,
+focus/IME/AT, native ARM64 runtime and controlled performance remain open. The implementation pin is distinct
+from later documentation-only checkpoint commits; adoption never floats with main.
