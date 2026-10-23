@@ -1,8 +1,10 @@
 # Architecture and compatibility
 
 RedMonitor owns its executable, DirectX view, log model, ETW listener, worker-based file I/O,
-resources, localization and test harness. Applications use a small producer header and optionally
-stage/launch a pinned viewer. Neither clients nor plugins include private viewer/support headers.
+resources, localization and test harness. Applications vendor only the pinned producer Client.h and
+MIT notice, with an immutable commit/API/hash lock. Ordinary builds verify those local bytes. The
+optional production Release viewer is installed separately in a standard application folder; consumers
+never clone, build, stage or package it. Neither clients nor plugins include private viewer/support headers.
 
 The first extraction statically links a private transitive support snapshot from the MIT-licensed
 RedSalamander commit in SourceImport. Its broad settings/theme types are S4 migration debt, not a
@@ -11,9 +13,11 @@ DxUi is an independent exact pinned archive. Shared theme extraction remains a s
 
 Product output is RedMonitor.exe. The initial compatibility contract retains settings app ID
 `RedSalamanderMonitor`, window ID `MonitorWindow`, legacy registry fallback and single-instance mutex
-`Local\RedSalamanderMonitor_Instance`. Satellite owner names remain RedSalamanderMonitor. A consuming
-RedSalamander may stage the same executable as RedSalamanderMonitor.exe. No second live implementation
-is retained there. The later independent-settings migration must preserve old files and rollback.
+`Local\RedSalamanderMonitor_Instance`. Satellite owner names remain RedSalamanderMonitor inside the
+standalone package. Consumer packages contain the client license, with no viewer executable or satellites.
+The shared client discovers only installed production RedMonitor.exe images; explicit launch and optional
+bare Debug asynchronous startup follow the consumption contract. No second live implementation is retained
+in RedSalamander. The later independent-settings migration must preserve old files and rollback.
 
 The document owns bounded immutable text blocks, copies metadata under lock, and shifts/clamps all
 selection/search/scroll mappings together on oldest-first eviction. Save captures shared block ownership;

@@ -9,6 +9,19 @@ retention, immutable snapshots, strict/bounded file read, atomic export/fault/ca
 without opening the clipboard, and bounded ETW consumer lifetime. test.ps1 supplies a unique repository-local
 test root and never cleans existing data. A failed native process must produce a failed receipt.
 
+The standalone project owns the former consumer's viewer coverage obligations: ETW provider
+compatibility, self-originated event suppression, runtime diagnostic gating, bounded ingestion/display
+and stable ColorTextView interaction. Preserve decoded expansion limits, split UTF-8/UTF-16 boundaries,
+malformed/truncated input, mid-decode cancellation, move-publication without UI reparsing, repeated
+search-cap eviction/refill and F3 order, Show IDs coordinate reset/rebuild, and exact canonical
+read/export/read records including empty, terminal, blank, Unicode and line-budget boundaries.
+Cover start-snapshot asynchronous export across later append/retention/clear/replacement,
+zero-text-copy immutable capture, open/save thread-admission rollback and retry, cancellation/fault
+target preservation, bounded worker close, registered payload drain, three-size/five-repeat Release
+scaling and selftest fixture cleanup. Richer clipboard formats and additional filter semantics require
+an explicit RedMonitor decision. These obligations are distinct from the implemented console subset
+and the still-open viewer qualification gates.
+
 Headless console cases do not take desktop focus. UI keyboard/clipboard/IME/AT fixtures require agreement
 to the time and a desktop lease with verified restoration. Screenshots are deterministic application
 harness captures with invented data and source/build/scenario provenance; never desktop screenshots.

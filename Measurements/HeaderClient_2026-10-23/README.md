@@ -36,3 +36,16 @@ The public Client.h/license bytes remain unchanged at the consumers' 9ebea65 pin
 The latest title commit's [hosted run 39969580627](https://github.com/RedSalamanders/RedMonitor/actions/runs/39969580627)
 also failed before any steps with the same verified account-billing rejection. Its exact head and
 annotation are retained in [french-title-hosted-validation.json](french-title-hosted-validation.json).
+
+## Final independent-helper contract reconciliation
+
+The latest local record is [closeout-validation.json](closeout-validation.json), source identity
+`d97c8b11c48d76a0fa9f1a93fd3c9362963dbf0a42cb6cd9adaea5748d051716`. It re-attests all six builds,
+three x64 runtime profiles with real ETW and actual ASan detection, all 14 installation controls and
+all five compiled packaged title resources after reconciling the architecture and transferred viewer
+validation contracts. Every declared native/package artifact hash was independently checked. Earlier
+sections and title receipts remain their own historical checkpoints, with no cross-source promotion.
+
+Consumer header/license bytes remain pinned at 9ebea6577fe9a5ced7647283c918f51f67d666fd. SDK native
+success does not close the failed RedSalamander Full attempts, its owner-deferred x64 Release/packages,
+S4 settings/support narrowing, viewer UI/resource/native ARM64/physical/performance or release gates.

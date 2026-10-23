@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Transfer the former consumer's detailed viewer validation obligations into the standalone contract, retaining Unicode, bounded decoding, snapshots, export/cancellation, lifetime, interaction and Release scaling requirements separately from the console subset already qualified.
+- Reconcile the architecture contract with the implemented minimal client boundary: consumers vendor the pinned header and MIT notice, verify locally, and use the separately installed production Release helper without staging its executable or satellites.
 - Use the independent RedMonitor product name in the French viewer title, matching the embedded and other localized titles; retain legacy resource-owner filenames for compatibility.
 - Record the completed single-header integrations in RedSalamander, RedPrism, RedXe and RedTilde, with independent helper installation and explicit source-bound qualification gates; retain RedSalamander Release deferral, broader failed suites, native/platform, settings and performance work as unfinished.
 - Mark the retained >2 GiB file boundary fixture as sparse before extension, and report the failing document-model subscenario; preserve its exact large-file rejection assertions without allocating 2 GiB per run.
