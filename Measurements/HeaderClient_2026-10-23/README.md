@@ -19,3 +19,9 @@ This is console/component and contained installer qualification. Native ARM64 st
 viewer UI/WARP/device-loss/resources, physical IME/AT, paired performance, independent settings/support
 narrowing and release handoff remain open in the canonical WIP. Failed and superseded receipts are
 retained. No helper was installed into a real standard folder by these controls.
+
+Hosted [run 39960920476](https://github.com/RedSalamanders/RedMonitor/actions/runs/39960920476)
+at fd9adf929bdfd5e0d6e1c313b8fac472c31c5f4f failed before any job steps. Its check annotation confirms
+account payment/spending-limit rejection, retained in [hosted-validation.json](hosted-validation.json).
+This is a failed, account-blocked hosted gate; it supplies no runtime qualification. Repository visibility
+and account settings were unchanged. Local native results above remain separately recorded.
