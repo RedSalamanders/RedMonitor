@@ -32,3 +32,7 @@ production packaging and 14 contained installer controls again. Resource-only ma
 packaged EXE and four satellites returned RedMonitor for all five title strings, including French;
 no viewer window was created. This is a resource/package check, not viewer UI qualification.
 The public Client.h/license bytes remain unchanged at the consumers' 9ebea65 pin.
+
+The latest title commit's [hosted run 39969580627](https://github.com/RedSalamanders/RedMonitor/actions/runs/39969580627)
+also failed before any steps with the same verified account-billing rejection. Its exact head and
+annotation are retained in [french-title-hosted-validation.json](french-title-hosted-validation.json).

@@ -1,0 +1,59 @@
+{
+  "reviewedUtc": "2026-10-23T14:29:59.3575496Z",
+  "runUrl": "https://github.com/RedSalamanders/RedMonitor/actions/runs/39969580627",
+  "headSha": "5b7fb52e6c548909d62d940fc59a17bec9a30fa0",
+  "conclusion": "failure",
+  "stepsExecuted": 0,
+  "reason": "Account billing prevented job start",
+  "annotations": [
+    {
+      "path": ".github",
+      "blob_href": "https://github.com/RedSalamanders/RedMonitor/blob/5b7fb52e6c548909d62d940fc59a17bec9a30fa0/.github",
+      "start_line": 1,
+      "start_column": null,
+      "end_line": 1,
+      "end_column": null,
+      "annotation_level": "failure",
+      "title": "",
+      "message": "The job was not started because recent account payments have failed or your spending limit needs to be increased. Please check the 'Billing & plans' section in your settings",
+      "raw_details": ""
+    }
+  ],
+  "jobs": [
+    {
+      "name": "tooling",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "native (x64, Debug)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "native (ARM64, ASan Debug)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "native (ARM64, Release)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "native (ARM64, Debug)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "native (x64, Release)",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "name": "native (x64, ASan Debug)",
+      "status": "completed",
+      "conclusion": "failure"
+    }
+  ]
+}
