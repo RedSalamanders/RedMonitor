@@ -5,6 +5,8 @@ Packages a successful exact-source viewer build and its full runtime/data closur
 x64 or ARM64 target.
 .PARAMETER Configuration
 Release by default; Debug and ASan Debug are diagnostic packages.
+.PARAMETER PassThru
+Return the generated ZIP, staging and extraction paths for a verified consumer staging operation.
 #>
 [CmdletBinding()]
 param([ValidateSet('x64','ARM64')][string]$Platform='x64',
@@ -17,6 +19,7 @@ try {
 $output=Join-Path $PSScriptRoot ".build/$Platform/$Configuration"
 $receipt=Get-Content -LiteralPath (Join-Path $output 'build-receipt.json') -Raw|ConvertFrom-Json
 if(-not $receipt.passed -or $receipt.sourceIdentity -cne (Get-RedMonitorSourceIdentity)){throw 'Build exact current source before packaging.'}
+if($Configuration -eq 'Release' -and $receipt.viewerTestsEnabled){throw 'A distributable Release viewer must be built with ViewerTests false.'}
 foreach($artifact in $receipt.artifacts){
     if((Get-FileHash -LiteralPath (Assert-RedMonitorOutputPath (Join-Path $output $artifact.path))).Hash -cne $artifact.sha256){throw "Changed artifact: $($artifact.path)"}
 }

@@ -13,6 +13,8 @@
     <RedMonitorTriplet Condition="'$(Platform)'=='ARM64'">arm64-windows-static-md</RedMonitorTriplet>
     <RedMonitorPackages>$(RedMonitorRoot).build\vcpkg_installed\$(Platform)\$(RedMonitorTriplet)\</RedMonitorPackages>
     <LinkIncremental>false</LinkIncremental>
+    <RedMonitorViewerTestsEnabled Condition="'$(RedMonitorViewerTestsEnabled)'=='' and '$(Configuration)'!='Release'">true</RedMonitorViewerTestsEnabled>
+    <RedMonitorViewerTestsEnabled Condition="'$(RedMonitorViewerTestsEnabled)'==''">false</RedMonitorViewerTestsEnabled>
     <CopyAsanBinariesToOutDir Condition="'$(Configuration)'=='ASan Debug'">true</CopyAsanBinariesToOutDir>
     <EnableASAN Condition="'$(Configuration)'=='ASan Debug'">true</EnableASAN>
   </PropertyGroup>

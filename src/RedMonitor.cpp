@@ -4043,6 +4043,10 @@ Localization::LanguagePreference GetLanguagePreferenceFromSettings(const Common:
 // Separate function with C++ objects (cannot use __try/__except)
 static int RunApplication(HINSTANCE hInstance, int nCmdShow)
 {
+#if ! defined(ENABLE_TESTS)
+    if (HasCommandLineArg(kMonitorChromeSelfTestArg) || HasCommandLineArg(kMonitorScrollbackSelfTestArg))
+        return ERROR_NOT_SUPPORTED;
+#endif
     // Distribution contract only: runs before settings, registry, mutex, ETW or HWND creation.
     // The consumer/package harness can verify the real executable without touching user state.
     if (HasCommandLineArg(L"--runtime-contract"))

@@ -10,10 +10,13 @@ x64 or ARM64 target architecture.
 Debug, Release or ASan Debug.
 .PARAMETER SkipRestore
 Use already restored exact dependencies.
+.PARAMETER ViewerTests
+Auto enables viewer test hooks in Debug/ASan and disables them in Release. Explicit true/false is receipt-bound.
 #>
 [CmdletBinding()]
 param([ValidateSet('x64','ARM64')][string] $Platform='x64',
-      [ValidateSet('Debug','Release','ASan Debug')][string] $Configuration='Debug', [switch] $SkipRestore)
+      [ValidateSet('Debug','Release','ASan Debug')][string] $Configuration='Debug', [switch] $SkipRestore,
+      [ValidateSet('Auto','true','false')][string]$ViewerTests='Auto')
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
@@ -28,8 +31,14 @@ if(Test-Path -LiteralPath $receipt){Remove-Item -LiteralPath $receipt}
 $identity=Get-RedMonitorSourceIdentity
 $msbuild=Get-RedMonitorMSBuild
 $started=[DateTime]::UtcNow
-& $msbuild (Join-Path $PSScriptRoot 'RedMonitor.proj') /nologo /m:4 /v:minimal "/p:Platform=$Platform" "/p:Configuration=$Configuration" "/flp:LogFile=$output/build.log;Verbosity=normal"
+$viewerTestsEnabled=if($ViewerTests -eq 'Auto'){$Configuration -ne 'Release'}else{$ViewerTests -eq 'true'}
+& $msbuild (Join-Path $PSScriptRoot 'RedMonitor.proj') /nologo /m:4 /v:minimal "/p:Platform=$Platform" "/p:Configuration=$Configuration" "/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())" "/flp:LogFile=$output/build.log;Verbosity=normal"
 if($LASTEXITCODE -ne 0){throw "RedMonitor build failed: $output/build.log"}
+$version=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $output 'RedMonitor.exe'))
+if($version.ProductName -cne 'RedMonitor' -or
+   (($version.SpecialBuild -ceq 'RedSalamander.TestSurface=ENABLE_TESTS') -ne $viewerTestsEnabled)){
+    throw 'Viewer version/test-surface metadata does not match the requested build mode.'
+}
 if($identity -cne (Get-RedMonitorSourceIdentity)){throw 'Source changed during build; no receipt published.'}
 $artifacts=@(Get-ChildItem -LiteralPath $output -Recurse -File | Where-Object {
     ($_.DirectoryName -ieq $output -and $_.Extension -in '.exe','.dll','.pdb' -and $_.Name -ne 'yyjson.dll') -or
@@ -37,7 +46,7 @@ $artifacts=@(Get-ChildItem -LiteralPath $output -Recurse -File | Where-Object {
 } | ForEach-Object {
     [ordered]@{path=[IO.Path]::GetRelativePath($output,$_.FullName);sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}
 })
-[ordered]@{schemaVersion=1;passed=$true;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;
+[ordered]@{schemaVersion=1;passed=$true;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;viewerTestsEnabled=$viewerTestsEnabled;
   dxui=Get-Content (Join-Path $PSScriptRoot 'Dependencies/DxUi.lock.json') -Raw|ConvertFrom-Json;
   toolchainSha256=(Get-FileHash -LiteralPath $msbuild).Hash;artifacts=$artifacts;
   startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');runtimeExecuted=$false}|

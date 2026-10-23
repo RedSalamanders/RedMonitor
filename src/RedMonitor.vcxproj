@@ -11,9 +11,10 @@
  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
  <PropertyGroup><GenerateManifest>false</GenerateManifest></PropertyGroup>
  <Import Project="..\Build\RedMonitor.DxUi.props" />
- <ItemDefinitionGroup><ClCompile><PreprocessorDefinitions>ENABLE_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile><Link><SubSystem>Windows</SubSystem><AdditionalDependencies>yyjson.lib;shcore.lib;comdlg32.lib;windowscodecs.lib;%(AdditionalDependencies)</AdditionalDependencies></Link></ItemDefinitionGroup>
+ <ItemDefinitionGroup><ClCompile><PreprocessorDefinitions Condition="'$(RedMonitorViewerTestsEnabled)'=='true'">ENABLE_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile><ResourceCompile><PreprocessorDefinitions Condition="'$(RedMonitorViewerTestsEnabled)'=='true'">ENABLE_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)'!='Release'">_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions></ResourceCompile><Link><SubSystem>Windows</SubSystem><AdditionalDependencies>yyjson.lib;shcore.lib;comdlg32.lib;windowscodecs.lib;%(AdditionalDependencies)</AdditionalDependencies></Link></ItemDefinitionGroup>
  <ItemGroup><ClCompile Include="ColorTextView.cpp" /><ClCompile Include="Configuration.cpp" /><ClCompile Include="Document.cpp" /><ClCompile Include="EtwListener.cpp" /><ClCompile Include="MonitorFileExporter.cpp" /><ClCompile Include="MonitorFileReader.cpp" /><ClCompile Include="RedMonitor.cpp" /><ResourceCompile Include="RedMonitor.rc"/><Manifest Include="res\exe.manifest"/></ItemGroup>
  <ItemGroup><ProjectReference Include="..\support\RedMonitorSupport.vcxproj"/></ItemGroup>
+ <ItemGroup><ResourceCompile Include="RedMonitor.Version.rc" /></ItemGroup>
  <Target Name="StageMonitorData" AfterTargets="Build">
   <ItemGroup><MonitorThemes Include="$(RedMonitorRoot)Specs\Themes\**\*"/></ItemGroup>
   <Copy SourceFiles="@(MonitorThemes)" DestinationFiles="@(MonitorThemes->'$(OutDir)Themes\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true"/>

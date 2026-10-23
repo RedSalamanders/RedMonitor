@@ -23,3 +23,5 @@ under its historical name and preserves installer IDs. Source ownership stays in
 Independent app adapters and application qualification belong to their respective repositories.
 
 Consumer SDK resolution and optional viewer staging are owned by Tools/Restore-Consumer.ps1, invoked from an exact clean managed checkout. Producer convenience headers and cross-process/runtime probes are described in [application adoption](../../docs/Consumers.md). Release packages include the architecture-matched app-local VC CRT, WIL/yyjson/DxUi notices and the existing resource/data closure.
+
+Viewer test hooks default on in Debug/ASan Debug and off in Release. build.ps1 -ViewerTests true|false explicitly selects the mode and records it as viewerTestsEnabled. Release packaging refuses test-enabled receipts. The viewer has independent RedMonitor version resources; test-enabled images carry the RedSalamander.TestSurface=ENABLE_TESTS marker for compatible consumer package checks. Native test executables retain their independent test definitions.
