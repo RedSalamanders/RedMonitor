@@ -333,5 +333,6 @@
     "viewer UI/WARP/device-loss/resources",
     "native ARM64 runtime for SDK/RedPrism/RedTilde",
     "physical IME/AT, paired performance and release publication"
-  ]
+  ],
+  "deliveryRecord": "five-repository-delivery.json"
 }

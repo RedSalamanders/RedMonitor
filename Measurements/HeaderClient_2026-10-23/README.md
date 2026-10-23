@@ -49,3 +49,11 @@ sections and title receipts remain their own historical checkpoints, with no cro
 Consumer header/license bytes remain pinned at 9ebea6577fe9a5ced7647283c918f51f67d666fd. SDK native
 success does not close the failed RedSalamander Full attempts, its owner-deferred x64 Release/packages,
 S4 settings/support narrowing, viewer UI/resource/native ARM64/physical/performance or release gates.
+
+[Five-repository delivery](five-repository-delivery.json) records the verified pushed consumer heads,
+including RedSalamander e06ea0b40ef71a9a3f37217b1a18a878844bdb3a. Its final clean ASan rebuild and
+actual compiler commands prove /Z7 and ASan instrumentation after the effective-metadata repair.
+All 12 real metadata controls, 143 affected tooling controls, both final monitor Preferences cases,
+fresh producer ETW/absence controls and the actual ASan detector passed. The original broad Full
+attempts remain failed. The owner-deferred x64 Release/packages and other WIP gates remain open.
+This follow-up changes only Measurements; the SDK's qualified source identity is unchanged.
