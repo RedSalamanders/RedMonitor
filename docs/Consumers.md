@@ -23,3 +23,8 @@ running target viewers, and retains the previous version. It does not install a 
 The app remains usable with no helper or ETW privileges. --redmonitor explicitly opens an installed
 production viewer. Debug bare startup may queue that launch automatically. Tests/help/probes and Release
 startup do not auto-launch it. No application package contains the viewer; no application kills it on exit.
+
+The four integrations currently share the public bytes at SDK commit
+9ebea6577fe9a5ced7647283c918f51f67d666fd. Each consumer owns its adapter, tests and evidence independently;
+updating this repository does not change a consumer pin. See the [delivery checkpoint](../Specs/Plans/WIP/RedMonitorExtraction_2026-10-21.md)
+for implemented scope and remaining qualification, including the owner's deferred RedSalamander Release gates.

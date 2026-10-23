@@ -12,17 +12,18 @@
     "header-only producer client API 1",
     "static independent support and yyjson",
     "source-bound noninteractive tests",
-    "four localization satellites"
+    "four localization satellites",
+    "single-header offline-verified integration in all four Red applications",
+    "normalized application-labelled diagnostics with compatible ETW fields",
+    "separate production Release package and transactional installation",
+    "fixed-location installed production helper discovery"
   ],
   "pending": [
     "RedSalamander cutover qualification",
     "independent settings",
-    "RedPrism adapter",
-    "RedXe adapter",
-    "RedTilde adapter",
     "native ARM64 runtime",
     "performance and release qualification",
-    "cross-process and per-module producer qualification",
+    "remaining platform and plugin-lifecycle qualification",
     "deterministic viewer UI and resource qualification"
   ]
 }

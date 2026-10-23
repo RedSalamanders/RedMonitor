@@ -39,12 +39,12 @@ This decision supersedes earlier compatibility-staging and optional bundled-view
 - [x] S2: run standalone behavioral tests and all six build configurations.
 - [x] S3: create `RedSalamanders/RedMonitor` on GitHub with initial source and CI.
 - [x] S3: remove the owned monitor source from RedSalamander and consume an exact RedMonitor pin.
-- [ ] S3: remove consumer viewer projects, legacy EXE aliases and installer entries; preserve settings compatibility.
+- [x] S3: remove consumer viewer projects, legacy EXE aliases and installer entries; preserve settings compatibility.
 - [ ] S3: qualify the RedSalamander launch, preferences, selftests and clean package extraction.
 - [ ] S4: migrate independent RedMonitor settings and remove the broad legacy support snapshot.
-- [ ] S5: adopt the client and optional launch integration in RedPrism.
-- [ ] S6: adopt the client and optional launch integration in RedXe, including plugin boundaries.
-- [ ] S7: adopt the client and optional launch integration in RedTilde.
+- [x] S5: adopt the client and optional launch integration in RedPrism.
+- [x] S6: adopt the client and optional launch integration in RedXe, including plugin boundaries.
+- [x] S7: adopt the client and optional launch integration in RedTilde.
 - [ ] S8: complete native/platform, performance, accessibility and release qualification.
 - [ ] S8: reconcile contracts/docs/capabilities, move this plan to Done and update indexes.
 
@@ -338,3 +338,29 @@ consumer probes remain required. A Release document-model failure exposed a test
 2 GiB without FSCTL_SET_SPARSE; the corrected fixture retains its >2 GiB metadata/budget assertion.
 Failed receipts remain retained. Cache cleanup is owner-authorized but automatic approval review still
 rejected deletion; preserved binary/symbol/evidence hashes are under .build/cache-preservation.
+
+### Four-consumer delivery checkpoint — 2026-10-23
+
+All four applications vendor Client.h and the MIT license from immutable SDK commit
+`9ebea6577fe9a5ced7647283c918f51f67d666fd`. Their local verifiers check exact bytes and API revision;
+their explicit updater is the only network operation. No normal build restores viewer sources,
+builds/stages the helper, or includes it in consumer packages. Subsequent SDK documentation and
+qualification commits do not require repinning those unchanged public bytes.
+
+| Consumer | Implemented delivery and observed qualification | Gates still open |
+| --- | --- | --- |
+| RedPrism | `ej/redmonitor-adoption-20261023`, commit `b81a2593ce3f4e3fef76eb9a5893af28b7424edf`; six builds, all three x64 Full profiles, actual-app ETW, absent-helper controls and clean app-only portable package passed. Reviewed receipts in its Measurements/RedMonitor_Adoption_2026-10-23. | Hosted run 39953778929 failed before steps because account billing prevented jobs from starting; native ARM64 execution, physical/manual and paired performance acceptance remain separate. |
+| RedXe | Same adoption branch; native-OS compiler-host selection fixes the ARM64 library/consumer mismatch. Explicit overrides remain supported. All six local builds and three x64 Full profiles passed the host-selection checkpoint. Commit `a55901c1fad009dab2fbd068002846a33ead2160` additionally tests a delayed completion notification before measuring the original idle CPU budget. Hosted run 39954330299 passed tooling and all six native Full jobs, including ARM64 Debug/Release/ASan; all recorded runtime payload hashes were independently verified. Evidence follow-up `7b86e1c` is pushed. | Native ARM64 runtime is qualified for the recorded commit. Physical IME/AT, paired performance and release publication remain open. Earlier run 39947763357 compiled all ARM64 profiles, passed Debug/ASan, and failed an ARM64 Release idle predicate; its cause remains unproven. The repair changes test quiescence, preserves the 250 ms / 1 ms budget and adds a deterministic witness; production queue code is unchanged. |
+| RedTilde | Same adoption branch, commit `93133008b5eaca416a5fc570ab6cc3e7b996d554`; six builds, three x64 Full profiles with captures, actual ASan detection, actual-app ETW, absent-helper controls and clean app-only portable package passed. | Hosted run 39943731886 was prevented from starting by account billing; native ARM64, physical/manual and paired performance acceptance remain separate. |
+| RedSalamander | `ej/extract-redmonitor-20261021`; six legacy viewer/test/satellite projects removed, providers reuse the client without changing plugin ABI/lifetimes, Preferences keeps the shared Release 7.0 settings path. Three ARM64 cross-builds passed. Broad Debug passed both monitor Preferences cases, 17 build-toolchain and 1001 ordinary tooling controls, standalone noninteractive entries and Compare. | The owner explicitly keeps the independently launched x64 Release instance open: defer x64 Release qualification and ZIP/MSI/MSIX execution. Broad Debug recorded five Commands and two FileOps failures and stopped a native viewer at the exact desktop-restoration guard. Preserve failures; Debug fixture repair and ASan qualification continue. Its consumer WIP owns exact run identities. |
+
+Current qualification reports are source/profile/scenario-bound. Existing broad RedSalamander failures
+are routed to its repository qualification investigation; overlap with historical failures does not
+establish baseline equivalence. Fixtures may retire only their own absolute junctions after assertions
+to allow portable evidence; security, desktop ownership and archive guards remain fail-closed.
+
+S4 is an explicit later compatibility migration: independent settings and narrowing private legacy
+support remain unfinished. S8 also retains viewer UI/WARP/device-loss/resources, physical IME/AT,
+native platform gaps, paired Release performance, independent installation handoff and release gates.
+This plan stays in WIP until those obligations are resolved. Code adoption and pushed branches do not
+mean complete product qualification.
