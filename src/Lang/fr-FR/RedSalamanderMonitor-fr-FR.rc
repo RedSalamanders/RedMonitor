@@ -99,7 +99,7 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_APP_TITLE           "Moniteur RedSalamander"
+    IDS_APP_TITLE           "RedMonitor"
     IDS_NOT_RUNNING         "RedSalamander Bug Reporter (RedSalamanderMonitor.exe) n’est pas en cours d’exécution. RedSalamander ne pourra pas gérer les crashs éventuels. Veuillez redémarrer RedSalamander."
     IDS_CAPTION_ERROR "Erreur"
     IDS_CAPTION_OPEN "Ouvrir"

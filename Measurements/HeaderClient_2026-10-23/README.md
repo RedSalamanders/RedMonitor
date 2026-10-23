@@ -1,6 +1,6 @@
 # Single-header delivery qualification — 2026-10-23
 
-The reviewed [validation receipt](validation.json) records the final PrePush source identity,
+The reviewed [header-boundary receipt](validation.json) records that checkpoint's PrePush source identity,
 all six successful build receipts and rechecked viewer/artifact hashes, three x64 native runtime
 receipts with real ETW, actual ASan detection, the production Release ZIP and 14 contained installer
 controls. Native model/file/settings/client/metadata tests passed in each applicable profile.
@@ -25,3 +25,10 @@ at fd9adf929bdfd5e0d6e1c313b8fac472c31c5f4f failed before any job steps. Its che
 account payment/spending-limit rejection, retained in [hosted-validation.json](hosted-validation.json).
 This is a failed, account-blocked hosted gate; it supplies no runtime qualification. Repository visibility
 and account settings were unchanged. Local native results above remain separately recorded.
+
+The later French title correction is qualified by [french-title-validation.json](french-title-validation.json).
+Its new exact source identity passed all six builds, three x64 runtime profiles with live ETW/ASan,
+production packaging and 14 contained installer controls again. Resource-only mapping of the actual
+packaged EXE and four satellites returned RedMonitor for all five title strings, including French;
+no viewer window was created. This is a resource/package check, not viewer UI qualification.
+The public Client.h/license bytes remain unchanged at the consumers' 9ebea65 pin.
