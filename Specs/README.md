@@ -8,7 +8,7 @@ Tests provide evidence, not permission to ignore contracts. WIP plans sequence u
 | --- | --- |
 | [Architecture](Core/Core_Architecture.md) | Source boundaries, compatibility and settings |
 | [Transport](Core/Core_Transport.md) | ETW schema, client and session lifetime |
-| [Consumption](Build/Build_Consumption.md) | Build, exact pins and consumer staging |
+| [Consumption](Build/Build_Consumption.md) | Build, exact client pins and standalone installation |
 | [Validation](Testing/Testing_Validation.md) | Native, tooling, performance and evidence |
 
 See the [active plan index](Plans/WIP/README.md), [Done index](Plans/Done/README.md),

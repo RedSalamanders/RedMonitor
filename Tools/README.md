@@ -14,3 +14,5 @@ Generated outputs remain below `.build`; independently launched applications are
 
 Tests/Tooling.Tests.ps1 exercises output boundaries and shared changelog behavior. Source/dependency
 locks, script syntax, documentation links and native project boundaries are checked by validate.ps1.
+
+ClientSdk/Update-RedMonitorClient.ps1 explicitly fetches only the pinned public header and MIT notice. ClientSdk/Verify-RedMonitorClient.ps1 checks consumer-local bytes without network or a helper build. Install-RedMonitor.ps1 installs a validated production package separately into a standard folder; its harness override is confined to source .build. Tests/Tooling.Tests.Installation.ps1 covers installation/replacement, retained backups, hashes, missing closure, foreign profiles and path/reparse failures without touching a real installation.

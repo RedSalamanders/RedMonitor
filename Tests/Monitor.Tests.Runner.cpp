@@ -16,11 +16,13 @@
 #include <random>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <winioctl.h>
 
 #include "InvalidRectVisualization.h"
 #include "LocalFileTransaction.h"
@@ -443,8 +445,10 @@ namespace
     const std::filesystem::path hugePath = root / L"sparse-over-2gib.txt";
     wil::unique_hfile hugeFile(CreateFileW(hugePath.c_str(), GENERIC_WRITE, 0u, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr));
     LARGE_INTEGER hugeSize{};
-    hugeSize.QuadPart = (2ll * 1024ll * 1024ll * 1024ll) + 1ll;
-    if (! hugeFile || SetFilePointerEx(hugeFile.get(), hugeSize, nullptr, FILE_BEGIN) == FALSE || SetEndOfFile(hugeFile.get()) == FALSE)
+    hugeSize.QuadPart         = (2ll * 1024ll * 1024ll * 1024ll) + 1ll;
+    DWORD sparseBytesReturned = 0;
+    if (! hugeFile || DeviceIoControl(hugeFile.get(), FSCTL_SET_SPARSE, nullptr, 0u, nullptr, 0u, &sparseBytesReturned, nullptr) == FALSE ||
+        SetFilePointerEx(hugeFile.get(), hugeSize, nullptr, FILE_BEGIN) == FALSE || SetEndOfFile(hugeFile.get()) == FALSE)
     {
         return false;
     }
@@ -1195,11 +1199,24 @@ int main(int argc, char** argv)
     }
     if (argc > 1 && argv[1] != nullptr && lstrcmpA(argv[1], "--document-model-selftest") == 0)
     {
-        return RunMonitorDocumentBatchFilterSelfTest() && RunMonitorDocumentRetentionSelfTest() && RunMonitorFileReaderSelfTest() &&
-                       RunMonitorDocumentAtomicSaveSelfTest() && RunLocalFileTransactionFaultSelfTest() && RunUnicodeClipboardContractSelfTest() &&
-                       RunEtwConsumerShutdownSelfTest()
-                   ? 0
-                   : 2;
+        const std::pair<const char*, bool (*)()> scenarios[]{
+            {"batch/filter", RunMonitorDocumentBatchFilterSelfTest},
+            {"retention", RunMonitorDocumentRetentionSelfTest},
+            {"file reader", RunMonitorFileReaderSelfTest},
+            {"atomic save", RunMonitorDocumentAtomicSaveSelfTest},
+            {"transaction faults", RunLocalFileTransactionFaultSelfTest},
+            {"clipboard storage", RunUnicodeClipboardContractSelfTest},
+            {"ETW shutdown", RunEtwConsumerShutdownSelfTest},
+        };
+        for (const auto& [name, run] : scenarios)
+        {
+            if (! run())
+            {
+                std::cerr << "FAIL document model: " << name << '\n';
+                return 2;
+            }
+        }
+        return 0;
     }
 
     // Use SEH to catch all exceptions (no C++ objects in this scope)

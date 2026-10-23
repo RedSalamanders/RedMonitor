@@ -1,6 +1,7 @@
 #pragma once
 
 // Optional launch convenience; the producer-only Client/Application headers need no WIL.
+#include "Client.h"
 #include <string>
 #include <string_view>
 #include <wil/resource.h>
@@ -8,15 +9,6 @@
 
 namespace RedMonitor
 {
-[[nodiscard]] constexpr bool IsViewerCommand(std::wstring_view command) noexcept
-{
-    const auto first = command.find_first_not_of(L" \t\r\n");
-    if (first == std::wstring_view::npos)
-        return false;
-    const auto last = command.find_last_not_of(L" \t\r\n");
-    return command.substr(first, last - first + 1) == L"--redmonitor";
-}
-
 [[nodiscard]] inline std::wstring ViewerPath(std::wstring_view executable)
 {
     const auto separator = executable.find_last_of(L"\\/");

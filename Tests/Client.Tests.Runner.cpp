@@ -1,6 +1,5 @@
 #define REDMONITOR_DEFINE_PROVIDER
-#include <RedMonitor/Application.h>
-#include <RedMonitor/Viewer.h>
+#include <RedMonitor/Client.h>
 
 #include <array>
 #include <cstdio>
@@ -8,9 +7,17 @@
 
 #include "TestSupport/TestSupport.Tests.FailureReports.h"
 
-int main()
+int wmain(int argc, wchar_t** argv)
 {
     RedSalamander::TestSupport::RouteFailureReportsAwayFromDialogs();
+    if (argc == 3)
+    {
+        const bool expected = std::wstring_view(argv[1]) == L"--expect-production";
+        if (RedMonitor::IsProductionViewer(argv[2]) != expected)
+            return 9;
+        std::puts("PASS: installed helper production metadata contract");
+        return 0;
+    }
     constexpr std::array severities{RedMonitor::Severity::Text,
                                     RedMonitor::Severity::Error,
                                     RedMonitor::Severity::Warning,
@@ -62,8 +69,7 @@ int main()
     if (application.Write(RedMonitor::Severity::Info, {&sentinel, RedMonitor::kMaxMessageCodeUnits}) != ERROR_BUFFER_OVERFLOW)
         return 7;
     if (! RedMonitor::IsViewerCommand(L" \t--redmonitor \r\n") || RedMonitor::IsViewerCommand(L"--redmonitor other") || RedMonitor::IsViewerCommand(L"") ||
-        RedMonitor::ViewerPath(L"C:\\Synthetic \u65e5\\RedPrism.exe") != L"C:\\Synthetic \u65e5\\RedMonitor\\RedMonitor.exe" ||
-        ! RedMonitor::ViewerPath(L"relative.exe").empty())
+        ! RedMonitor::IsOrdinaryStartup(L" \t\r\n") || RedMonitor::IsOrdinaryStartup(L"--help") || RedMonitor::IsProductionViewer(L""))
         return 8;
     std::puts("PASS: severity mapping, repeated registration, Unicode, bounded app labels, UTF-8 and explicit adjacent viewer command");
     return 0;

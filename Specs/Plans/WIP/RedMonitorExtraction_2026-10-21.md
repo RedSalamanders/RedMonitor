@@ -8,6 +8,27 @@ This is the single execution plan for extraction and adoption. Intended contract
 Update this checklist and the evidence table at every implementation checkpoint. A checked
 delivery item does not close the independent runtime, platform, performance or release gates.
 
+## Accepted integration boundary — 2026-10-23
+
+The owner clarified that RedMonitor is an optional side-process helper, not a consumer build target.
+This decision supersedes earlier compatibility-staging and optional bundled-viewer instructions below.
+
+- Share only a small immutable public client header and its MIT notice. Vendor the exact reviewed bytes
+  in each consumer; record upstream commit/API/SHA-256. Dependency updates are explicit network operations.
+- Ordinary builds verify local header integrity. They never clone/build RedMonitor, stage its EXE, or require
+  any monitor executable, source checkout, archive or installed viewer to compile, test or package the app.
+- RedMonitor owns its Release packaging and installation. Standard per-user and machine installation roots
+  are the only discovery locations. Debug startup may launch an available installed Release helper; Release
+  apps and all test/help/probe paths do not auto-launch it. Missing helpers remain harmless.
+- Normalize application label, severity, counted Unicode, PID, TID and FILETIME through the same header in
+  all four products. Preserve existing debugger/file/crash policy and the compatible ETW GUID/event schema.
+- RedSalamander removes the compatibility build targets and bundled-viewer installer/test ownership.
+  Existing Preferences compatibility is reconciled explicitly with the standalone installed helper.
+- Fix RedXe ARM64 default compiler-host selection and requalify the final source. Retain all earlier receipts
+  and cancelled runs as checkpoints; they do not qualify the revised dependency boundary.
+- Complete affected tooling and native profile tests, docs/specs and WIP evidence, then commit/push all branches.
+  Native ARM64 execution, physical IME/AT, timed desktop interaction and controlled performance remain explicit.
+
 ## Delivery checklist
 
 - [x] S0: inspect the source, consumers, ownership, license and local working trees.
@@ -18,7 +39,7 @@ delivery item does not close the independent runtime, platform, performance or r
 - [x] S2: run standalone behavioral tests and all six build configurations.
 - [x] S3: create `RedSalamanders/RedMonitor` on GitHub with initial source and CI.
 - [x] S3: remove the owned monitor source from RedSalamander and consume an exact RedMonitor pin.
-- [ ] S3: preserve legacy executable, satellites, schema, themes and installer behavior.
+- [ ] S3: remove consumer viewer projects, legacy EXE aliases and installer entries; preserve settings compatibility.
 - [ ] S3: qualify the RedSalamander launch, preferences, selftests and clean package extraction.
 - [ ] S4: migrate independent RedMonitor settings and remove the broad legacy support snapshot.
 - [ ] S5: adopt the client and optional launch integration in RedPrism.
@@ -61,8 +82,8 @@ Extraction is not permission to refactor unrelated file operations, themes, DxUi
 | Selected `Common/` includes and six implementation units | Private static `RedMonitorSupport.lib`, with origin records | No link/load of RedSalamander's Common.dll |
 | `Common/Helpers.h` producer and `Common/Common/TraceProvider.cpp` | Remain RedSalamander-owned during compatibility phase | Existing producer still decoded without rebuilding a plugin ABI |
 | `RedSalamander/Preferences.Monitor.*` | Remain application policy; later use documented RedMonitor settings interface | Preferences Apply and restart roundtrip |
-| `RedSalamander/RedSalamander.cpp::QueueRedSalamanderMonitorLaunch` | Consumer adapter, never shared window code | Missing dependency, duplicate launch, enabled/disabled auto-launch |
-| Solution, `Installer/*`, build/test orchestration | Import/stage exact external artifact through compatibility projects | Direct project, solution, installer and clean ZIP tests |
+| RedSalamander startup adapter | Installed Release discovery, never shared window code | Missing helper, duplicate instance, Debug bare-startup-only launch |
+| Solution, installers and build/test orchestration | Remove viewer build/staging ownership; share only pinned header/license | Offline direct-project, solution and application-only package tests |
 
 Do not copy all of Common or any plugin into RedMonitor. The initially imported, transitive
 support closure preserves extraction behavior but still contains broad settings/theme types.
@@ -81,14 +102,13 @@ S4 narrows it after S3 behavior is proved. Never make clients include `support/`
    Explicit lifetime precedes producers and ends only after their callbacks/threads quiesce.
 4. Existing producer absence/registration failure does not impair the application. Disabled
    diagnostics must return before formatting/allocation. Logs have an explicit size ceiling.
-5. In the first cut, retain the legacy settings app ID, single-instance mutex and satellite owner
-   names so RedSalamander preferences/launch/installers keep working. Product output is
-   `RedMonitor.exe`; RedSalamander stages the same artifact as `RedSalamanderMonitor.exe`.
-   The alias is packaging compatibility, not a second implementation.
+5. Retain the legacy settings app ID, single-instance mutex and satellite owner names inside the
+   standalone helper. RedSalamander Preferences targets the Release 7.0 monitor profile in every
+   consumer configuration. The standalone package owns all viewer resources; consumers own no alias.
 6. RedMonitor owns its DxUi exact commit and private output fingerprint. The initial pin is
    RedSalamander's inspected API-4 commit `f65e4a4b9311370b3e3070088e2a8abe29adcb27`.
-   Every consumer owns an exact RedMonitor lock and isolated outputs. No implicit sibling path.
-7. Resource files, schema, themes, notices and sanitizer runtime are part of the staging closure.
+   Every consumer owns an exact client lock/header/license. No implicit sibling path or viewer output.
+7. Resource files, schema, themes, notices and sanitizer runtime belong only to standalone viewer packages.
    Restoring the pin is not executing tests; cross-compilation is not native runtime evidence.
 
 ## 4. S0: freeze and characterize
@@ -150,19 +170,17 @@ Exit: tested compatibility, a frozen minimal API fixture, explicit version/capab
 1. Create `RedSalamanders/RedMonitor`, push reviewed standalone source to `main`, confirm default
    branch/visibility/remote SHA. Add CI for validators, x64 runtime and all six build profiles.
    Pending/blocked hosted CI remains pending. Do not invent release artifacts or successful checks.
-2. Commit an exact `Dependencies/RedMonitor.lock.json` in RedSalamander. Restore to the consumer's
-   generated tree; validate repository/commit/API and dirty state. Fail before compilation for a bad pin.
-3. Replace the old monitor and MonitorTest native projects with thin external-build compatibility
-   projects at the documented legacy paths. Update solution, installer project references,
-   build routing and source inventories. Consumers never enumerate RedMonitor `.cpp` files.
-4. Stage external EXE as the old filename plus PDB, MonitorTest executable, four satellites, themes,
-   schema, notices and ASan runtime where applicable. Include the external lock/artifact closure
-   in build evidence. Reject unknown/missing outputs; avoid broad overwrite of consumer DLLs.
-5. Remove the native implementation/resources from `RedSalamanderMonitor/` and MonitorTest only after the new pin is
-   published and compatibility builds pass. Keep historical specs/reviews/test evidence intact.
-   Change active monitor specs/docs to describe the external owner and remaining cutover gates.
-6. Update tooling inventory/help/tests and normatively document compatibility names. Reconcile
-   localization resource-root tests and source-shape guards against the new dependency boundary.
+2. Publish the reviewed client commit, then explicitly run the client updater in RedSalamander.
+   Commit only Client.h, LICENSE.txt, binary-preserving .gitattributes and the commit/API/SHA lock.
+3. Remove the old six viewer/test/satellite projects and their solution references. Direct MSBuild
+   verifies the local header/license before compilation. No ordinary build invokes the updater.
+4. Remove EXE aliases, satellites, symbols, shortcuts and MSIX applications from consumer packages.
+   Keep the SDK MIT notice. Reject stale generated viewer payload in portable extraction tests.
+5. Normalize the existing module-owned provider through WriteNormalizedEvent; preserve registration,
+   copied PID/TID/time, severity, crash/debug/file policy and plugin ABI.
+6. Retire viewer-only source guards in the consumer; keep viewer behavioral tests upstream.
+   Update tool inventory/help and test routing. Test offline clean/missing/tampered/unsafe/reparse
+   local inputs with Git/network absent. Discover only a production installed Release helper.
 7. Qualify auto-launch on/off, duplicate instance, spaces/Unicode install path, absent executable,
    Preferences filter/mask Apply, restart, existing settings and window placement, language switching,
    portable ZIP, MSI/MSIX manifests, symbols and receipt tampering/missing-runtime cases.
@@ -202,7 +220,7 @@ perf pair and release gate. Inspect its current owner/dirty state again; the tab
    diagnostic adapter alongside it; do not rename or double-count pipeline performance events.
 3. Register the client in the EXE before owned workers, route severity-bearing diagnostic boundaries,
    retain current local/debug output policy and dispose after workers stop. Avoid logging per-pixel work.
-4. Add an explicit optional monitor command/setting and exact runtime staging only if bundling is chosen.
+4. Vendor only the pinned client header/license. Add explicit --redmonitor and optional Debug bare-startup discovery of an installed Release helper.
    Disabled/missing monitor must not block editing, save, startup, recovery or rendering.
 5. Test synthetic startup/error/Unicode/device-loss messages, disabled path, no monitor, simultaneous
    RedPrism/RedSalamander sources, session permission failure, portable launch and shutdown stress.
@@ -216,7 +234,7 @@ perf pair and release gate. Inspect its current owner/dirty state again; the tab
    Host-forwarded plugin messages carry copied text/source identity; no owning SDK object crosses ABI.
 3. Preserve existing file-log/crash fallback, bounded drain and device-loss behavior. Never open the
    monitor synchronously from frame composition, a device callback or a plugin unload callback.
-4. Add optional launch/staging and settings schema/docs through RedXe's existing runtime dependency flow.
+4. Vendor only pinned client header/license; add installed Release discovery. Default to x64 compiler host on AMD64, respecting overrides; verify all ARM64 profiles without an environment workaround.
 5. Test plugin failure/unload/reload, cancelled work, missing monitor, write bursts, log queue overflow,
    simultaneous dashboard sources, shutdown and portable extraction. Exercise real renderer paths.
 6. Compare same-machine Release frame p95/p99, private bytes, allocations and worker wakeups.
@@ -229,7 +247,7 @@ perf pair and release gate. Inspect its current owner/dirty state again; the tab
    Log operation outcome/IDs, not document contents, personal paths or credentials by default.
 3. Keep crash handling's local emergency path independent of ETW/client lifetime; avoid allocation,
    registration or monitor launch in an exception handler.
-4. Add optional launch/staging and settings docs; do not change authoritative Markdown/history semantics.
+4. Vendor only pinned client header/license; add installed Release discovery and docs. Preserve authoritative Markdown/history semantics.
 5. Test failed save/open, Unicode text, stale image completion, diagram fallback, recovery startup,
    absent monitor, concurrent Red-family instances, shutdown and clean portable package.
 6. Compare typing/caret/frame and open/save p95, memory and diagnostics-disabled startup on the same corpus.
@@ -238,13 +256,13 @@ perf pair and release gate. Inspect its current owner/dirty state again; the tab
 
 | Area | Required coverage | Gate |
 | --- | --- | --- |
-| Tooling | Parse/help, exact pins, dirty pin, traversal/reparse, no external process termination, staging closure | Every affected edit |
+| Tooling | Parse/help, exact pins, modified/missing header, unsafe lock/reparse, offline verification, no external process termination | Every affected edit |
 | Native | x64 Debug/Release/ASan tests; x64/ARM64 all three builds | S2 and changed consumer qualification |
 | Sanitizer | Known-invalid owned probe actually detected, production tests clean | ASan acceptance; a build alone fails |
 | Protocol | Real old/new producer roundtrip, metadata/severity, Unicode, bounds, denied access | S2/S3 |
 | Model/I/O | Retention, filters/search, immutable snapshots, malformed/oversized files, atomic replacement and cancel | S1-S4 |
 | UI/resources | Four satellites, DPI/themes, hidden idle, WARP/device loss, selection/clipboard, keyboard/accessibility | Viewer release |
-| Distribution | Standalone clone, dependency imports, extracted ZIP, legacy staged package, symbols/notices | S3/S8 |
+| Distribution | Standalone clone, dependency imports, standalone Release install/replacement, app-only ZIP/MSI/MSIX, symbols/notices | S3/S8 |
 | Platform/manual | Native ARM64 execution, physical IME/AT and consented foreground fixtures | Explicit independent gates |
 
 Keep queue defaults 4096, retained lines 100000, text 64 MiB and search matches 100000 unless
@@ -263,7 +281,7 @@ Evidence lives in repository-local generated run directories; retain reviewed su
 No foreground or clipboard capture runs without agreement to the time. Application images come from
 the deterministic harness with invented data, provenance and non-activating windows.
 
-## 11. Checkpoint evidence
+## 11. Historical checkpoint evidence (before the accepted header-only boundary)
 
 | Date | Scope | Result | Remaining |
 | --- | --- | --- | --- |
@@ -306,3 +324,17 @@ from later documentation-only checkpoint commits; adoption never floats with mai
 RedSalamander is integrated with current upstream master; the changelog conflict was resolved through fragments without dropping upstream entries. Its external staging now requires all four satellites and carries WIL/yyjson notices into the ZIP closure. A real executable runtime/resource probe runs before settings, mutex, ETW and window access. RedPrism, RedXe and RedTilde adoption branches now contain exact-SDK bootstrap, module-owned bounded labelled diagnostic adapters, an explicit optional adjacent-viewer command, synthetic producer probe, normative contracts and usage docs. RedXe forwards already-copied host/plugin records while preserving its log queue; RedPrism preserves its Pipeline provider. Build, behavioral, platform, package and performance acceptance is pending at this checkpoint. S4 independent settings/support narrowing remains an explicit later compatibility change; this continuation does not silently repoint RedSalamander Preferences.
 
 Release viewer builds now default to production mode. Independent version metadata identifies RedMonitor and marks test-enabled images; packaging rejects a test-enabled Release receipt. The explicit mode is propagated through the RedSalamander compatibility projects. Debug test hooks and native console tests remain available; this closes the packaging distinction without treating it as UI acceptance.
+
+### Header-only implementation checkpoint — 2026-10-23
+
+The single public Client.h contains normalized Application/Provider logging and fixed-location production
+helper discovery. Compatibility headers remain source shims upstream. Explicit update tools fetch only
+the two public files; normal builds verify local bytes without Git or network. The standalone Release
+ZIP owns Install-RedMonitor.ps1 and all runtime resources. Installer controls cover complete closure,
+replacement recovery, tampering, malformed manifests and reparse paths in contained fixtures.
+
+Earlier full runs qualify their recorded source only. Revised final-source matrices and all four actual
+consumer probes remain required. A Release document-model failure exposed a test fixture that allocated
+2 GiB without FSCTL_SET_SPARSE; the corrected fixture retains its >2 GiB metadata/budget assertion.
+Failed receipts remain retained. Cache cleanup is owner-authorized but automatic approval review still
+rejected deletion; preserved binary/symbol/evidence hashes are under .build/cache-preservation.

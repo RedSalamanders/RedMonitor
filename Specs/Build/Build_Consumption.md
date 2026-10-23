@@ -1,27 +1,38 @@
-# Build and consumption
+# Build and header-only consumption
 
-Build with PowerShell 7 and discovered Visual Studio 2026 C++ tools. Targets are x64/ARM64 and
-Debug/Release/ASan Debug. Source is Unicode in stdcpplatest mode with /W4 /WX /permissive- /sdl.
-ASan configurations require compiler instrumentation, matching runtime and a real detection probe.
+RedMonitor is an independent EXE. Only this repository builds, tests and packages it.
+Build with PowerShell 7 and discovered Visual Studio 2026 C++ tools, x64/ARM64 and
+Debug/Release/ASan Debug, Unicode stdcpplatest and /W4 /WX /permissive- /sdl.
+Pinned vcpkg and DxUi restores, outputs and exact source/profile receipts remain local under .build.
+No RedSalamander Common.dll or sibling build is required.
 
-`restore.ps1` restores the pinned vcpkg manifest/tool and exact DxUi lock into `.build`.
-No source lookup falls back to Z:\src or another consumer. DxUi uses its public consumer imports,
-one archive and isolated source/compiler/SDK/CRT fingerprint outputs. No consumer enumerates its sources.
-The viewer support library is static; yyjson is linked statically through the windows-static-md triplets. Only the selected ASan runtime is staged application-local.
+Consumers vendor only `include/RedMonitor/Client.h` and `LICENSE.txt` in ThirdParty/RedMonitor.
+Their lock records the immutable upstream commit, API revision and SHA-256 of each Git blob.
+The vendored subtree uses `-text` to preserve exact Git bytes on Windows. Ordinary builds verify
+local files without Git, network, a RedMonitor checkout, library or executable. Only the explicit
+Update-RedMonitorClient tool fetches a newly reviewed header/license. ClientSdk/ tools are the
+canonical source of the consumer update/verify adapters.
 
-`build.ps1` builds RedMonitor.proj, which owns the viewer, model tests and four resource-only satellites.
-Generated outputs stay under `.build/<platform>/<configuration>` and are never committed. Build receipts
-bind source/dependency/profile/tool/artifact identities and never claim runtime execution.
+The single header owns normalized counted UTF-16/strict UTF-8 messages, app labels, severity and
+PID/TID/FILETIME metadata. Disabled writes return before conversion, formatting or heap work.
+An existing module provider can call WriteNormalizedEvent without changing registration or ABI.
+Other consumers own one Application provider, created before workers and destroyed after teardown.
+Windows SDK and the consumers' existing WIL dependency provide Windows resource ownership.
 
-Consumers pin RedMonitor by repository URL, exact 40-character commit and API revision. Restore rejects
-dirty managed sources and mismatched pins. Headers come only from include/RedMonitor. Optional viewer
-packaging carries the full reviewed closure: executable, satellites, schema, themes/notices and
-ASan runtime where selected. Client SDK use does not require installing or starting the viewer.
+The helper is optional at runtime. Installed production Release images are discovered only at
+LocalAppData/Programs/RedMonitor/RedMonitor.exe and ProgramFiles/RedMonitor/RedMonitor.exe.
+The single header checks product/version flags, rejecting diagnostic/test-enabled builds. Explicit
+--redmonitor launches through a fixed absolute path, without a shell or wait. Debug bare startup may
+queue the same best-effort launch; Release, help, tests and synthetic probes never auto-launch it.
+Missing helpers and ETW privilege denial cannot block normal application work. Applications never
+own the independent helper's teardown and never package or rebuild its executable.
 
-RedSalamander initially uses thin compatibility build projects under Build, stages the pinned artifact
-under its historical name and preserves installer IDs. Source ownership stays in this repository.
-Independent app adapters and application qualification belong to their respective repositories.
+Release packages include the full CRT/data/language/license closure plus Install-RedMonitor.ps1.
+The installer validates every manifest entry and production metadata before atomic directory
+replacement in a standard per-user or machine folder. Running installations block replacement;
+no process is killed. Previous installations remain recoverable. Harness installation is confined
+below source .build and never modifies real standard locations.
 
-Consumer SDK resolution and optional viewer staging are owned by Tools/Restore-Consumer.ps1, invoked from an exact clean managed checkout. Producer convenience headers and cross-process/runtime probes are described in [application adoption](../../docs/Consumers.md). Release packages include the architecture-matched app-local VC CRT, WIL/yyjson/DxUi notices and the existing resource/data closure.
-
-Viewer test hooks default on in Debug/ASan Debug and off in Release. build.ps1 -ViewerTests true|false explicitly selects the mode and records it as viewerTestsEnabled. Release packaging refuses test-enabled receipts. The viewer has independent RedMonitor version resources; test-enabled images carry the RedSalamander.TestSurface=ENABLE_TESTS marker for compatible consumer package checks. Native test executables retain their independent test definitions.
+Viewer test hooks default on in Debug/ASan Debug and off in Release. The explicit ViewerTests mode
+is receipt-bound. Release packaging refuses test-enabled builds. Diagnostic images carry the
+RedSalamander.TestSurface=ENABLE_TESTS marker; native test executables have independent definitions.

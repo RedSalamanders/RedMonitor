@@ -13,7 +13,7 @@ threads before destroying the module owner. A disabled provider returns before f
 Payloads exceeding 16000 UTF-16 code units are rejected with ERROR_BUFFER_OVERFLOW.
 
 The viewer currently subscribes to this one provider; multi-provider/source selection remains future work.
-Clients may prepend an app label; PID/TID metadata remains authoritative. Independent apps retain their
+All four application adapters use the same Client.h normalization: a required static app label becomes a bounded [Application] text prefix and an additive counted UTF-16 Application field. Legacy fields and their types remain unchanged; old viewers ignore the extra field. PID/TID metadata remains authoritative. Independent apps retain their
 existing dedicated performance providers and fallback log policy.
 
 Sessions are owned explicitly. Starting must never stop or attach to a pre-existing session by name.

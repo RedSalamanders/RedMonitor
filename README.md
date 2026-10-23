@@ -21,9 +21,8 @@ from `.build/<platform>/<configuration>/RedMonitor.exe`. ETW session permissions
 Performance Log Users membership or elevation; opening text files does not require ETW access.
 
 This is an active extraction. Legacy settings app ID, single-instance identity and resource-owner
-names are retained for RedSalamander compatibility. Other applications still need their explicit
-adoption changes. See [capabilities](capabilities.json), [usage](docs/README.md),
+names are retained for RedSalamander compatibility. Consumer adoption and qualification are tracked explicitly. See [capabilities](capabilities.json), [usage](docs/README.md),
 [specifications](Specs/README.md), and the [complete WIP plan](Specs/Plans/WIP/RedMonitorExtraction_2026-10-21.md).
 MIT source origin and private support imports are recorded in [SourceImport](Specs/SourceImport/source-origin.json).
 
-See [application adoption](docs/Consumers.md) for the labelled SDK, optional viewer and consumer validation contracts.
+See [application adoption](docs/Consumers.md) for the single-header SDK, offline verification and separately installed Release helper.

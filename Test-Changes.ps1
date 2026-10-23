@@ -20,7 +20,9 @@ if($Mode -in 'Full','PrePush'){& (Join-Path $PSScriptRoot 'Tools/Fold-Changelog.
 & (Join-Path $PSScriptRoot 'format.ps1') -Check
 & (Join-Path $PSScriptRoot 'Tests/Tooling.Tests.ps1')
 $configs=if($Mode -eq 'Affected'){@('Debug')}else{@('Debug','Release','ASan Debug')}
-foreach($configuration in $configs){& (Join-Path $PSScriptRoot 'test.ps1') -Configuration $configuration}
+foreach($configuration in $configs){& (Join-Path $PSScriptRoot 'test.ps1') -Configuration $configuration -IncludeLiveEtw:($Mode -ne 'Affected')}
 if($Mode -ne 'Affected'){
     foreach($configuration in 'Debug','Release','ASan Debug'){& (Join-Path $PSScriptRoot 'build.ps1') -Platform ARM64 -Configuration $configuration}
+    $package=& (Join-Path $PSScriptRoot 'package.ps1') -PassThru
+    & (Join-Path $PSScriptRoot 'Tests/Tooling.Tests.Installation.ps1') -PackageDirectory $package.extracted
 }

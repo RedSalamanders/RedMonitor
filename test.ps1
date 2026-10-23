@@ -49,12 +49,15 @@ try{
         @{name='client-contract';exe='ClientContractTests.exe';argument=$null},
         @{name='settings-contract';exe='SettingsContractTests.exe';argument=$null})
     if($IncludeLiveEtw){$scenarios+=@{name='transport-roundtrip';exe='TransportRoundtripTests.exe';argument=$null}}
+    $scenarios+=@{name='installed-production-metadata';exe='ClientContractTests.exe';argument=$null;
+        arguments=@($(if($build.viewerTestsEnabled -or $Configuration -ne 'Release'){'--expect-development'}else{'--expect-production'}),(Join-Path $output 'RedMonitor.exe'))}
     $asanProbe=$Configuration -eq 'ASan Debug'
     if($asanProbe){$scenarios+=@{name='asan-detection';exe='AsanProbe.exe';argument='--detect';expectedAsan=$true}}
     foreach($entry in $scenarios){
         $scenario=$entry.name
         $start=[Diagnostics.ProcessStartInfo]::new((Join-Path $output $entry.exe))
         if($entry.argument){$start.ArgumentList.Add($entry.argument)}
+        if($entry.ContainsKey('arguments')){foreach($argument in $entry.arguments){$start.ArgumentList.Add($argument)}}
         $start.UseShellExecute=$false;$start.CreateNoWindow=$true
         $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
         $process=[Diagnostics.Process]::new();$process.StartInfo=$start
@@ -73,7 +76,7 @@ try{
     }
 }finally{
     [Environment]::SetEnvironmentVariable('REDMONITOR_TEST_ROOT',$previousRoot,'Process')
-    $expected=if($IncludeLiveEtw){6}else{5}
+    $expected=if($IncludeLiveEtw){7}else{6}
     if($Configuration -eq 'ASan Debug'){$expected++}
     $passed=$rows.Count -eq $expected -and @($rows|Where-Object passed -eq $false).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
     [ordered]@{schemaVersion=1;passed=$passed;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;

@@ -22,3 +22,8 @@ Record append/filter/retention/export snapshot latency, frame p95/p99, private b
 handles, CPU, wakeups and event loss. An unpaired measurement is diagnostic only. Investigate repeatable
 >5% regressions before advice; never silently change the baseline. Required viewer gates include WARP,
 device loss and clean/dirty/hidden resource behavior. The WIP matrix owns remaining execution.
+
+Full/PrePush also run real ETW roundtrips and contained production installer controls. The >2 GiB
+file-size boundary fixture uses FSCTL_SET_SPARSE before extending its logical size, so retained
+test evidence does not reserve gigabytes. A failed filesystem control fails the scenario.
+Consumer local-client controls run with system-only PATH and require no Git/network or viewer.

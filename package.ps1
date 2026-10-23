@@ -26,9 +26,12 @@ foreach($artifact in $receipt.artifacts){
 $root=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ('.build/packages/'+[guid]::NewGuid().ToString('N')))
 $stage=Join-Path $root 'RedMonitor'
 New-Item -ItemType Directory -Path $stage -Force|Out-Null
-foreach($name in 'RedMonitor.exe','SettingsStore.schema.json','Themes','Lang'){
+foreach($name in 'RedMonitor.exe','SettingsStore.schema.json','Themes'){
     Copy-Item -LiteralPath (Join-Path $output $name) -Destination $stage -Recurse
 }
+New-Item -ItemType Directory -Path (Join-Path $stage 'Lang')|Out-Null
+Get-ChildItem -LiteralPath (Join-Path $output 'Lang') -File -Filter '*.dll'|Copy-Item -Destination (Join-Path $stage 'Lang')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Tools/Install-RedMonitor.ps1') -Destination (Join-Path $stage 'Install-RedMonitor.ps1')
 if($Configuration -eq 'ASan Debug'){
     $runtimes=@(Get-ChildItem -LiteralPath $output -Filter '*asan*.dll')
     if(-not $runtimes){throw 'ASan package is missing its runtime.'}
