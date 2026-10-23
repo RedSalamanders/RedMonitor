@@ -4043,6 +4043,30 @@ Localization::LanguagePreference GetLanguagePreferenceFromSettings(const Common:
 // Separate function with C++ objects (cannot use __try/__except)
 static int RunApplication(HINSTANCE hInstance, int nCmdShow)
 {
+    // Distribution contract only: runs before settings, registry, mutex, ETW or HWND creation.
+    // The consumer/package harness can verify the real executable without touching user state.
+    if (HasCommandLineArg(L"--runtime-contract"))
+    {
+        std::array<wchar_t, 32768> filename{};
+        const DWORD length = GetModuleFileNameW(nullptr, filename.data(), static_cast<DWORD>(filename.size()));
+        if (length == 0 || length >= filename.size())
+            return 10;
+        const auto directory = std::filesystem::path(filename.data()).parent_path();
+        std::error_code error;
+        if (! std::filesystem::is_regular_file(directory / L"SettingsStore.schema.json", error) ||
+            ! std::filesystem::is_directory(directory / L"Themes", error))
+            return 11;
+        for (const auto* culture : {L"cs-CZ", L"fr-FR", L"ja-JP", L"sk-SK"})
+        {
+            const auto path = directory / L"Lang" / (std::wstring(L"RedSalamanderMonitor-") + culture + L".dll");
+            wil::unique_hmodule resource(LoadLibraryExW(path.c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
+            wchar_t title[256]{};
+            if (! resource || LoadStringW(resource.get(), IDS_APP_TITLE, title, static_cast<int>(std::size(title))) == 0)
+                return 12;
+        }
+        std::puts("PASS: real viewer schema/themes/four satellite resources; no user settings, ETW or window access");
+        return 0;
+    }
     constexpr wchar_t kInstanceMutexName[] = L"Local\\RedSalamanderMonitor_Instance";
 
     constexpr std::wstring_view kWaitInstanceArg = L"--wait-instance";

@@ -21,3 +21,5 @@ ASan runtime where selected. Client SDK use does not require installing or start
 RedSalamander initially uses thin compatibility build projects under Build, stages the pinned artifact
 under its historical name and preserves installer IDs. Source ownership stays in this repository.
 Independent app adapters and application qualification belong to their respective repositories.
+
+Consumer SDK resolution and optional viewer staging are owned by Tools/Restore-Consumer.ps1, invoked from an exact clean managed checkout. Producer convenience headers and cross-process/runtime probes are described in [application adoption](../../docs/Consumers.md). Release packages include the architecture-matched app-local VC CRT, WIL/yyjson/DxUi notices and the existing resource/data closure.

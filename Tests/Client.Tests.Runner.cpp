@@ -1,5 +1,6 @@
 #define REDMONITOR_DEFINE_PROVIDER
-#include <RedMonitor/Client.h>
+#include <RedMonitor/Application.h>
+#include <RedMonitor/Viewer.h>
 
 #include <array>
 #include <cstdio>
@@ -52,6 +53,18 @@ int main()
             return 5;
         }
     }
-    std::puts("PASS: severity mapping, duplicate owner, repeated registration, Unicode, empty and bounded payloads");
+    RedMonitor::Application application(L"RedPrism");
+    if (application.Status() != ERROR_SUCCESS || application.Write(RedMonitor::Severity::Warning, L"Unicode \u00e9\u65e5\U0001F642") != ERROR_SUCCESS ||
+        application.WriteUtf8(RedMonitor::Severity::Info, "bounded host/plugin record") != ERROR_SUCCESS ||
+        application.Write(static_cast<RedMonitor::Severity>(63), L"invalid") != ERROR_INVALID_PARAMETER)
+        return 6;
+    const wchar_t sentinel = L'x';
+    if (application.Write(RedMonitor::Severity::Info, {&sentinel, RedMonitor::kMaxMessageCodeUnits}) != ERROR_BUFFER_OVERFLOW)
+        return 7;
+    if (! RedMonitor::IsViewerCommand(L" \t--redmonitor \r\n") || RedMonitor::IsViewerCommand(L"--redmonitor other") || RedMonitor::IsViewerCommand(L"") ||
+        RedMonitor::ViewerPath(L"C:\\Synthetic \u65e5\\RedPrism.exe") != L"C:\\Synthetic \u65e5\\RedMonitor\\RedMonitor.exe" ||
+        ! RedMonitor::ViewerPath(L"relative.exe").empty())
+        return 8;
+    std::puts("PASS: severity mapping, repeated registration, Unicode, bounded app labels, UTF-8 and explicit adjacent viewer command");
     return 0;
 }
