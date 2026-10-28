@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Close the hosted formatter repair after PR #2 and merged main passed tooling and all six native profiles; retain the separate extraction, viewer and consumer qualification gates.
 - Pin the compatible native formatter and checksum-verified PowerShell installation for local and hosted checks, preserving the existing style, strict formatting errors and all native matrix jobs.
 - Limit recognized Markdown fence openers and closers to zero to three leading spaces, preserving required-resource checks across four-space and tab-indented markers; add module and public-entrypoint boundary controls.
 - Keep line-leading same-line backtick spans as inline prose so they cannot hide following required resources; retain tilde-fence info handling and cover module and public-entrypoint behavior.
