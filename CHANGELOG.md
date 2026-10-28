@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Pin the compatible native formatter and checksum-verified PowerShell installation for local and hosted checks, preserving the existing style, strict formatting errors and all native matrix jobs.
 - Prefer the selected Visual Studio Clang formatter over unrelated PATH LLVM, report its identity and reject incompatible style before source processing; preserve standalone fallback and cover selection with six read-only fixture controls.
 - Count actual resolved Markdown link uses in the active-plan index separately from reference definitions, preserving resource validation while rejecting definition-only and duplicate-use indexes; cover full, collapsed and shortcut forms through module and public-entrypoint controls.
 - Make public documentation and skill validation share local-link semantics, reject reparse headers before reads and validate drive/file-URI targets; cover balanced destinations, inline examples, typed descriptions and the actual public entrypoint with bounded fixtures.
