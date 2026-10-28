@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Pin the compatible native formatter and checksum-verified PowerShell installation for local and hosted checks, preserving the existing style, strict formatting errors and all native matrix jobs.
 - Limit recognized Markdown fence openers and closers to zero to three leading spaces, preserving required-resource checks across four-space and tab-indented markers; add module and public-entrypoint boundary controls.
 - Keep line-leading same-line backtick spans as inline prose so they cannot hide following required resources; retain tilde-fence info handling and cover module and public-entrypoint behavior.
 - Recognize only complete unquoted date/timestamp metadata scalars so date-prefixed guidance stays valid prose; retain quoted strings and typed temporal rejection through header and public-entrypoint controls.

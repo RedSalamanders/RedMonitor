@@ -3,8 +3,8 @@
 Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush explicitly account for
 x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
 boundaries and required repository surfaces. format.ps1 -Check verifies native formatting.
-Formatting prefers the discovered Visual Studio C++ Clang bundle over unrelated LLVM executables on PATH,
-with standalone PATH LLVM supported when no bundle is installed. The command reports the executable/version
+Formatting prefers the repository's exact pinned install, followed by the discovered Visual Studio C++
+Clang bundle and then standalone PATH LLVM. Every selected tool must match the pin. The command reports the executable/version
 and parses the unchanged repository style before checking or rewriting source. An incompatible formatter
 fails with its identity; CI must install compatible tools rather than weakening formatting policy.
 
@@ -61,6 +61,14 @@ destinations, local URI boundaries and reparse headers. Synthetic link targets s
 hosts without symbolic-link privilege report those controls as skipped, not passed.
 
 ## Native and performance evidence
+
+`Build/clang-format.json` owns the exact native formatter version and wheel SHA256.
+Run `Tools/Install-ClangFormat.ps1` before the first formatting check; it extracts only the
+verified native executable beneath guarded `.build/format` paths without installing Python
+or changing machine-wide tools. `-WheelPath` supports offline setup with the same checksum.
+The formatter requires the pinned version, and `format.ps1 -Check` performs no installation
+or source writes. CI installs that exact package before retaining `--dry-run --Werror`
+verification across the complete native source set.
 
 The imported MonitorTest flags cover diagnostics opt-in, scrollbar model, document batching/filtering,
 retention, immutable snapshots, strict/bounded file read, atomic export/fault/cancel, clipboard rejection

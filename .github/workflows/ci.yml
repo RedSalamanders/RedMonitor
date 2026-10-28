@@ -19,6 +19,9 @@ jobs:
           persist-credentials: false
       - run: ./validate.ps1
         shell: pwsh
+      - name: Install checksum-pinned formatter
+        run: ./Tools/Install-ClangFormat.ps1
+        shell: pwsh
       - run: ./format.ps1 -Check
         shell: pwsh
       - run: ./Tests/Tooling.Tests.ps1
