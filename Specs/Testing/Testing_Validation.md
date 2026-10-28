@@ -4,6 +4,14 @@ Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush ex
 x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
 boundaries and required repository surfaces. format.ps1 -Check verifies native formatting.
 
+`Build/clang-format.json` owns the exact native formatter version and wheel SHA256.
+Run `Tools/Install-ClangFormat.ps1` before the first formatting check; it extracts only the
+verified native executable beneath guarded `.build/format` paths without installing Python
+or changing machine-wide tools. `-WheelPath` supports offline setup with the same checksum.
+The formatter requires the pinned version, and `format.ps1 -Check` performs no installation
+or source writes. CI installs that exact package before retaining `--dry-run --Werror`
+verification across the complete native source set.
+
 The imported MonitorTest flags cover diagnostics opt-in, scrollbar model, document batching/filtering,
 retention, immutable snapshots, strict/bounded file read, atomic export/fault/cancel, clipboard rejection
 without opening the clipboard, and bounded ETW consumer lifetime. test.ps1 supplies a unique repository-local

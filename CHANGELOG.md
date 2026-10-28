@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Pin the compatible native formatter and checksum-verified PowerShell installation for local and hosted checks, preserving the existing style, strict formatting errors and all native matrix jobs.
 - Transfer the former consumer's detailed viewer validation obligations into the standalone contract, retaining Unicode, bounded decoding, snapshots, export/cancellation, lifetime, interaction and Release scaling requirements separately from the console subset already qualified.
 - Reconcile the architecture contract with the implemented minimal client boundary: consumers vendor the pinned header and MIT notice, verify locally, and use the separately installed production Release helper without staging its executable or satellites.
 - Use the independent RedMonitor product name in the French viewer title, matching the embedded and other localized titles; retain legacy resource-owner filenames for compatibility.
