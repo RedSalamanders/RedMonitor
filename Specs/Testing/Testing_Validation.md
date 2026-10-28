@@ -28,6 +28,18 @@ paths and target anchors are not covered by this check. Full/collapsed reference
 case-insensitive labels and check their definition destinations; the first definition wins, and an undefined
 explicit reference label fails. Full/collapsed references require adjacent brackets; space, tab or newline
 separation leaves independent shortcut/text spans. A bracket-only shortcut without a definition remains ordinary text.
+The bounded inline-code scanner ends at blank paragraphs (including whitespace-only blank lines); soft line
+breaks within a paragraph remain supported. Single-line titles may use single quotes, double quotes or
+parentheses, and a reference destination may continue onto the immediately following line. These forms do not
+claim a general CommonMark parser. File URI escapes are decoded once, preserving encoded `#` and literal
+percent sequences in filenames. Quoted ISO dates/timestamps retain their exact string text rather than receiving
+automatic date conversion. Hidden direct skill directories receive the same metadata and package checks.
+Temporal type detection matches a complete scalar. Plain date-prefixed prose such as
+`2026-10-28 migration guidance` remains a string; complete unquoted dates/timestamps still require quotes.
+Backtick fence opening info cannot contain backticks: line-leading same-line code such as
+`` ```literal``` `` remains inline prose; tilde-fence info may contain backticks.
+Recognized fence openers and closers have zero to three leading spaces before the optional list marker.
+Four-space or tab indentation does not open or close a fence in this bounded scanner.
 
 The public `validate.ps1` documentation check reuses this same Markdown/path helper. It rejects reparse files and
 ancestors before source reads, parsing or traversal; skill headers must not be opened by an earlier, weaker reader.

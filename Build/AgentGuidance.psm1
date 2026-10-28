@@ -38,14 +38,19 @@ function Get-RedMonitorSkillProblem {
             if (-not $quoted.Success) { return 'invalid quoted scalar' }
             $value = $quoted.Groups['text'].Value.Replace("''", "'")
         } elseif ($value.StartsWith('"')) {
-            try { $value = ConvertFrom-Json -InputObject $value -ErrorAction Stop }
+            try {
+                # Decode a JSON string without ConvertFrom-Json's automatic ISO-date coercion.
+                $document = [Text.Json.JsonDocument]::Parse($value)
+                try { $value = $document.RootElement.GetString() }
+                finally { $document.Dispose() }
+            }
             catch [System.ArgumentException] { return 'invalid quoted scalar' }
             catch [System.Management.Automation.RuntimeException] { return 'invalid quoted scalar' }
             if ($value -isnot [string]) { return 'header values must be strings' }
         } elseif ($value -match '^[-?:,\[\]{}#&*!|>''"%@`]' -or $value.Contains(': ') -or $value.EndsWith(':') -or
             $value -cmatch '^(?:~|null|Null|NULL|true|True|TRUE|false|False|FALSE|yes|Yes|YES|no|No|NO|on|On|ON|off|Off|OFF|=|<<)$' -or
             $value -cmatch '^[-+]?(?:[0-9][0-9_:]*(?:\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?|\.[0-9_]+(?:[eE][-+]?[0-9]+)?|0[bB][01_]+|0[xX][0-9a-fA-F_]+|\.(?:inf|Inf|INF|nan|NaN|NAN))$' -or
-            $value -cmatch '^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}' -or $value.Contains(' #')) {
+            $value -cmatch '^(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt]|[ \t]+)[0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]*)?(?:[ \t]*(?:Z|[-+][0-9]{1,2}(?::[0-9]{2})?))?)$' -or $value.Contains(' #')) {
             return 'unsupported plain scalar; quote the value'
         }
         $values.Add($key, $value)
@@ -66,18 +71,21 @@ function Get-RedMonitorMarkdownLinkAnalysis {
     $fence = $null
     $prose = [Collections.Generic.List[string]]::new()
     foreach ($line in $Text -split "`r?`n") {
-        $marker = [regex]::Match($line, '^[ \t]*(?:(?:[-+*]|\d+[.)])[ \t]+)?(?<fence>`{3,}|~{3,})(?<rest>.*)$')
-        if ($marker.Success) {
+        $marker = [regex]::Match($line, '^ {0,3}(?:(?:[-+*]|\d+[.)])[ \t]+)?(?<fence>`{3,}|~{3,})(?<rest>.*)$')
+        # Backtick fence info cannot contain backticks; a same-line code span is prose.
+        if ($marker.Success -and ($null -ne $fence -or $marker.Groups['fence'].Value[0] -cne '`' -or
+            -not $marker.Groups['rest'].Value.Contains('`'))) {
             $token = $marker.Groups['fence'].Value
             if ($null -eq $fence) { $fence = $token }
             elseif ($token[0] -ceq $fence[0] -and $token.Length -ge $fence.Length -and -not $marker.Groups['rest'].Value.Trim()) { $fence = $null }
         } elseif ($null -eq $fence) { $prose.Add($line) }
     }
     # Equal-length backtick runs delimit inline code; a pseudo-link in code is not a destination.
-    $text = [regex]::Replace(($prose -join "`n"), '(?<![\\`])(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)', ' ')
+    # Blank paragraphs end this bounded inline-code span rather than hiding later real links.
+    $text = [regex]::Replace(($prose -join "`n"), '(?<![\\`])(`+)(?!`)(?:(?!\r?\n[ \t]*\r?\n)[\s\S])*?(?<!`)\1(?!`)', ' ')
     # Balancing groups preserve nested parentheses in inline and reference-style destinations.
     $destination = '(?:<(?<angle>[^>\r\n]*)>|(?<plain>(?:\\[()]|\\(?![()])|[^()\s\\]|\((?<depth>)|\)(?<-depth>))+(?(depth)(?!))))'
-    $title = '(?:[ \t]+(?:"[^"]*"|''[^'']*''))?[ \t]*'
+    $title = '(?:[ \t]+(?:"[^"\r\n]*"|''[^''\r\n]*''|\([^()\r\n]*\)))?[ \t]*'
     $labelStart = '(?<!\\)(?:\\\\)*\[' # Only an even number of preceding backslashes leaves a live bracket.
     $inline = $labelStart+'[^\]\r\n]*\]\([ \t]*'+$destination+$title+'\)'
     $declared = [Collections.Generic.List[string]]::new()
@@ -87,7 +95,8 @@ function Get-RedMonitorMarkdownLinkAnalysis {
         if ($target) { $declared.Add(($target -replace '\\([()])','$1')) }
     }
     $definitions = [Collections.Generic.Dictionary[string,string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($link in [regex]::Matches($text,('(?m)^[ ]{0,3}\[(?<label>[^\]\r\n]+)\]:[ \t]*'+$destination+$title+'$'))) {
+    $definitionPattern = '(?m)^[ ]{0,3}\[(?<label>[^\]\r\n]+)\]:[ \t]*(?:\r?\n[ \t]*)?'+$destination+$title+'$'
+    foreach ($link in [regex]::Matches($text,$definitionPattern)) {
         $label = [regex]::Replace($link.Groups['label'].Value.Trim(),'\s+',' ')
         if ($definitions.ContainsKey($label)) { continue } # CommonMark uses the first definition.
         $target = if ($link.Groups['angle'].Success) { $link.Groups['angle'].Value } else { $link.Groups['plain'].Value }
@@ -95,10 +104,11 @@ function Get-RedMonitorMarkdownLinkAnalysis {
         if ($target) { $declared.Add($definitions[$label]) }
     }
     # Declarations are checked even when unused, but only rendered uses count as plan-index links.
-    # The first alternative masks definition lines so their labels/destinations cannot count as uses.
+    # Mask complete definitions, including continued destinations, before counting rendered uses.
     # Full/collapsed references require adjacent brackets; separated shortcuts are distinct uses.
-    $usagePattern = '(?m)^[ ]{0,3}\[[^\]\r\n]+\]:[^\r\n]*$|(?<inline>'+ $inline +')|(?<reference>'+$labelStart+'(?<text>[^\]\r\n]+)\]\[(?<label>[^\]\r\n]*)\])|'+$labelStart+'(?<shortcut>[^\]\r\n]+)\]'
-    foreach ($usage in [regex]::Matches($text,$usagePattern)) {
+    $usageText = [regex]::Replace($text,$definitionPattern,' ')
+    $usagePattern = '(?<inline>'+ $inline +')|(?<reference>'+$labelStart+'(?<text>[^\]\r\n]+)\]\[(?<label>[^\]\r\n]*)\])|'+$labelStart+'(?<shortcut>[^\]\r\n]+)\]'
+    foreach ($usage in [regex]::Matches($usageText,$usagePattern)) {
         $target = $null
         if ($usage.Groups['inline'].Success) {
             $target = if ($usage.Groups['angle'].Success) { $usage.Groups['angle'].Value } else { $usage.Groups['plain'].Value }
@@ -177,7 +187,7 @@ function Test-RedMonitorAgentGuidance {
     $failures = [Collections.Generic.List[string]]::new()
     $skillRoot = Join-Path $Root '.agents/skills'
     Assert-RedMonitorOrdinaryGuidancePath $skillRoot
-    $folders = @(Get-ChildItem -LiteralPath $skillRoot -Directory -ErrorAction Stop)
+    $folders = @(Get-ChildItem -LiteralPath $skillRoot -Directory -Force -ErrorAction Stop)
     if (-not $folders.Count) { $failures.Add('No repository skills found') }
     foreach ($folder in $folders) {
         if ($folder.Attributes -band [IO.FileAttributes]::ReparsePoint) { $failures.Add("Reparse skill folder: $($folder.Name)"); continue }

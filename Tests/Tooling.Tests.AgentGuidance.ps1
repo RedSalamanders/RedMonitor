@@ -18,6 +18,15 @@ $cases = @(
     @{ Name='CRLF'; Text=($prefix+'Read.').Replace("`n","`r`n"); Valid=$true },
     @{ Name='single quote'; Text=$prefix.Replace('Validate a fixture.',"'It''s a fixture: 日本語.'")+'Read.'; Valid=$true },
     @{ Name='double quote'; Text=$prefix.Replace('Validate a fixture.','"Validate français."')+'Read.'; Valid=$true },
+    @{ Name='double quoted date'; Text=$prefix.Replace('Validate a fixture.','"2026-10-28"')+'Read.'; Valid=$true },
+    @{ Name='double quoted UTC timestamp'; Text=$prefix.Replace('Validate a fixture.','"2026-10-28T09:00:00Z"')+'Read.'; Valid=$true },
+    @{ Name='double quoted offset timestamp'; Text=$prefix.Replace('Validate a fixture.','"2026-10-28T09:00:00+02:00"')+'Read.'; Valid=$true },
+    @{ Name='plain timestamp requires quoting'; Text=$prefix.Replace('Validate a fixture.','2026-10-28T09:00:00Z')+'Read.'; Valid=$false },
+    @{ Name='plain date requires quoting'; Text=$prefix.Replace('Validate a fixture.','2026-10-28')+'Read.'; Valid=$false },
+    @{ Name='plain offset timestamp requires quoting'; Text=$prefix.Replace('Validate a fixture.','2026-10-28 9:00:00 +02:30')+'Read.'; Valid=$false },
+    @{ Name='plain fractional timestamp requires quoting'; Text=$prefix.Replace('Validate a fixture.','2026-10-28t09:00:00.25-08:00')+'Read.'; Valid=$false },
+    @{ Name='plain date-prefixed prose'; Text=$prefix.Replace('Validate a fixture.','2026-10-28 migration guidance')+'Read.'; Valid=$true },
+    @{ Name='plain timestamp-prefixed prose'; Text=$prefix.Replace('Validate a fixture.','2026-10-28T09:00:00Z migration guidance')+'Read.'; Valid=$true },
     @{ Name='missing file'; Text=$null; Valid=$false },
     @{ Name='unfenced'; Text="name: example-skill`ndescription: Validate.`nRead."; Valid=$false },
     @{ Name='empty body'; Text=$prefix; Valid=$false },
@@ -52,8 +61,8 @@ function Put([string]$Name,[string]$Text) {
 function Snapshot {
     return (@(Get-ChildItem -LiteralPath $run -Recurse -Force | Sort-Object FullName | ForEach-Object {
         $relative = [IO.Path]::GetRelativePath($run,$_.FullName)
-        if ($_.PSIsContainer) { 'D:'+$relative }
-        else { 'F:'+$relative+':'+$_.LastWriteTimeUtc.Ticks+':'+(Get-FileHash -LiteralPath $_.FullName).Hash }
+        if ($_.PSIsContainer) { 'D:'+$relative+':'+$_.Attributes }
+        else { 'F:'+$relative+':'+$_.LastWriteTimeUtc.Ticks+':'+(Get-FileHash -LiteralPath $_.FullName).Hash+':'+$_.Attributes }
     }) -join "`n")
 }
 function Expect([string]$Name,[bool]$Accepted,[string]$ExpectedProblem='') {
@@ -82,6 +91,10 @@ Put 'Specs/Plans/WIP/README.md' "[Only][plan]`n[plan]: Example_2026-10-28.md`n[u
 Expect 'unused second definition is not a duplicate index link' $true
 Put 'Specs/Plans/WIP/README.md' "[Only][plan]`n[plan]: Example_2026-10-28.md"
 Expect 'ordinary one-use reference indexes a plan' $true
+Put 'Specs/Plans/WIP/README.md' "[plan]:`n  Example_2026-10-28.md"
+Expect 'continued definition alone does not index a plan' $false 'exactly one index link'
+Put 'Specs/Plans/WIP/README.md' "[Only][plan]`n[plan]:`n  Example_2026-10-28.md (Plan contract)"
+Expect 'one continued reference use indexes a plan' $true
 Put 'Specs/Plans/WIP/README.md' "[plan][]`n[plan]: Example_2026-10-28.md"
 Expect 'one collapsed use indexes a plan' $true
 Put 'Specs/Plans/WIP/README.md' "[plan]`n[plan]: Example_2026-10-28.md"
@@ -113,6 +126,20 @@ Put $skill ($prefix+'Read [web](https://example.invalid/contract) and [section](
 Expect 'external links are not fetched' $true
 Put $skill ($prefix+'```markdown'+"`n[example](missing.md)`n"+'```')
 Expect 'illustrative fenced link ignored' $true
+Put $skill ($prefix+'```literal```')
+Expect 'line-leading same-line backtick code is valid prose' $true
+Put $skill ($prefix+'```literal```'+"`n`n[Missing](missing.md)")
+Expect 'line-leading inline code cannot hide following real resource' $false 'missing local reference'
+Put $skill ($prefix+'~~~info`literal'+"`n[Illustration](missing.md)`n"+'~~~')
+Expect 'tilde fence info can retain backticks' $true
+foreach ($indent in '    ',"`t") {
+    Put $skill ($prefix+$indent+'```text'+"`n`n[Missing](missing.md)")
+    Expect "indent length $($indent.Length) cannot open a fence hiding a real link" $false 'missing local reference'
+    Put $skill ($prefix+'```text'+"`n"+$indent+'```'+"`n[Illustration](missing.md)`n"+'```')
+    Expect "indent length $($indent.Length) cannot close an illustrative fence" $true
+}
+Put $skill ($prefix+'   ```text'+"`n[Illustration](missing.md)`n"+'   ```')
+Expect 'three-space fence boundary remains supported' $true
 Put $skill ($prefix+'Read [encoded contract](../../../Specs/contract%20name.md#section).')
 Put 'Specs/contract name.md' '# Contract with space'
 Expect 'encoded path and fragment' $true
@@ -123,6 +150,43 @@ Put $skill ($prefix+'Read [contract](../../../Specs/contract(v1).md).')
 Expect 'balanced destination parentheses' $true
 Put $skill ($prefix+'The syntax is `[example](missing.md)` or `` `[another](absent.md)` ``.')
 Expect 'inline-code pseudo-links ignored' $true
+Put $skill ($prefix+'first `'+"`n`n[Missing](missing.md)`n`n"+'last `')
+Expect 'inline-code delimiters do not hide another paragraph' $false 'missing local reference'
+Put $skill ($prefix+'first `'+"`n `t`n[Missing](missing.md)`n`n"+'last `')
+Expect 'whitespace-only blank line ends inline-code span' $false 'missing local reference'
+Put $skill ($prefix+'Read `'+"soft`n[example](missing.md)"+'` within one paragraph.')
+Expect 'soft-line inline-code pseudo-link remains ignored' $true
+Put $skill ($prefix+'Read [contract](../../../Specs/contract.md (Owning contract)).')
+Expect 'parenthesized link title accepted' $true
+Put $skill ($prefix+'Read [missing](missing.md (Owning contract)).')
+Expect 'parenthesized link title cannot hide missing target' $false 'missing local reference'
+Put $skill ($prefix+"[owner]:`n  ../../../Specs/contract.md`nRead [contract][owner].")
+Expect 'continued reference destination resolves' $true
+Put $skill ($prefix+"[owner]:`n  missing.md")
+Expect 'unused continued definition still validates target' $false 'missing local reference'
+Put $skill ($prefix+"[owner]:`n  ../../../Specs/contract.md (Owning contract)`nRead [owner][].")
+Expect 'continued definition with parenthesized title resolves' $true
+foreach ($fileName in 'guide#v1.md','literal%20.md') {
+    Put ('Specs/'+$fileName) '# Encoded filename contract'
+    $target = Join-Path $run ('Specs/'+$fileName)
+    $uri = [uri]::new('file:///'+$target.Replace('\','/').Replace('%','%25').Replace('#','%23')).AbsoluteUri
+    Put $skill ($prefix+'Read [contract]('+ $uri +').')
+    Expect "file URI preserves literal filename $fileName" $true
+}
+$hidden = Join-Path $run '.agents/skills/hidden-skill'
+[void][IO.Directory]::CreateDirectory($hidden)
+[IO.File]::SetAttributes($hidden,[IO.FileAttributes]::Directory -bor [IO.FileAttributes]::Hidden)
+try {
+    Expect 'hidden package missing entrypoint refused' $false 'missing or empty SKILL.md'
+    Put '.agents/skills/hidden-skill/SKILL.md' 'malformed'
+    Expect 'hidden malformed package refused' $false 'missing frontmatter delimiters'
+    Put '.agents/skills/hidden-skill/SKILL.md' ($prefix.Replace('example-skill','hidden-skill')+'Read.')
+    Expect 'hidden valid package checked' $true
+} finally {
+    [IO.File]::SetAttributes($hidden,[IO.FileAttributes]::Directory)
+    [IO.File]::Delete((Join-Path $hidden 'SKILL.md'))
+    [IO.Directory]::Delete($hidden)
+}
 Put $skill ($prefix+'Read [web](//example.invalid/no-fetch).')
 Expect 'protocol-relative external URL ignored' $true
 $absoluteContract = (Join-Path $run 'Specs/contract.md').Replace('\','/')
@@ -233,16 +297,67 @@ Put $publicSkill ($prefix+'```markdown'+"`n[example](missing.md)`n"+'```')
 Expect-Public 'fenced illustration accepted by actual entrypoint' $true
 Put $publicSkill ($prefix+'The syntax is `[example](missing.md)`.')
 Expect-Public 'inline-code pseudo-link accepted by actual entrypoint' $true
+Put $publicSkill ($prefix+'```literal```')
+Expect-Public 'line-leading same-line code span accepted publicly' $true
+Put $publicSkill ($prefix+'```literal```'+"`n`n[Missing](missing.md)")
+Expect-Public 'same-line inline backticks do not hide real resource publicly' $false 'missing local reference'
+Put $publicSkill ($prefix+'~~~info`literal'+"`n[Illustration](missing.md)`n"+'~~~')
+Expect-Public 'tilde info with backticks remains a fence publicly' $true
+foreach ($indent in '    ',"`t") {
+    Put $publicSkill ($prefix+$indent+'```text'+"`n`n[Missing](missing.md)")
+    Expect-Public "indent length $($indent.Length) cannot open a fence publicly" $false 'missing local reference'
+    Put $publicSkill ($prefix+'```text'+"`n"+$indent+'```'+"`n[Illustration](missing.md)`n"+'```')
+    Expect-Public "indent length $($indent.Length) cannot close illustrative fence publicly" $true
+}
+Put $publicSkill ($prefix+'   ```text'+"`n[Illustration](missing.md)`n"+'   ```')
+Expect-Public 'three-space fence remains supported publicly' $true
 Put $publicSkill ($prefix+'Read [contract](../../../Specs/contract(v1).md).')
 Expect-Public 'balanced parentheses accepted by actual entrypoint' $true
 Put $publicSkill ($prefix+"Read [contract][owner].`n[owner]: ../../../Specs/contract%20name.md")
 Expect-Public 'reference-style link accepted by actual entrypoint' $true
+Put $publicSkill ($prefix.Replace('Validate a fixture.','"2026-10-28T09:00:00Z"')+'Read.')
+Expect-Public 'quoted timestamp remains a string publicly' $true
+Put $publicSkill ($prefix.Replace('Validate a fixture.','2026-10-28 migration guidance')+'Read.')
+Expect-Public 'plain date-prefixed prose accepted publicly' $true
+Put $publicSkill ($prefix+'first `'+"`n`n[Missing](missing.md)`n`n"+'last `')
+Expect-Public 'cross-paragraph backticks do not hide missing link publicly' $false 'missing local reference'
+Put $publicSkill ($prefix+'Read [contract](../../../Specs/contract%20name.md (Owning contract)).')
+Expect-Public 'parenthesized title accepted publicly' $true
+Put $publicSkill ($prefix+'Read [missing](missing.md (Owning contract)).')
+Expect-Public 'parenthesized title missing target refused publicly' $false 'missing local reference'
+Put $publicSkill ($prefix+"[owner]:`n  ../../../Specs/contract%20name.md`nRead [contract][owner].")
+Expect-Public 'continued reference accepted publicly' $true
+Put $publicSkill ($prefix+"[unused]:`n  missing.md")
+Expect-Public 'unused continued missing target refused publicly' $false 'missing local reference'
+foreach ($fileName in 'guide#v1.md','literal%20.md') {
+    Put ('public-entrypoint/Specs/'+$fileName) '# Encoded filename contract'
+    $target = Join-Path $public ('Specs/'+$fileName)
+    $uri = [uri]::new('file:///'+$target.Replace('\','/').Replace('%','%25').Replace('#','%23')).AbsoluteUri
+    Put $publicSkill ($prefix+'Read [contract]('+ $uri +').')
+    Expect-Public "file URI literal filename $fileName accepted publicly" $true
+}
+$publicHidden = Join-Path $public '.agents/skills/hidden-skill'
+Put 'public-entrypoint/.agents/skills/hidden-skill/SKILL.md' 'malformed'
+[IO.File]::SetAttributes($publicHidden,[IO.FileAttributes]::Directory -bor [IO.FileAttributes]::Hidden)
+try {
+    Expect-Public 'hidden malformed skill rejected publicly' $false 'missing frontmatter delimiters'
+    Put 'public-entrypoint/.agents/skills/hidden-skill/SKILL.md' ($prefix.Replace('example-skill','hidden-skill')+'Read.')
+    Expect-Public 'hidden valid skill checked publicly' $true
+} finally {
+    [IO.File]::SetAttributes($publicHidden,[IO.FileAttributes]::Directory)
+    [IO.File]::Delete((Join-Path $publicHidden 'SKILL.md'))
+    [IO.Directory]::Delete($publicHidden)
+}
 Put $publicSkill ($prefix+"Read [contract][owner].`n[owner]: ../../../Specs/absent.md")
 Expect-Public 'reference definition missing local target refused publicly' $false 'missing local reference'
 Put $publicSkill ($prefix+'Read the contract.')
 Put 'public-entrypoint/Specs/Plans/WIP/Example_2026-10-28.md' '# Active plan'
 Put 'public-entrypoint/Specs/Plans/WIP/README.md' "[Only][plan]`n[plan]: Example_2026-10-28.md"
 Expect-Public 'one rendered reference indexes a public plan' $true
+Put 'public-entrypoint/Specs/Plans/WIP/README.md' "[plan]:`n  Example_2026-10-28.md"
+Expect-Public 'continued definition-only public index refused' $false 'exactly one index link'
+Put 'public-entrypoint/Specs/Plans/WIP/README.md' "[Only][plan]`n[plan]:`n  Example_2026-10-28.md (Plan contract)"
+Expect-Public 'one continued reference indexes public plan' $true
 Put 'public-entrypoint/Specs/Plans/WIP/README.md' '[plan]: Example_2026-10-28.md'
 Expect-Public 'definition-only public index refused' $false 'exactly one index link'
 Put 'public-entrypoint/Specs/Plans/WIP/README.md' "[First][plan] [Second][plan]`n[plan]: Example_2026-10-28.md"
