@@ -36,6 +36,10 @@ percent sequences in filenames. Quoted ISO dates/timestamps retain their exact s
 automatic date conversion. Hidden direct skill directories receive the same metadata and package checks.
 Temporal type detection matches a complete scalar. Plain date-prefixed prose such as
 `2026-10-28 migration guidance` remains a string; complete unquoted dates/timestamps still require quotes.
+Backtick fence opening info cannot contain backticks: line-leading same-line code such as
+`` ```literal``` `` remains inline prose; tilde-fence info may contain backticks.
+Recognized fence openers and closers have zero to three leading spaces before the optional list marker.
+Four-space or tab indentation does not open or close a fence in this bounded scanner.
 
 The public `validate.ps1` documentation check reuses this same Markdown/path helper. It rejects reparse files and
 ancestors before source reads, parsing or traversal; skill headers must not be opened by an earlier, weaker reader.

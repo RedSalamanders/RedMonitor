@@ -126,6 +126,20 @@ Put $skill ($prefix+'Read [web](https://example.invalid/contract) and [section](
 Expect 'external links are not fetched' $true
 Put $skill ($prefix+'```markdown'+"`n[example](missing.md)`n"+'```')
 Expect 'illustrative fenced link ignored' $true
+Put $skill ($prefix+'```literal```')
+Expect 'line-leading same-line backtick code is valid prose' $true
+Put $skill ($prefix+'```literal```'+"`n`n[Missing](missing.md)")
+Expect 'line-leading inline code cannot hide following real resource' $false 'missing local reference'
+Put $skill ($prefix+'~~~info`literal'+"`n[Illustration](missing.md)`n"+'~~~')
+Expect 'tilde fence info can retain backticks' $true
+foreach ($indent in '    ',"`t") {
+    Put $skill ($prefix+$indent+'```text'+"`n`n[Missing](missing.md)")
+    Expect "indent length $($indent.Length) cannot open a fence hiding a real link" $false 'missing local reference'
+    Put $skill ($prefix+'```text'+"`n"+$indent+'```'+"`n[Illustration](missing.md)`n"+'```')
+    Expect "indent length $($indent.Length) cannot close an illustrative fence" $true
+}
+Put $skill ($prefix+'   ```text'+"`n[Illustration](missing.md)`n"+'   ```')
+Expect 'three-space fence boundary remains supported' $true
 Put $skill ($prefix+'Read [encoded contract](../../../Specs/contract%20name.md#section).')
 Put 'Specs/contract name.md' '# Contract with space'
 Expect 'encoded path and fragment' $true
@@ -283,6 +297,20 @@ Put $publicSkill ($prefix+'```markdown'+"`n[example](missing.md)`n"+'```')
 Expect-Public 'fenced illustration accepted by actual entrypoint' $true
 Put $publicSkill ($prefix+'The syntax is `[example](missing.md)`.')
 Expect-Public 'inline-code pseudo-link accepted by actual entrypoint' $true
+Put $publicSkill ($prefix+'```literal```')
+Expect-Public 'line-leading same-line code span accepted publicly' $true
+Put $publicSkill ($prefix+'```literal```'+"`n`n[Missing](missing.md)")
+Expect-Public 'same-line inline backticks do not hide real resource publicly' $false 'missing local reference'
+Put $publicSkill ($prefix+'~~~info`literal'+"`n[Illustration](missing.md)`n"+'~~~')
+Expect-Public 'tilde info with backticks remains a fence publicly' $true
+foreach ($indent in '    ',"`t") {
+    Put $publicSkill ($prefix+$indent+'```text'+"`n`n[Missing](missing.md)")
+    Expect-Public "indent length $($indent.Length) cannot open a fence publicly" $false 'missing local reference'
+    Put $publicSkill ($prefix+'```text'+"`n"+$indent+'```'+"`n[Illustration](missing.md)`n"+'```')
+    Expect-Public "indent length $($indent.Length) cannot close illustrative fence publicly" $true
+}
+Put $publicSkill ($prefix+'   ```text'+"`n[Illustration](missing.md)`n"+'   ```')
+Expect-Public 'three-space fence remains supported publicly' $true
 Put $publicSkill ($prefix+'Read [contract](../../../Specs/contract(v1).md).')
 Expect-Public 'balanced parentheses accepted by actual entrypoint' $true
 Put $publicSkill ($prefix+"Read [contract][owner].`n[owner]: ../../../Specs/contract%20name.md")
