@@ -3,6 +3,10 @@
 Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush explicitly account for
 x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
 boundaries and required repository surfaces. format.ps1 -Check verifies native formatting.
+Formatting prefers the discovered Visual Studio C++ Clang bundle over unrelated LLVM executables on PATH,
+with standalone PATH LLVM supported when no bundle is installed. The command reports the executable/version
+and parses the unchanged repository style before checking or rewriting source. An incompatible formatter
+fails with its identity; CI must install compatible tools rather than weakening formatting policy.
 
 ## Agent guidance checks
 

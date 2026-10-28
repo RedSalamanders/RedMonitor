@@ -19,4 +19,5 @@ $scratch=Assert-RedMonitorOutputPath (Join-Path $valid ([guid]::NewGuid().ToStri
 New-Item -ItemType Directory -Path $scratch -Force|Out-Null
 & (Join-Path $root 'Tools/Test-ChangelogWorkflow.ps1') -ScratchRoot $scratch
 & (Join-Path $PSScriptRoot 'Tooling.Tests.AgentGuidance.ps1')
-Write-Host 'PASS: canonical output boundary, changelog and agent-guidance behavior'
+& (Join-Path $PSScriptRoot 'Tooling.Tests.Formatting.ps1')
+Write-Host 'PASS: canonical output boundary, changelog, agent-guidance and formatter behavior'
