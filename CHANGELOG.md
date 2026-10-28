@@ -2,6 +2,10 @@
 
 ## Unreleased
 - Pin the compatible native formatter and checksum-verified PowerShell installation for local and hosted checks, preserving the existing style, strict formatting errors and all native matrix jobs.
+- Prefer the selected Visual Studio Clang formatter over unrelated PATH LLVM, report its identity and reject incompatible style before source processing; preserve standalone fallback and cover selection with six read-only fixture controls.
+- Count actual resolved Markdown link uses in the active-plan index separately from reference definitions, preserving resource validation while rejecting definition-only and duplicate-use indexes; cover full, collapsed and shortcut forms through module and public-entrypoint controls.
+- Make public documentation and skill validation share local-link semantics, reject reparse headers before reads and validate drive/file-URI targets; cover balanced destinations, inline examples, typed descriptions and the actual public entrypoint with bounded fixtures.
+- Validate skill headers, declared local references and active-plan indexing without requiring an extraction plan to remain in WIP; add build/test scope examples and focused read-only/lifecycle regression controls. Tooling validation does not imply native viewer qualification.
 - Transfer the former consumer's detailed viewer validation obligations into the standalone contract, retaining Unicode, bounded decoding, snapshots, export/cancellation, lifetime, interaction and Release scaling requirements separately from the console subset already qualified.
 - Reconcile the architecture contract with the implemented minimal client boundary: consumers vendor the pinned header and MIT notice, verify locally, and use the separately installed production Release helper without staging its executable or satellites.
 - Use the independent RedMonitor product name in the French viewer title, matching the embedded and other localized titles; retain legacy resource-owner filenames for compatibility.

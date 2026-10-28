@@ -13,6 +13,10 @@ The view uses Direct2D/DirectWrite/D3D11 and an exact pinned DxUi library.
 ./package.ps1 -Configuration Release
 ```
 
+`validate.ps1` is read-only and checks repository surfaces, skill structure/declared links and the active-plan
+index. `./Tests/Tooling.Tests.ps1` exercises the tooling with owned `.build` fixtures. Neither command builds
+native code or establishes viewer/runtime qualification; see [validation](Specs/Testing/Testing_Validation.md).
+
 Requires Windows 11 build 22000.2600+, Visual Studio 2026 Desktop C++ tools, a Windows SDK,
 Git and PowerShell 7. The build discovers Visual Studio. x64 and ARM64 each support Debug,
 Release and ASan Debug; cross-builds do not establish native ARM64 runtime support.

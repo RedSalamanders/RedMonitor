@@ -4,6 +4,11 @@ AGENTS.md and this catalog own repository policy. Contracts state intended behav
 distinguishes implemented behavior from pending qualification. Exact locks/manifests own machine identity.
 Tests provide evidence, not permission to ignore contracts. WIP plans sequence unfinished work.
 
+Completed plans move to Done only after their own gates close. Update the active index, Done index and inbound
+links together. Validation checks the current indexed plans and their references; it does not permanently require
+the extraction plan, or any other historical filename, to remain unfinished. The
+[agent guidance checks](Testing/Testing_Validation.md#agent-guidance-checks) define the structural validation scope.
+
 | Contract | Ownership |
 | --- | --- |
 | [Architecture](Core/Core_Architecture.md) | Source boundaries, compatibility and settings |

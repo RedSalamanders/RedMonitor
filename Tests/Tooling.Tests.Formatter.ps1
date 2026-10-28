@@ -12,7 +12,7 @@ $fixture=Assert-RedMonitorOutputPath (Join-Path $repo ('.build/tooling-tests/for
 foreach($directory in 'Tools','Build','src','support','include','Tests','.build/format/clang_format/data/bin'){
     [void][IO.Directory]::CreateDirectory((Join-Path $fixture $directory))
 }
-foreach($path in 'Tools/Install-ClangFormat.ps1','Build/Toolchain.psm1','Build/clang-format.json','format.ps1','.clang-format'){
+foreach($path in 'Tools/Install-ClangFormat.ps1','Build/Toolchain.psm1','Build/Formatting.psm1','Build/clang-format.json','format.ps1','.clang-format'){
     Copy-Item -LiteralPath (Join-Path $repo $path) -Destination (Join-Path $fixture $path)
 }
 $pin=Get-Content -LiteralPath (Join-Path $repo 'Build/clang-format.json') -Raw|ConvertFrom-Json
