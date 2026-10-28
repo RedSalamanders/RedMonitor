@@ -50,7 +50,7 @@ function Get-RedMonitorSkillProblem {
         } elseif ($value -match '^[-?:,\[\]{}#&*!|>''"%@`]' -or $value.Contains(': ') -or $value.EndsWith(':') -or
             $value -cmatch '^(?:~|null|Null|NULL|true|True|TRUE|false|False|FALSE|yes|Yes|YES|no|No|NO|on|On|ON|off|Off|OFF|=|<<)$' -or
             $value -cmatch '^[-+]?(?:[0-9][0-9_:]*(?:\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?|\.[0-9_]+(?:[eE][-+]?[0-9]+)?|0[bB][01_]+|0[xX][0-9a-fA-F_]+|\.(?:inf|Inf|INF|nan|NaN|NAN))$' -or
-            $value -cmatch '^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}' -or $value.Contains(' #')) {
+            $value -cmatch '^(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt]|[ \t]+)[0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]*)?(?:[ \t]*(?:Z|[-+][0-9]{1,2}(?::[0-9]{2})?))?)$' -or $value.Contains(' #')) {
             return 'unsupported plain scalar; quote the value'
         }
         $values.Add($key, $value)

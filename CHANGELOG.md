@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Recognize only complete unquoted date/timestamp metadata scalars so date-prefixed guidance stays valid prose; retain quoted strings and typed temporal rejection through header and public-entrypoint controls.
 - Validate hidden skill packages and preserve quoted ISO metadata strings; keep inline-code spans within paragraphs and validate continued Markdown references and parenthesized titles through module and public-entrypoint controls, preserving literal file-URI filenames and exact plan-index counts.
 - Prefer the selected Visual Studio Clang formatter over unrelated PATH LLVM, report its identity and reject incompatible style before source processing; preserve standalone fallback and cover selection with six read-only fixture controls.
 - Count actual resolved Markdown link uses in the active-plan index separately from reference definitions, preserving resource validation while rejecting definition-only and duplicate-use indexes; cover full, collapsed and shortcut forms through module and public-entrypoint controls.

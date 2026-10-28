@@ -22,6 +22,11 @@ $cases = @(
     @{ Name='double quoted UTC timestamp'; Text=$prefix.Replace('Validate a fixture.','"2026-10-28T09:00:00Z"')+'Read.'; Valid=$true },
     @{ Name='double quoted offset timestamp'; Text=$prefix.Replace('Validate a fixture.','"2026-10-28T09:00:00+02:00"')+'Read.'; Valid=$true },
     @{ Name='plain timestamp requires quoting'; Text=$prefix.Replace('Validate a fixture.','2026-10-28T09:00:00Z')+'Read.'; Valid=$false },
+    @{ Name='plain date requires quoting'; Text=$prefix.Replace('Validate a fixture.','2026-10-28')+'Read.'; Valid=$false },
+    @{ Name='plain offset timestamp requires quoting'; Text=$prefix.Replace('Validate a fixture.','2026-10-28 9:00:00 +02:30')+'Read.'; Valid=$false },
+    @{ Name='plain fractional timestamp requires quoting'; Text=$prefix.Replace('Validate a fixture.','2026-10-28t09:00:00.25-08:00')+'Read.'; Valid=$false },
+    @{ Name='plain date-prefixed prose'; Text=$prefix.Replace('Validate a fixture.','2026-10-28 migration guidance')+'Read.'; Valid=$true },
+    @{ Name='plain timestamp-prefixed prose'; Text=$prefix.Replace('Validate a fixture.','2026-10-28T09:00:00Z migration guidance')+'Read.'; Valid=$true },
     @{ Name='missing file'; Text=$null; Valid=$false },
     @{ Name='unfenced'; Text="name: example-skill`ndescription: Validate.`nRead."; Valid=$false },
     @{ Name='empty body'; Text=$prefix; Valid=$false },
@@ -284,6 +289,8 @@ Put $publicSkill ($prefix+"Read [contract][owner].`n[owner]: ../../../Specs/cont
 Expect-Public 'reference-style link accepted by actual entrypoint' $true
 Put $publicSkill ($prefix.Replace('Validate a fixture.','"2026-10-28T09:00:00Z"')+'Read.')
 Expect-Public 'quoted timestamp remains a string publicly' $true
+Put $publicSkill ($prefix.Replace('Validate a fixture.','2026-10-28 migration guidance')+'Read.')
+Expect-Public 'plain date-prefixed prose accepted publicly' $true
 Put $publicSkill ($prefix+'first `'+"`n`n[Missing](missing.md)`n`n"+'last `')
 Expect-Public 'cross-paragraph backticks do not hide missing link publicly' $false 'missing local reference'
 Put $publicSkill ($prefix+'Read [contract](../../../Specs/contract%20name.md (Owning contract)).')

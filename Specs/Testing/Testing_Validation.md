@@ -34,6 +34,8 @@ parentheses, and a reference destination may continue onto the immediately follo
 claim a general CommonMark parser. File URI escapes are decoded once, preserving encoded `#` and literal
 percent sequences in filenames. Quoted ISO dates/timestamps retain their exact string text rather than receiving
 automatic date conversion. Hidden direct skill directories receive the same metadata and package checks.
+Temporal type detection matches a complete scalar. Plain date-prefixed prose such as
+`2026-10-28 migration guidance` remains a string; complete unquoted dates/timestamps still require quotes.
 
 The public `validate.ps1` documentation check reuses this same Markdown/path helper. It rejects reparse files and
 ancestors before source reads, parsing or traversal; skill headers must not be opened by an earlier, weaker reader.
