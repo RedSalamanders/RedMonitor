@@ -18,4 +18,6 @@ foreach($path in @($root,(Split-Path $root -Parent),(Join-Path $root '.build/../
 $scratch=Assert-RedMonitorOutputPath (Join-Path $valid ([guid]::NewGuid().ToString('N')))
 New-Item -ItemType Directory -Path $scratch -Force|Out-Null
 & (Join-Path $root 'Tools/Test-ChangelogWorkflow.ps1') -ScratchRoot $scratch
-Write-Host 'PASS: canonical output boundary and changelog behavior'
+& (Join-Path $PSScriptRoot 'Tooling.Tests.AgentGuidance.ps1')
+& (Join-Path $PSScriptRoot 'Tooling.Tests.Formatting.ps1')
+Write-Host 'PASS: canonical output boundary, changelog, agent-guidance and formatter behavior'

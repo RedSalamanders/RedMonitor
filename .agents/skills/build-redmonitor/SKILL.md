@@ -5,4 +5,14 @@ description: Build, restore or package standalone RedMonitor and diagnose toolch
 
 # build-redmonitor
 
-Read Specs/Build/Build_Consumption.md. Use build.ps1 and exact restores; never borrow a sibling Common.dll or output. Verify six profiles, runtime dependencies and receipts separately. Preserve running apps and checked output paths.
+Read the [build/consumption contract](../../../Specs/Build/Build_Consumption.md). Use the repository entrypoints:
+
+```powershell
+./build.ps1 -Platform x64 -Configuration Debug
+./build.ps1 -Platform ARM64 -Configuration Release
+./package.ps1 -Platform x64 -Configuration Release
+```
+
+The ARM64 command cross-builds on x64; it does not run ARM64 tests. Packaging is a separate Release operation,
+not a default build step. Verify the owning profile matrix, dependency closure and receipts separately; do not
+borrow sibling outputs or terminate independently launched apps. Outputs stay beneath the repository `.build`.
