@@ -32,8 +32,11 @@ Use focused `ej/` branches after the initial import.
   Require x64 Debug/Release/ASan tests and six builds for code qualification, a real ASan detection
   probe, native ARM64 execution for runtime claims and paired Release performance before non-regression.
   A successful compile or pending CI is not a runtime pass. Preserve failed receipts.
-- Update docs and source provenance when moving ownership. Add a dated Changes fragment; run
-  `Tools/Test-Changelog.ps1`, then `Tools/Fold-Changelog.ps1` and `-Check` before final handoff/PrePush.
+- Update docs and source provenance when moving ownership. Add a dated Changes fragment and keep it in the
+  change: never fold it in a feature change and never edit `CHANGELOG.md`. Fragments are folded on main after
+  merge by `Tools/Submit-ChangelogFold.ps1`, which opens a fold pull request. Run `Tools/Test-Changelog.ps1`
+  while editing; PrePush and CI run it with `-Base`, which refuses any `CHANGELOG.md` change that is not an
+  exact fold of fragments already on main.
 
 Read the relevant focused skill in `.agents/skills/`: build-redmonitor, transport-client,
 viewer-lifetime, file-safety, consumer-adoption, test-harness or spec-workflow.

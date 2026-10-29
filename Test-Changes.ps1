@@ -4,7 +4,7 @@ Explains or runs affected validation and explicit local Full/PrePush qualificati
 .PARAMETER Explain
 Print required coverage without executing it.
 .PARAMETER Mode
-Affected validates and tests Debug; Full/PrePush run all local profiles. No hosted CI pass is inferred.
+Affected validates and tests Debug; Full/PrePush run all local profiles, and PrePush also checks CHANGELOG.md against origin/main. No hosted CI pass is inferred.
 #>
 [CmdletBinding()]
 param([switch]$Explain,[ValidateSet('Affected','Full','PrePush')][string]$Mode='Affected')
@@ -15,7 +15,9 @@ if($Explain){
     if($Mode -ne 'Affected'){Write-Host 'Also x64 Release/ASan runtime and all three ARM64 cross-builds. Native/manual/UI/performance gates remain separate.'}
     return
 }
-if($Mode -in 'Full','PrePush'){& (Join-Path $PSScriptRoot 'Tools/Fold-Changelog.ps1') -Check}
+# Pending fragments are expected: they are folded on the default branch after merge. CHANGELOG.md may change only by such a fold.
+if($Mode -eq 'PrePush'){& (Join-Path $PSScriptRoot 'Tools/Test-Changelog.ps1') -Base origin/main}
+elseif($Mode -eq 'Full'){& (Join-Path $PSScriptRoot 'Tools/Test-Changelog.ps1')}
 & (Join-Path $PSScriptRoot 'validate.ps1')
 & (Join-Path $PSScriptRoot 'format.ps1') -Check
 & (Join-Path $PSScriptRoot 'Tests/Tooling.Tests.ps1')

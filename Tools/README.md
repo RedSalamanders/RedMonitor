@@ -5,8 +5,9 @@ Generated outputs remain below `.build`; independently launched applications are
 
 | Tool | Purpose and side effects |
 | --- | --- |
-| `Fold-Changelog.ps1` | Validates/folds Changes into CHANGELOG.md; Check and WhatIf are read-only |
-| `Test-Changelog.ps1` | Read-only fragment and generated changelog validation |
+| `Fold-Changelog.ps1` | Folds Changes fragments into CHANGELOG.md on the default branch, normally through `Submit-ChangelogFold.ps1`; Check and WhatIf are read-only |
+| `Submit-ChangelogFold.ps1` | Folds the fetched default branch in a temporary worktree, pushes `changelog/fold-<commit>` and opens its pull request with `gh`; uses the network and never changes this checkout |
+| `Test-Changelog.ps1` | Read-only fragment validation; `-Base <ref>` also refuses any CHANGELOG.md change that is not an exact fold of fragments already on that base |
 | `Test-ChangelogWorkflow.ps1` | Runs shared behavior fixtures in a caller-owned scratch directory |
 | `VisualStudio.psm1` | Read-only discovery of the installed C++ toolchain |
 | `VcpkgTriplet.psm1` | Writes toolchain-pinned overlay triplets under the generated dependency root |
