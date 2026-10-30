@@ -31,3 +31,5 @@ names are retained for RedSalamander compatibility. Consumer adoption and qualif
 MIT source origin and private support imports are recorded in [SourceImport](Specs/SourceImport/source-origin.json).
 
 See [application adoption](docs/Consumers.md) for the single-header SDK, offline verification and separately installed Release helper.
+
+CI behavior and manual actions: [Unified CI contract](Specs/Build/Build_UnifiedCI.md).

@@ -12,13 +12,22 @@ Debug, Release or ASan Debug.
 Use already restored exact dependencies.
 .PARAMETER ViewerTests
 Auto enables viewer test hooks in Debug/ASan and disables them in Release. Explicit true/false is receipt-bound.
+.PARAMETER ProductionOnly
+Build only the production viewer and satellites; excludes console test targets.
+.PARAMETER BuildNumber
+Explicit frozen batch version component. Zero preserves the local default version.
 #>
 [CmdletBinding()]
 param([ValidateSet('x64','ARM64')][string] $Platform='x64',
       [ValidateSet('Debug','Release','ASan Debug')][string] $Configuration='Debug', [switch] $SkipRestore,
-      [ValidateSet('Auto','true','false')][string]$ViewerTests='Auto')
+      [ValidateSet('Auto','true','false')][string]$ViewerTests='Auto',
+      [switch]$ProductionOnly, [ValidateRange(0,65535)][int]$BuildNumber=0)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
+if ($env:CI_NATIVE_BUILDS_DISABLED -eq 'true') { throw 'Native builds are forbidden in compiler-free PR checks.' }
+if($ProductionOnly -and ($Configuration -ne 'Release' -or $ViewerTests -eq 'true')){
+    throw 'ProductionOnly requires a test-disabled Release viewer.'
+}
 Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
 $lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
 try {
@@ -32,10 +41,10 @@ $identity=Get-RedMonitorSourceIdentity
 $msbuild=Get-RedMonitorMSBuild
 $started=[DateTime]::UtcNow
 $viewerTestsEnabled=if($ViewerTests -eq 'Auto'){$Configuration -ne 'Release'}else{$ViewerTests -eq 'true'}
-& $msbuild (Join-Path $PSScriptRoot 'RedMonitor.proj') /nologo /m:4 /v:minimal "/p:Platform=$Platform" "/p:Configuration=$Configuration" "/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())" "/flp:LogFile=$output/build.log;Verbosity=normal"
+& $msbuild (Join-Path $PSScriptRoot 'RedMonitor.proj') /nologo /m:4 /v:minimal "/p:Platform=$Platform" "/p:Configuration=$Configuration" "/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())" "/p:RedMonitorProductionOnly=$($ProductionOnly.IsPresent.ToString().ToLowerInvariant())" "/p:RedMonitorBuildNumber=$BuildNumber" "/flp:LogFile=$output/build.log;Verbosity=normal"
 if($LASTEXITCODE -ne 0){throw "RedMonitor build failed: $output/build.log"}
 $version=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $output 'RedMonitor.exe'))
-if($version.ProductName -cne 'RedMonitor' -or
+if($version.ProductName -cne 'RedMonitor' -or $version.FileBuildPart -ne $BuildNumber -or
    (($version.SpecialBuild -ceq 'RedSalamander.TestSurface=ENABLE_TESTS') -ne $viewerTestsEnabled)){
     throw 'Viewer version/test-surface metadata does not match the requested build mode.'
 }
@@ -47,6 +56,7 @@ $artifacts=@(Get-ChildItem -LiteralPath $output -Recurse -File | Where-Object {
     [ordered]@{path=[IO.Path]::GetRelativePath($output,$_.FullName);sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}
 })
 [ordered]@{schemaVersion=1;passed=$true;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;viewerTestsEnabled=$viewerTestsEnabled;
+  buildNumber=$BuildNumber;productionOnly=[bool]$ProductionOnly;
   dxui=Get-Content (Join-Path $PSScriptRoot 'Dependencies/DxUi.lock.json') -Raw|ConvertFrom-Json;
   toolchainSha256=(Get-FileHash -LiteralPath $msbuild).Hash;artifacts=$artifacts;
   startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');runtimeExecuted=$false}|
