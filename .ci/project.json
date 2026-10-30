@@ -4,7 +4,7 @@
   "repository": "RedSalamanders/RedMonitor",
   "engine": {
     "repository": "RedSalamanders/.github",
-    "ref": "195ab4a253947f4217ca1e57d37ba5e43ae1cb0c"
+    "ref": "81304070dbd7ac9206b1fe13a78edb7d24671fea"
   },
   "kind": "application",
   "adapter": "Tools/Invoke-ProjectCi.ps1",
@@ -39,6 +39,7 @@
     "identifier": "RedSalamanders.RedMonitor",
     "executable": "RedMonitor.exe",
     "alias": "redmonitor",
-    "license": "MIT"
+    "license": "MIT",
+    "minimumOSVersion": "10.0.22000.2600"
   }
 }

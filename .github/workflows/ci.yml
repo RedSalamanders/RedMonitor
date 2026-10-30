@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: RedSalamanders/.github
-          ref: 195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+          ref: 81304070dbd7ac9206b1fe13a78edb7d24671fea
           path: .ci-engine
           persist-credentials: false
       - id: pr
@@ -52,9 +52,9 @@ jobs:
   checks:
     needs: resolve
     if: always() && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && needs.resolve.result == 'success'))
-    uses: RedSalamanders/.github/.github/workflows/pr.yml@195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+    uses: RedSalamanders/.github/.github/workflows/pr.yml@81304070dbd7ac9206b1fe13a78edb7d24671fea
     with:
-      engine_ref: 195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+      engine_ref: 81304070dbd7ac9206b1fe13a78edb7d24671fea
       head: ${{ github.event.pull_request.head.sha || needs.resolve.outputs.head }}
       base: ${{ github.event.pull_request.base.sha || needs.resolve.outputs.base }}
     permissions:
@@ -75,7 +75,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: RedSalamanders/.github
-          ref: 195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+          ref: 81304070dbd7ac9206b1fe13a78edb7d24671fea
           path: .ci-engine
           persist-credentials: false
       - shell: pwsh
@@ -86,9 +86,9 @@ jobs:
         run: ./.ci-engine/Tools/Complete-PrCheck.ps1 -CheckId $env:CI_CHECK_ID -Result $env:CI_RESULT
   coordinate:
     if: github.event_name == 'push'
-    uses: RedSalamanders/.github/.github/workflows/coordinate.yml@195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+    uses: RedSalamanders/.github/.github/workflows/coordinate.yml@81304070dbd7ac9206b1fe13a78edb7d24671fea
     with:
-      engine_ref: 195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+      engine_ref: 81304070dbd7ac9206b1fe13a78edb7d24671fea
     permissions:
       contents: read
       statuses: write
