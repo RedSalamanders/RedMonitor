@@ -1,68 +1,95 @@
-name: Standalone validation
+name: CI
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR to recheck after an explicit formatting commit
+        type: string
+        required: true
+      expected_head:
+        description: Exact new PR head SHA
+        type: string
+        required: true
 permissions:
   contents: read
 concurrency:
-  group: redmonitor-${{ github.ref }}
+  group: ci-${{ github.event_name == 'push' && 'main-coordinator' || github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: true
 jobs:
-  tooling:
-    runs-on: windows-2025-vs2026
+  resolve:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      checks: write
+    outputs:
+      head: ${{ steps.pr.outputs.head }}
+      base: ${{ steps.pr.outputs.base }}
+      check_id: ${{ steps.pr.outputs.check_id }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Enable long Windows checkout paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          repository: RedSalamanders/.github
+          ref: 195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+          path: .ci-engine
           persist-credentials: false
-          # A pull request needs its merge commit and first parent; a push needs the history back to the tip it replaced. The
-          # strings matter: a bare 0 is falsy, so "push && 0 || 2" would give every push a two-commit checkout.
-          fetch-depth: ${{ github.event_name == 'push' && '0' || '2' }}
-      - name: Changelog changes are fragments or exact folds
+      - id: pr
+        shell: pwsh
         env:
-          # A pull request's merge commit compares with its first parent; a push compares with the tip it replaced.
-          CHANGELOG_BASE: ${{ github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' && github.event.before || 'HEAD^1' }}
-        run: ./Tools/Test-Changelog.ps1 -Base $env:CHANGELOG_BASE
-        shell: pwsh
-      - run: ./validate.ps1
-        shell: pwsh
-      - name: Install checksum-pinned formatter
-        run: ./Tools/Install-ClangFormat.ps1
-        shell: pwsh
-      - run: ./format.ps1 -Check
-        shell: pwsh
-      - run: ./Tests/Tooling.Tests.ps1
-        shell: pwsh
-  native:
-    name: native (${{ matrix.platform }}, ${{ matrix.configuration }})
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [x64, ARM64]
-        configuration: [Debug, Release, ASan Debug]
-        include:
-          - platform: x64
-            runner: windows-2025-vs2026
-          - platform: ARM64
-            runner: windows-11-vs2026-arm
+          GH_TOKEN: ${{ github.token }}
+          CI_PR: ${{ inputs.pr_number }}
+          CI_HEAD: ${{ inputs.expected_head }}
+        run: ./.ci-engine/Tools/Resolve-PrCheck.ps1 -PullRequest $env:CI_PR -ExpectedHead $env:CI_HEAD
+  checks:
+    needs: resolve
+    if: always() && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && needs.resolve.result == 'success'))
+    uses: RedSalamanders/.github/.github/workflows/pr.yml@195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+    with:
+      engine_ref: 195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+      head: ${{ github.event.pull_request.head.sha || needs.resolve.outputs.head }}
+      base: ${{ github.event.pull_request.base.sha || needs.resolve.outputs.base }}
+    permissions:
+      contents: read
+  report:
+    needs: [resolve, checks]
+    if: always() && github.event_name == 'workflow_dispatch' && needs.resolve.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      checks: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-      - run: ./test.ps1 -Platform ${{ matrix.platform }} -Configuration "${{ matrix.configuration }}"
+      - name: Enable long Windows checkout paths
+        if: runner.os == 'Windows'
         shell: pwsh
-      - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          name: native-${{ matrix.platform }}-${{ matrix.configuration }}
-          include-hidden-files: true
-          path: |
-            .build/logs/**
-            .build/test-runs/**
-            .build/${{ matrix.platform }}/${{ matrix.configuration }}/*.log
-            .build/${{ matrix.platform }}/${{ matrix.configuration }}/*receipt.json
-          retention-days: 14
+          repository: RedSalamanders/.github
+          ref: 195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+          path: .ci-engine
+          persist-credentials: false
+      - shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_CHECK_ID: ${{ needs.resolve.outputs.check_id }}
+          CI_RESULT: ${{ needs.checks.result }}
+        run: ./.ci-engine/Tools/Complete-PrCheck.ps1 -CheckId $env:CI_CHECK_ID -Result $env:CI_RESULT
+  coordinate:
+    if: github.event_name == 'push'
+    uses: RedSalamanders/.github/.github/workflows/coordinate.yml@195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+    with:
+      engine_ref: 195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+    permissions:
+      contents: read
+      statuses: write
+      actions: write

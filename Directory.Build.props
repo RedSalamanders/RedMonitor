@@ -1,6 +1,8 @@
 <Project>
   <PropertyGroup>
     <RedMonitorRoot>$(MSBuildThisFileDirectory)</RedMonitorRoot>
+    <RequiredMsvcToolsVersion>14.52</RequiredMsvcToolsVersion>
+    <RedMonitorBuildNumber Condition="'$(RedMonitorBuildNumber)'==''">0</RedMonitorBuildNumber>
     <RedMonitorOutputRoot Condition="'$(RedMonitorOutputRoot)'==''">$(RedMonitorRoot).build\</RedMonitorOutputRoot>
     <OutDir>$(RedMonitorOutputRoot)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(RedMonitorOutputRoot)obj\$(Platform)\$(Configuration)\$(MSBuildProjectName)\</IntDir>
@@ -27,7 +29,7 @@
       <ConformanceMode>true</ConformanceMode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/utf-8 /FS %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>UNICODE;_UNICODE;COMMON_API=;WINVER=0x0A00;_WIN32_WINNT=0x0A00;NTDDI_VERSION=NTDDI_WIN11_GE;RS_DIAGNOSTICS_RUNTIME_OPT_IN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UNICODE;_UNICODE;COMMON_API=;WINVER=0x0A00;_WIN32_WINNT=0x0A00;NTDDI_VERSION=NTDDI_WIN11_GE;RS_DIAGNOSTICS_RUNTIME_OPT_IN;VERSINFO_BUILDNUMBER=$(RedMonitorBuildNumber);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(RedMonitorRoot)support;$(RedMonitorRoot)include;$(RedMonitorRoot)Tests;$(RedMonitorRoot)Tests\Support;$(RedMonitorPackages)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExternalIncludePath>$(RedMonitorPackages)include;$(ExternalIncludePath)</ExternalIncludePath>
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
@@ -43,7 +45,7 @@
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(RedMonitorRoot)support;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UNICODE;_UNICODE;VERSINFO_BUILDNUMBER=$(RedMonitorBuildNumber);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

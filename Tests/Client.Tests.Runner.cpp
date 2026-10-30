@@ -7,9 +7,25 @@
 
 #include "TestSupport/TestSupport.Tests.FailureReports.h"
 
+namespace
+{
+[[nodiscard]] bool CheckClientCondition(bool condition, const char* message) noexcept
+{
+    if (! condition)
+    {
+        std::fprintf(stderr, "FAILED: %s\n", message);
+    }
+    return condition;
+}
+} // namespace
+
 int wmain(int argc, wchar_t** argv)
 {
     RedSalamander::TestSupport::RouteFailureReportsAwayFromDialogs();
+    if (argc == 2 && std::wstring_view(argv[1]) == L"--ci-assertion-probe")
+    {
+        return CheckClientCondition(false, "CI_ASSERTION_PROBE") ? 0 : 21;
+    }
     if (argc == 3)
     {
         const bool expected = std::wstring_view(argv[1]) == L"--expect-production";
@@ -26,7 +42,7 @@ int wmain(int argc, wchar_t** argv)
                                     RedMonitor::Severity::Debug};
     for (size_t index = 0; index < severities.size(); ++index)
     {
-        if (RedMonitor::FilterBit(severities[index]) != (1u << index))
+        if (! CheckClientCondition(RedMonitor::FilterBit(severities[index]) == (1u << index), "severity-to-filter mapping"))
         {
             return 1;
         }

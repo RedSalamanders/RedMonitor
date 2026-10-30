@@ -1,0 +1,43 @@
+name: Qualify main Release
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Exact current main SHA, or main for an explicit run
+        type: string
+        default: main
+      mode:
+        description: automatic is reserved for the verified quiet-window coordinator
+        type: string
+        default: manual
+      retry:
+        description: Explicitly retry already admitted inputs
+        type: boolean
+        default: false
+      profile:
+        description: Automatic qualification profile
+        type: choice
+        options: [Release]
+        default: Release
+      coordinator_run:
+        description: Exact push coordinator run (automatic dispatch only)
+        type: string
+        default: ''
+permissions:
+  contents: write
+  statuses: write
+  actions: read
+concurrency:
+  group: native-main-qualification
+  cancel-in-progress: false
+  queue: max
+jobs:
+  qualify:
+    if: github.ref == 'refs/heads/main'
+    uses: RedSalamanders/.github/.github/workflows/native.yml@195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+    with:
+      engine_ref: 195ab4a253947f4217ca1e57d37ba5e43ae1cb0c
+      commit: ${{ inputs.commit }}
+      mode: ${{ inputs.mode }}
+      retry: ${{ inputs.retry }}
+      coordinator_run: ${{ inputs.coordinator_run }}
