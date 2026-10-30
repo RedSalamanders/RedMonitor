@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Pin the common CI engine to v1.0.5: verify native portable winget registration, every installed command alias, declared smoke probes and owned cleanup; retain the compiler-free custom dependency status observer and recorded owner-only emergency PR merge route. Publication remains an explicit action requiring both matching native Release regression and production ZIP receipts.
 - Document the explicit organization-owner, PR-only emergency merge route with a recorded reason and exact-head match; preserve actual checks and native publication qualification.
 - Retain stdout/stderr and real exit codes for windowless hosted native commands through the common pinned CI engine v1.0.4.
 - Upgrade shared CI to v1.0.3: fix literal-path formatting commits and separate archive/receipt/publication workflow outputs; preserve failed pilot evidence and the native test-to-production gate.
