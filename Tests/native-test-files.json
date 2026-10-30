@@ -1,9 +1,0 @@
-[
-  "Tests/Asan.Tests.Probe.cpp",
-  "Tests/Client.Tests.Runner.cpp",
-  "Tests/Monitor.Tests.Runner.cpp",
-  "Tests/Settings.Tests.Contract.cpp",
-  "Tests/Support/TestSupport.Tests.Runner.h",
-  "Tests/TestSupport/TestSupport.Tests.FailureReports.h",
-  "Tests/Transport.Tests.Roundtrip.cpp"
-]

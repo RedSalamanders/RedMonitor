@@ -1,7 +1,0 @@
-<Project>
-  <Import Project="$(RedMonitorRoot).build\dependencies\DxUi\DxUi.resolved.$(Platform).props" Condition="Exists('$(RedMonitorRoot).build\dependencies\DxUi\DxUi.resolved.$(Platform).props')" />
-  <Import Project="$(DxUiRoot)\Build\DxUi.Consumer.props" Condition="'$(DxUiRoot)'!=''" />
-  <Target Name="RedMonitorRequireDxUi" BeforeTargets="PrepareForBuild">
-    <Error Condition="'$(DxUiRoot)'==''" Text="Run restore.ps1 before building the RedMonitor viewer." />
-  </Target>
-</Project>

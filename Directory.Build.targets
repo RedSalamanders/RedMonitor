@@ -1,7 +1,0 @@
-<Project>
-  <Target Name="RedMonitorValidateProfile" BeforeTargets="PrepareForBuild">
-    <Error Condition="'$(Platform)'!='x64' and '$(Platform)'!='ARM64'" Text="RedMonitor requires x64 or ARM64." />
-    <Error Condition="'$(Configuration)'!='Debug' and '$(Configuration)'!='Release' and '$(Configuration)'!='ASan Debug'" Text="Invalid RedMonitor configuration." />
-    <Error Condition="!Exists('$(RedMonitorPackages)include\wil\resource.h')" Text="Run restore.ps1 before building RedMonitor." />
-  </Target>
-</Project>
