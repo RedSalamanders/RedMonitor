@@ -69,4 +69,8 @@ that all six native product pipelines passed.
 
 The adapter retains all six normal native scenarios. Release test builds explicitly enable viewer hooks; ProductionOnly builds the viewer and satellites with ViewerTests false, excluding console test targets. BuildNumber freezes the third PE version field and is recorded and checked before the build receipt is accepted. The Release failure probe uses the same client condition check as the normal severity scenario. package.ps1 consumes the exact current build receipt, bundles runtime/data closure and runs clean-extraction --runtime-contract. Live ETW and sanitizer/extended diagnostics remain explicit manual qualifications.
 
+## Emergency PR merge
 
+An organization owner may explicitly bypass PR merge checks during a recorded emergency through the GitHub PR override or gh pr merge --admin --match-head-commit FULL_SHA. Record the reason, blocked checks, exact reviewed head, rollback and follow-up in the PR and merge commit. The default-branch ruleset uses OrganizationAdmin with pull_request bypass; automation receives no bypass permission and direct/force pushes stay protected. Failed checks remain their actual results, and normal main qualification still runs. Production ZIP/SDK and publication requirements remain unchanged.
+
+Follow the common [emergency merge runbook](https://github.com/RedSalamanders/.github/blob/main/Specs/EmergencyMerge.md), including the reason file and exact-head CLI procedure. No emergency merge is an ordinary fallback after a failed merge attempt. Account restrictions must be resolved before enabling the ruleset; the pending RedPrism/RedTilde public visibility change remains the owner's operation.
