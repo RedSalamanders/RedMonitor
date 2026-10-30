@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Document the explicit organization-owner, PR-only emergency merge route with a recorded reason and exact-head match; preserve actual checks and native publication qualification.
 - Retain stdout/stderr and real exit codes for windowless hosted native commands through the common pinned CI engine v1.0.4.
 - Upgrade shared CI to v1.0.3: fix literal-path formatting commits and separate archive/receipt/publication workflow outputs; preserve failed pilot evidence and the native test-to-production gate.
 - Upgrade the shared CI engine to v1.0.2 so explicit formatting commits trigger fresh formatting/tooling, CodeQL and dependency-review checks on the exact new PR head. Native batching, toolchain and immutable ZIP publication contracts are preserved.
