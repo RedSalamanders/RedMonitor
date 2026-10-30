@@ -1,1 +1,4 @@
-int CiFormattingWitness(){return 7;}
+int CiFormattingWitness()
+{
+    return 7;
+}
