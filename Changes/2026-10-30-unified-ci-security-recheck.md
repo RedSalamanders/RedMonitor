@@ -1,1 +1,0 @@
-- Upgrade the shared CI engine to v1.0.2 so explicit formatting commits trigger fresh formatting/tooling, CodeQL and dependency-review checks on the exact new PR head. Native batching, toolchain and immutable ZIP publication contracts are preserved.
