@@ -1,0 +1,1 @@
+- Upgrade shared CI to v1.0.3: fix literal-path formatting commits and separate archive/receipt/publication workflow outputs; preserve failed pilot evidence and the native test-to-production gate.
