@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Retain stdout/stderr and real exit codes for windowless hosted native commands through the common pinned CI engine v1.0.4.
 - Upgrade shared CI to v1.0.3: fix literal-path formatting commits and separate archive/receipt/publication workflow outputs; preserve failed pilot evidence and the native test-to-production gate.
 - Upgrade the shared CI engine to v1.0.2 so explicit formatting commits trigger fresh formatting/tooling, CodeQL and dependency-review checks on the exact new PR head. Native batching, toolchain and immutable ZIP publication contracts are preserved.
 - Introduce the pinned organization CI adapter: compiler-free PR feedback, quiet-window main admission, native Release test-to-production gates, ZIP qualification and explicit publication. Preserve canonical project test, dependency, toolchain and evidence contracts; hosted rollout acceptance remains in progress.
