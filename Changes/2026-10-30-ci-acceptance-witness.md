@@ -1,0 +1,1 @@
+- Exercise formatting and dependency-review failure controls in a temporary acceptance PR; this PR must close without merging.
