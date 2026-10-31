@@ -1,1 +1,0 @@
-- Align the CI publication contract with the verified organization token policy and read-only credential check. Native qualification and exact-artifact Prepare remain separate acceptance gates; no product publication is selected.
