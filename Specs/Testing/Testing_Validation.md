@@ -3,6 +3,13 @@
 Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush explicitly account for
 x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
 boundaries and required repository surfaces. format.ps1 -Check verifies native formatting.
+
+`Tests/Tooling.Tests.Build.ps1`, included by the tooling suite, uses fresh owned `.build` Git fixtures
+to check receipt identity against ignored CI cache/Git metadata churn, timestamp-only changes, tracked
+and untracked edits/additions/deletions/renames, tracked ignored inputs and Unicode paths. It also checks
+the ASCII banner, color/plain modes, safe launch links and refusal to print success for warnings/errors.
+These controls do not invoke a compiler, launch an application or establish native runtime qualification.
+
 Formatting prefers the repository's exact pinned install, followed by the discovered Visual Studio C++
 Clang bundle and then standalone PATH LLVM. Every selected tool must match the pin. The command reports the executable/version
 and parses the unchanged repository style before checking or rewriting source. An incompatible formatter

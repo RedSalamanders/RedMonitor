@@ -38,16 +38,69 @@ function Assert-RedMonitorOutputNotRunning {
     }
 }
 
+function Get-RedMonitorSourceSnapshot {
+    [CmdletBinding()]
+    param([string]$Root = (Join-Path $PSScriptRoot '..'))
+    $Root = [IO.Path]::GetFullPath($Root)
+    if (-not (Test-Path -LiteralPath (Join-Path $Root '.git'))) {
+        throw "Source identity requires a Git checkout at '$Root'."
+    }
+    Import-Module (Join-Path $PSScriptRoot 'AgentGuidance.psm1') -ErrorAction Stop
+    Assert-RedMonitorOrdinaryGuidancePath $Root
+
+    # Bind tracked and non-ignored untracked bytes, never generated checkouts or Git metadata.
+    # NUL-delimited UTF-8 preserves spaces, apostrophes and non-ASCII paths independently of the console.
+    $start = [Diagnostics.ProcessStartInfo]::new('git')
+    foreach ($argument in @('-C',$Root,'ls-files','--cached','--others','--exclude-standard','-z')) {
+        $start.ArgumentList.Add($argument)
+    }
+    $start.UseShellExecute = $false
+    $start.CreateNoWindow = $true
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $start.StandardOutputEncoding = [Text.UTF8Encoding]::new($false, $true)
+    $process = [Diagnostics.Process]::Start($start)
+    try {
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(60000)) {
+            $process.Kill($true)
+            $process.WaitForExit()
+            throw 'Git source inventory timed out after 60 seconds.'
+        }
+        if ($process.ExitCode -ne 0) {
+            throw "Git source inventory failed ($($process.ExitCode)): $($stderr.GetAwaiter().GetResult().Trim())"
+        }
+        $paths = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+        foreach ($path in $stdout.GetAwaiter().GetResult().Split([char]0, [StringSplitOptions]::RemoveEmptyEntries)) {
+            [void]$paths.Add($path)
+        }
+    } finally { $process.Dispose() }
+    if (-not $paths.Count) { throw 'Git source inventory is empty; no source identity can be published.' }
+    $orderedPaths = [string[]]@($paths)
+    [Array]::Sort($orderedPaths, [StringComparer]::Ordinal)
+    $files = [Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)
+    $text = [Text.StringBuilder]::new("RedMonitorSource/v2`0")
+    foreach ($path in $orderedPaths) {
+        if ($path -match '(^/|(^|/)\.\.(/|$)|:|\\)') { throw "Invalid Git source path: $path" }
+        $absolute = Join-Path $Root $path
+        Assert-RedMonitorOrdinaryGuidancePath $absolute
+        $hash = if (Test-Path -LiteralPath $absolute -PathType Leaf) {
+            (Get-FileHash -LiteralPath $absolute -Algorithm SHA256 -ErrorAction Stop).Hash
+        } elseif (Test-Path -LiteralPath $absolute) {
+            throw "Source entry is not a file: $path"
+        } else { '(missing)' }
+        $files.Add($path, $hash)
+        [void]$text.Append($path).Append([char]0).Append($hash).Append([char]0)
+    }
+    $identity = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($text.ToString()))).ToLowerInvariant()
+    return [pscustomobject]@{Identity=$identity;Files=$files}
+}
+
 function Get-RedMonitorSourceIdentity {
-    $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-    $files = @(Get-ChildItem -LiteralPath $root -File -Force)
-    foreach ($directory in Get-ChildItem -LiteralPath $root -Directory -Force | Where-Object Name -notin '.git','.build','.vs','Measurements') {
-        $files += @(Get-ChildItem -LiteralPath $directory.FullName -File -Recurse -Force)
-    }
-    $rows = foreach ($file in $files | Sort-Object FullName) {
-        [IO.Path]::GetRelativePath($root, $file.FullName).Replace('\','/') + ':' + (Get-FileHash -LiteralPath $file.FullName).Hash
-    }
-    return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes(($rows -join "`n")))).ToLowerInvariant()
+    [CmdletBinding()]
+    param([string]$Root = (Join-Path $PSScriptRoot '..'))
+    return (Get-RedMonitorSourceSnapshot -Root $Root).Identity
 }
 
 function Enter-RedMonitorOperation {
@@ -66,4 +119,4 @@ function Enter-RedMonitorOperation {
     return $mutex
 }
 
-Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation
+Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceSnapshot,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation

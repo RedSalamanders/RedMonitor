@@ -21,4 +21,5 @@ New-Item -ItemType Directory -Path $scratch -Force|Out-Null
 & (Join-Path $PSScriptRoot 'Tooling.Tests.Formatter.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.AgentGuidance.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.Formatting.ps1')
-Write-Host 'PASS: canonical output boundary, changelog, agent-guidance and formatter behavior'
+& (Join-Path $PSScriptRoot 'Tooling.Tests.Build.ps1')
+Write-Host 'PASS: canonical output boundary, changelog, agent-guidance, formatter and build behavior'
