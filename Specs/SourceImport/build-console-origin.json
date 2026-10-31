@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/RedSalamanders/RedSalamander",
+  "commit": "6b6f5646be297fbc232d137f1df6a00c5cb74461",
+  "license": "MIT",
+  "importDate": "2026-10-31",
+  "files": [
+    {
+      "source": "Build/BuildConsole.psm1",
+      "destination": "Build/BuildConsole.psm1",
+      "sha256": "cd4477e0d4430758f150baa37de247446bccb3901851f38c2e378d8d60efc818",
+      "sha256Kind": "imported working-tree bytes with CRLF line endings",
+      "disposition": "byte-identical local copy of the shared Red-family terminal result helper; no sibling runtime dependency"
+    }
+  ]
+}
