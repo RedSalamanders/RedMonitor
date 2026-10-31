@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Adopt shared CI v1.0.7 with separate sandbox and workspace evidence uploads. Preserve paired native regression, production and archive validation; no product publication is performed.
 - Adopt shared CI v1.0.6: DxUi SDK ZIPs stay internal with no publication workflow; application publication remains manual and artifact-only. Document the organization token route and separate implementation closeout from source-bound hosted acceptance; no product or winget publication is performed.
 - Add a colored RedMonitor ASCII build banner and checked green result summary; keep ignored CI checkout/Git metadata out of source receipts while detecting real source edits, retain changed-path snapshots when a build's source changes, and enable incremental Debug linking to match the pinned DxUi Edit and Continue objects.
 - Pin the common CI engine to v1.0.5: verify native portable winget registration, every installed command alias, declared smoke probes and owned cleanup; retain the compiler-free custom dependency status observer and recorded owner-only emergency PR merge route. Publication remains an explicit action requiring both matching native Release regression and production ZIP receipts.
