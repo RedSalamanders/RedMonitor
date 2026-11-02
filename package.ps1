@@ -39,7 +39,14 @@ if($Configuration -eq 'ASan Debug'){
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE.txt') -Destination $stage
 $dxuiPin=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Dependencies/DxUi.lock.json') -Raw|ConvertFrom-Json
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot ".build/dependencies/DxUi/source/$($dxuiPin.commit)/LICENSE.txt") -Destination (Join-Path $stage 'DxUi-LICENSE.txt')
+$dxuiSource=Join-Path $PSScriptRoot ".build/dependencies/DxUi/source/$($dxuiPin.commit)"
+Copy-Item -LiteralPath (Join-Path $dxuiSource 'LICENSE.txt') -Destination (Join-Path $stage 'DxUi-LICENSE.txt')
+Copy-Item -LiteralPath (Join-Path $dxuiSource 'THIRD-PARTY-NOTICES.md') -Destination (Join-Path $stage 'DxUi-THIRD-PARTY-NOTICES.md')
+# DxUi.lib compiles these in; WIL's notice ships below from vcpkg and test-corpus licenses are not redistributed.
+New-Item -ItemType Directory -Path (Join-Path $stage 'DxUi-licenses')|Out-Null
+foreach($notice in 'katex.txt','rapidyaml.txt','rapidyaml-bundled.txt','tomlplusplus.txt'){
+    Copy-Item -LiteralPath (Join-Path $dxuiSource "docs/licenses/$notice") -Destination (Join-Path $stage "DxUi-licenses/$notice")
+}
 if($Configuration -eq 'Release'){
     Import-Module (Join-Path $PSScriptRoot 'Tools/VisualStudio.psm1') -Force
     $installation=Get-RedMonitorVisualStudioInstallation

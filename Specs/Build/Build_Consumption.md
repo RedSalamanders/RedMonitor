@@ -59,6 +59,8 @@ own the independent helper's teardown and never package or rebuild its executabl
 ## Installation and packaging
 
 Release packages include the full CRT/data/language/license closure plus Install-RedMonitor.ps1.
+The license closure carries the pinned DxUi license, its third-party notices and the notices of
+components compiled into DxUi.lib, beside the WIL and yyjson copyrights.
 The installer validates every manifest entry and production metadata before atomic directory
 replacement in a standard per-user or machine folder. Running installations block replacement;
 no process is killed. Previous installations remain recoverable. Harness installation is confined

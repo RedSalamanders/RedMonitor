@@ -42,7 +42,7 @@ $files=@(foreach($entry in $manifest.files){
        -not(Test-Path -LiteralPath $file -PathType Leaf) -or (Get-FileHash -LiteralPath $file).Hash -ine $entry.sha256){throw "Changed/missing package file: $relative"}
     [pscustomobject]@{source=$file;relative=$relative}
 })
-$required=@('RedMonitor.exe','SettingsStore.schema.json','LICENSE.txt','DxUi-LICENSE.txt','wil-LICENSE.txt','yyjson-LICENSE.txt','vcruntime140.dll')
+$required=@('RedMonitor.exe','SettingsStore.schema.json','LICENSE.txt','DxUi-LICENSE.txt','DxUi-THIRD-PARTY-NOTICES.md','wil-LICENSE.txt','yyjson-LICENSE.txt','vcruntime140.dll')
 $required+=@('cs-CZ','fr-FR','ja-JP','sk-SK'|ForEach-Object {"Lang/RedSalamanderMonitor-$_.dll"})
 foreach($name in $required){if(-not $names.Contains($name)){throw "Incomplete package: $name"}}
 if(-not @($names|Where-Object {$_ -like 'Themes/*'}).Count){throw 'Missing theme closure.'}
