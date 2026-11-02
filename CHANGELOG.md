@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Advance the exact DxUi API-4 pin from `f65e4a4b` to main `f2e328a0` (the 2 November delivery `6df17007` plus its
+  upgrade guide and production review) and rebuild the full viewer/test closure. Release packages also carry DxUi's
+  third-party notices and the toml++, rapidyaml and KaTeX notices now compiled into DxUi.lib. DxUi's open production
+  review (embedded `TextField` P0, P1 defects, missing Unicode/WHATWG notices) and its planned history rewrite remain
+  upstream gates; native ARM64 execution and paired performance are not run.
 - Align the CI publication contract with the verified organization token policy and read-only credential check. Native qualification and exact-artifact Prepare remain separate acceptance gates; no product publication is selected.
 - Adopt shared CI v1.0.7 with separate sandbox and workspace evidence uploads. Preserve paired native regression, production and archive validation; no product publication is performed.
 - Adopt shared CI v1.0.6: DxUi SDK ZIPs stay internal with no publication workflow; application publication remains manual and artifact-only. Document the organization token route and separate implementation closeout from source-bound hosted acceptance; no product or winget publication is performed.
