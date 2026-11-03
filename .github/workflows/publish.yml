@@ -21,9 +21,9 @@ concurrency:
 jobs:
   publish:
     if: github.ref == 'refs/heads/main'
-    uses: RedSalamanders/.github/.github/workflows/publish.yml@1a42715d4f113bab0836558a05c86f70a7d78619
+    uses: RedSalamanders/.github/.github/workflows/publish.yml@91c38d667a0b1776e74dc43403f08a844fa9aade
     with:
-      engine_ref: 1a42715d4f113bab0836558a05c86f70a7d78619
+      engine_ref: 91c38d667a0b1776e74dc43403f08a844fa9aade
       qualification_run: ${{ inputs.qualification_run }}
       operation: ${{ inputs.operation }}
     secrets:
