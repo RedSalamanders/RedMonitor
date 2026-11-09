@@ -220,6 +220,18 @@ void EtwListener::Stop()
         }
     }
 
+    // Stop the real-time trace session before waiting on the consumer worker so ProcessTrace
+    // unblocks immediately instead of waiting for the session FlushTimer to expire.
+    if (_sessionHandle != INVALID_PROCESSTRACE_HANDLE)
+    {
+        std::vector<BYTE> sessionBuffer(sizeof(EVENT_TRACE_PROPERTIES) + (_sessionName.size() + 1) * sizeof(wchar_t));
+        auto* props             = reinterpret_cast<PEVENT_TRACE_PROPERTIES>(sessionBuffer.data());
+        props->Wnode.BufferSize = static_cast<ULONG>(sessionBuffer.size());
+        props->LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
+        ControlTrace(_sessionHandle, nullptr, props, EVENT_TRACE_CONTROL_STOP);
+        _sessionHandle = INVALID_PROCESSTRACE_HANDLE;
+    }
+
     if (_workerThread.joinable())
     {
         const HANDLE workerHandle = _workerThread.native_handle();
@@ -245,17 +257,6 @@ void EtwListener::Stop()
     _debugTraceContext = nullptr;
     _shutdownTimeoutMs = 5'000u;
 #endif
-
-    // Stop the trace session
-    if (_sessionHandle != INVALID_PROCESSTRACE_HANDLE)
-    {
-        std::vector<BYTE> sessionBuffer(sizeof(EVENT_TRACE_PROPERTIES) + (_sessionName.size() + 1) * sizeof(wchar_t));
-        auto* props             = reinterpret_cast<PEVENT_TRACE_PROPERTIES>(sessionBuffer.data());
-        props->Wnode.BufferSize = static_cast<ULONG>(sessionBuffer.size());
-        props->LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
-        ControlTrace(_sessionHandle, nullptr, props, EVENT_TRACE_CONTROL_STOP);
-        _sessionHandle = INVALID_PROCESSTRACE_HANDLE;
-    }
 }
 
 ULONG WINAPI EtwListener::BufferCallback(PEVENT_TRACE_LOGFILEW logfile)

@@ -8,6 +8,7 @@
 #include <optional>
 #include <shared_mutex>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -106,6 +107,9 @@ public:
     Line GetVisibleLine(size_t visibleIndex) const; // Locked snapshot by visible index
     Line GetSourceLine(size_t sourceIndex) const;   // Locked snapshot by source index
     std::vector<VisibleLine> VisibleLines() const;  // Locked visibility snapshot
+    std::vector<VisibleLine> CopyVisibleLinesRange(size_t firstVisibleIndex, size_t lastVisibleIndex) const;
+    std::optional<size_t> SourceIndexForVisible(size_t visibleIndex) const;
+    std::optional<size_t> LowerBoundVisibleIndexForSource(size_t sourceIndex) const;
 
     // Display row mapping (VisibleLine architecture)
     UINT32 DisplayRowForVisible(size_t visibleIndex) const;
@@ -146,21 +150,43 @@ public:
     struct TailLineInfo
     {
         size_t sourceIndex = 0;
+        UINT32 sourceStart = 0;
         UINT32 prefixLen   = 0;
         UINT32 textLen     = 0;
         bool hasMeta       = false;
         Debug::InfoParam::Type type{};
+        std::vector<Line::ColorSpan> spans;
     };
     struct FilteredTailResult
     {
         std::wstring text;
         std::vector<TailLineInfo> lines;
-        size_t visibleCount = 0;
+        size_t visibleCount     = 0;
+        UINT32 firstSourceStart = 0;
+        UINT32 lastSourceEnd    = 0;
     };
     FilteredTailResult BuildFilteredTailText(size_t firstAll, size_t lastAll) const;
 
+    struct WidthCandidate
+    {
+        size_t sourceIndex = 0;
+        size_t charLength  = 0;
+        std::wstring displayText;
+    };
+    [[nodiscard]] std::vector<WidthCandidate> CollectWidthCandidates(size_t firstLine, size_t lastLine, size_t maxCandidates) const;
+
+    [[nodiscard]] std::pair<size_t, size_t> FindMatchesInRange(size_t startLine,
+                                                               size_t startOffset,
+                                                               std::wstring_view needle,
+                                                               std::wstring_view lowerNeedle,
+                                                               bool caseSensitive,
+                                                               const D2D1_COLOR_F& highlightColor,
+                                                               size_t maxMatches,
+                                                               std::vector<Line::ColorSpan>& outMatches) const;
+
     // Coloring
     void AddColorRange(UINT32 start, UINT32 length, const D2D1_COLOR_F& color);
+    void ColorizeWord(std::wstring_view word, const D2D1_COLOR_F& color, bool caseSensitive = false);
     void ClearColoring();
 
     // Display Helpers
@@ -211,7 +237,8 @@ private:
     mutable bool _totalLengthValid    = false;
     mutable UINT32 _cachedTotalLength = 0;
     mutable bool _offsetsValid        = false;
-    mutable std::vector<UINT32> _lineOffsets; // Cumulative offsets for each line (for character positions)
+    mutable uint64_t _lineOffsetBase  = 0;
+    mutable std::deque<uint64_t> _lineOffsets; // Cumulative offsets for each line (with _lineOffsetBase subtracted on query)
     mutable bool _maxLineCharsValid = false;
     mutable size_t _maxLineChars    = 0;
     mutable size_t _maxLineIndex    = 0;

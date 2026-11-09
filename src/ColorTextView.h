@@ -309,6 +309,7 @@ private:
 
     // Find bar UI (overlay)
     void EnsureFindBar();
+    void DestroyFindBar() noexcept;
     void ShowFindBar();
     void HideFindBar();
     void LayoutFindBar();
@@ -436,6 +437,7 @@ private:
 
     // Search state
     std::wstring _search;
+    std::wstring _searchLower;
     bool _searchCaseSensitive = false;
     std::vector<Line::ColorSpan> _matches;
     __int64 _matchIndex      = -1;
@@ -522,8 +524,12 @@ private:
     size_t _tailFirstLine              = 0;      // First line in tail layout
     static constexpr size_t kTailLines = 100;    // Fixed window size for tail
     bool _tailLayoutValid              = false;
+    bool _tailIsFiltered               = false;
+    UINT32 _tailStartPos               = 0;
+    UINT32 _tailEndPos                 = 0;
     // Cached per-line metadata from BuildFilteredTailText, used by ApplyColoringToTailLayout
     std::vector<Document::TailLineInfo> _tailFilteredLines;
+    std::vector<FilteredTextRun> _tailFilteredRuns;
 
     // Adaptive layout timing thresholds
     static constexpr size_t kSyncLayoutThresholdLines = 100; // Lines below which we use sync layout
@@ -559,6 +565,8 @@ private:
     // ETW event queue with wil::critical_section for efficient bounded draining (prevents message loop flooding)
     std::deque<EtwEventEntry> _etwEventQueue;
     wil::critical_section _etwQueueCS;
+    bool _etwBatchPostPending     = false;
+    ULONGLONG _lastBatchPaintTick = 0;
     std::atomic<size_t> _maxQueuedEvents{4'096u};
     size_t _maxRetainedLines       = 100'000u;
     uint64_t _maxRetainedTextBytes = 64u * 1024u * 1024u;

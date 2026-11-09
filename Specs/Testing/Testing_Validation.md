@@ -93,9 +93,12 @@ or source writes. CI installs that exact package before retaining `--dry-run --W
 verification across the complete native source set.
 
 The imported MonitorTest flags cover diagnostics opt-in, scrollbar model, document batching/filtering,
-retention, immutable snapshots, strict/bounded file read, atomic export/fault/cancel, clipboard rejection
-without opening the clipboard, and bounded ETW consumer lifetime. test.ps1 supplies a unique repository-local
-test root and never cleans existing data. A failed native process must produce a failed receipt.
+non-dirtying filter changes, bounded visible-range queries, incremental retention eviction (offset deque,
+dirty range, visible-line shifting, and bounded width-candidate sampling), filtered and unfiltered tail-text
+assembly, in-place search/colorize helpers, immutable snapshots, strict/bounded file read, atomic
+export/fault/cancel, clipboard rejection without opening the clipboard, and bounded ETW consumer lifetime.
+test.ps1 supplies a unique repository-local test root and never cleans existing data. A failed native process
+must produce a failed receipt.
 
 The standalone project owns the former consumer's viewer coverage obligations: ETW provider
 compatibility, self-originated event suppression, runtime diagnostic gating, bounded ingestion/display

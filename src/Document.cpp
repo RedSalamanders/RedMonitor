@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cwctype>
 #include <format>
 #include <limits>
 #include <optional>
@@ -36,6 +37,39 @@ static std::wstring_view EmojiForType(Debug::InfoParam::Type t)
     }
 }
 
+namespace
+{
+[[nodiscard]] size_t FindWithLowerNeedle(std::wstring_view hay, std::wstring_view lowerNeedle, size_t startPos) noexcept
+{
+    if (lowerNeedle.empty())
+        return 0;
+    if (startPos >= hay.size())
+        return std::wstring::npos;
+
+    const size_t nlen = lowerNeedle.size();
+    if (nlen > hay.size() || startPos > hay.size() - nlen)
+        return std::wstring::npos;
+
+    const wchar_t firstChar = lowerNeedle[0];
+    const size_t lastStart  = hay.size() - nlen;
+    for (size_t i = startPos; i <= lastStart; ++i)
+    {
+        if (static_cast<wchar_t>(std::towlower(hay[i])) != firstChar)
+            continue;
+
+        size_t j = 1;
+        for (; j < nlen; ++j)
+        {
+            if (static_cast<wchar_t>(std::towlower(hay[i + j])) != lowerNeedle[j])
+                break;
+        }
+        if (j == nlen)
+            return i;
+    }
+    return std::wstring::npos;
+}
+} // namespace
+
 // --- Document Implementation ---
 
 void Document::InvalidateCaches(CacheInvalidationReason reason)
@@ -51,8 +85,10 @@ void Document::InvalidateCaches(CacheInvalidationReason reason)
                 line.cachedDisplay.clear();
                 line.cachedDisplayValid = false;
             }
-            _totalLengthValid  = false;
-            _offsetsValid      = false;
+            _totalLengthValid = false;
+            _offsetsValid     = false;
+            _lineOffsetBase   = 0;
+            _lineOffsets.clear();
             _maxLineCharsValid = false;
             _maxLineChars      = 0;
             _maxLineIndex      = 0;
@@ -80,8 +116,10 @@ void Document::InvalidateCaches(CacheInvalidationReason reason)
         case CacheInvalidationReason::FullInvalidation:
         default:
             // Full invalidation (backward compatibility with old behavior)
-            _totalLengthValid  = false;
-            _offsetsValid      = false;
+            _totalLengthValid = false;
+            _offsetsValid     = false;
+            _lineOffsetBase   = 0;
+            _lineOffsets.clear();
             _maxLineCharsValid = false;
             _maxLineChars      = 0;
             _maxLineIndex      = 0;
@@ -99,18 +137,18 @@ void Document::InvalidateCaches(CacheInvalidationReason reason)
 
 void Document::EnsureOffsetsValid() const
 {
-    if (_offsetsValid)
+    if (_offsetsValid && _lineOffsets.size() == _lines.size())
         return;
 
     _lineOffsets.clear();
-    _lineOffsets.reserve(_lines.size());
-    UINT32 offset = 0;
+    _lineOffsetBase = 0;
+    uint64_t offset = 0;
 
     for (const auto& line : _lines)
     {
         _lineOffsets.push_back(offset);
         const UINT32 plen = PrefixLength(line);
-        offset += plen + static_cast<UINT32>(line.text.size()) + 1; // +1 for '\n' separator between logical lines
+        offset += static_cast<uint64_t>(plen) + line.text.size() + 1u; // +1 for '\n' separator between logical lines
     }
     _offsetsValid = true;
 }
@@ -248,7 +286,8 @@ void Document::AppendText(const std::wstring& more)
     if (more.empty())
         return;
 
-    if (_lines.empty())
+    const bool wasEmpty = _lines.empty();
+    if (wasEmpty)
         _lines.push_back(Line{});
     const size_t prevLineCount = _lines.size();
 
@@ -304,17 +343,22 @@ void Document::AppendText(const std::wstring& more)
 
     if (_offsetsValid)
     {
+        if (wasEmpty && _lineOffsets.empty())
+        {
+            _lineOffsets.push_back(_lineOffsetBase);
+        }
+
         if (_lineOffsets.size() != prevLineCount)
         {
             _offsetsValid = false;
         }
         else
         {
-            UINT32 offset = 0;
+            uint64_t offset = _lineOffsetBase;
             if (prevLineCount > 0)
             {
                 const auto& tail = _lines[prevLineCount - 1];
-                offset           = _lineOffsets.back() + PrefixLength(tail) + static_cast<UINT32>(tail.text.size()) + 1;
+                offset           = _lineOffsets.back() + static_cast<uint64_t>(PrefixLength(tail)) + tail.text.size() + 1u;
             }
             for (size_t idx = prevLineCount; idx < _lines.size() && _offsetsValid; ++idx)
             {
@@ -325,7 +369,7 @@ void Document::AppendText(const std::wstring& more)
                 }
                 _lineOffsets.push_back(offset);
                 const auto& newLine = _lines[idx];
-                offset += PrefixLength(newLine) + static_cast<UINT32>(newLine.text.size()) + 1;
+                offset += static_cast<uint64_t>(PrefixLength(newLine)) + newLine.text.size() + 1u;
             }
         }
     }
@@ -403,11 +447,11 @@ void Document::AppendInfoLineUnsafe(std::wstring text, const Debug::InfoParam& i
         }
         else
         {
-            UINT32 offset = 0;
+            uint64_t offset = _lineOffsetBase;
             if (! _lineOffsets.empty())
             {
                 const auto& prev = _lines[_lines.size() - 2];
-                offset           = _lineOffsets.back() + PrefixLength(prev) + static_cast<UINT32>(prev.text.size()) + 1;
+                offset           = _lineOffsets.back() + static_cast<uint64_t>(PrefixLength(prev)) + prev.text.size() + 1u;
             }
             _lineOffsets.push_back(offset);
         }
@@ -458,6 +502,10 @@ Document::RetentionResult Document::EnforceRetentionLimits(size_t maxLines, uint
         }
         _retainedTextBytes = textBytes > _retainedTextBytes ? 0u : _retainedTextBytes - textBytes;
         _lines.pop_front();
+        if (_offsetsValid && ! _lineOffsets.empty())
+        {
+            _lineOffsets.pop_front();
+        }
         ++result.linesEvicted;
     }
 
@@ -466,19 +514,104 @@ Document::RetentionResult Document::EnforceRetentionLimits(size_t maxLines, uint
         return result;
     }
 
-    _totalLengthValid = false;
-    _offsetsValid     = false;
-    _lineOffsets.clear();
-    _maxLineCharsValid = false;
-    _maxLineChars      = 0u;
-    _maxLineIndex      = 0u;
-    RebuildVisibleLines();
-    MarkAllDirtyUnsafe();
+    if (_lines.empty())
+    {
+        _totalLengthValid  = true;
+        _cachedTotalLength = 0u;
+        _offsetsValid      = true;
+        _lineOffsetBase    = 0u;
+        _lineOffsets.clear();
+        _maxLineCharsValid = true;
+        _maxLineChars      = 0u;
+        _maxLineIndex      = 0u;
+        _visibleLines.clear();
+        ResetDirtyRange();
+        return result;
+    }
+
+    if (_totalLengthValid)
+    {
+        if (_cachedTotalLength >= result.characterPositionsEvicted)
+        {
+            _cachedTotalLength -= static_cast<UINT32>(result.characterPositionsEvicted);
+        }
+        else
+        {
+            _totalLengthValid = false;
+        }
+    }
+
+    if (_offsetsValid)
+    {
+        if (_lineOffsets.size() == _lines.size())
+        {
+            _lineOffsetBase = _lineOffsets.empty() ? 0u : _lineOffsets.front();
+        }
+        else
+        {
+            _offsetsValid   = false;
+            _lineOffsetBase = 0u;
+            _lineOffsets.clear();
+        }
+    }
+
+    if (_maxLineCharsValid)
+    {
+        if (_maxLineIndex >= result.linesEvicted)
+        {
+            _maxLineIndex -= result.linesEvicted;
+        }
+        else
+        {
+            _maxLineCharsValid = false;
+            _maxLineChars      = 0u;
+            _maxLineIndex      = 0u;
+        }
+    }
+    else
+    {
+        _maxLineChars = 0u;
+        _maxLineIndex = 0u;
+    }
+
+    if (! _visibleLines.empty())
+    {
+        const auto firstSurviving =
+            std::lower_bound(_visibleLines.begin(), _visibleLines.end(), result.linesEvicted, [](const VisibleLine& vl, size_t evictedCount) noexcept {
+            return vl.sourceIndex < evictedCount;
+        });
+        _visibleLines.erase(_visibleLines.begin(), firstSurviving);
+        const UINT32 rowsEvicted = static_cast<UINT32>(result.displayRowsEvicted);
+        for (auto& vl : _visibleLines)
+        {
+            vl.sourceIndex -= result.linesEvicted;
+            vl.displayRowStart = (vl.displayRowStart >= rowsEvicted) ? (vl.displayRowStart - rowsEvicted) : 0u;
+        }
+    }
+
+    if (_dirtyRangeValid)
+    {
+        if (_dirtyRangeLast < result.linesEvicted)
+        {
+            ResetDirtyRange();
+        }
+        else
+        {
+            _dirtyRangeFirst = (_dirtyRangeFirst > result.linesEvicted) ? (_dirtyRangeFirst - result.linesEvicted) : 0u;
+            _dirtyRangeLast  = std::min(_dirtyRangeLast - result.linesEvicted, _lines.size() - 1u);
+        }
+    }
+
     return result;
 }
 
 size_t Document::TotalLength() const
 {
+    {
+        std::shared_lock sharedLock(_rwMutex);
+        if (_totalLengthValid)
+            return _cachedTotalLength;
+    }
     std::unique_lock lock(_rwMutex); // May refresh cached aggregate state.
     EnsureTotalLengthValid();
     return _cachedTotalLength;
@@ -486,6 +619,11 @@ size_t Document::TotalLength() const
 
 size_t Document::LongestLineChars() const
 {
+    {
+        std::shared_lock sharedLock(_rwMutex);
+        if (_maxLineCharsValid)
+            return _maxLineChars;
+    }
     std::unique_lock lock(_rwMutex); // May refresh cached aggregate state.
     if (! _maxLineCharsValid)
     {
@@ -537,7 +675,6 @@ void Document::SetFilterMask(uint32_t mask)
     _filterMask = mask;
     RebuildVisibleLines(); // Rebuild visible lines vector for new filter
     InvalidateCaches(CacheInvalidationReason::FilterChanged);
-    MarkAllDirtyUnsafe();
 }
 
 void Document::RebuildVisibleLines()
@@ -654,6 +791,42 @@ std::vector<VisibleLine> Document::VisibleLines() const
     return _visibleLines;
 }
 
+std::vector<VisibleLine> Document::CopyVisibleLinesRange(size_t firstVisibleIndex, size_t lastVisibleIndex) const
+{
+    std::shared_lock lock(_rwMutex);
+    if (_visibleLines.empty() || firstVisibleIndex >= _visibleLines.size())
+        return {};
+
+    const size_t clampedLast = std::min(lastVisibleIndex, _visibleLines.size() - 1u);
+    if (clampedLast < firstVisibleIndex)
+        return {};
+
+    return std::vector<VisibleLine>(_visibleLines.begin() + static_cast<std::ptrdiff_t>(firstVisibleIndex),
+                                    _visibleLines.begin() + static_cast<std::ptrdiff_t>(clampedLast + 1u));
+}
+
+std::optional<size_t> Document::SourceIndexForVisible(size_t visibleIndex) const
+{
+    std::shared_lock lock(_rwMutex);
+    if (visibleIndex >= _visibleLines.size())
+        return std::nullopt;
+    return _visibleLines[visibleIndex].sourceIndex;
+}
+
+std::optional<size_t> Document::LowerBoundVisibleIndexForSource(size_t sourceIndex) const
+{
+    std::shared_lock lock(_rwMutex);
+    if (_visibleLines.empty())
+        return std::nullopt;
+
+    const auto it = std::lower_bound(
+        _visibleLines.begin(), _visibleLines.end(), sourceIndex, [](const VisibleLine& vl, size_t src) noexcept { return vl.sourceIndex < src; });
+    if (it == _visibleLines.end())
+        return std::nullopt;
+
+    return static_cast<size_t>(std::distance(_visibleLines.begin(), it));
+}
+
 UINT32 Document::DisplayRowForVisible(size_t visibleIndex) const
 {
     std::shared_lock lock(_rwMutex);
@@ -761,8 +934,15 @@ UINT32 Document::DisplayRowForSource(size_t sourceIndex) const
 
 UINT32 Document::GetLineStartOffset(size_t sourceIndex) const
 {
-    std::unique_lock lock(_rwMutex);
+    {
+        std::shared_lock sharedLock(_rwMutex);
+        if (sourceIndex >= _lines.size())
+            return 0;
+        if (_offsetsValid && _lineOffsets.size() == _lines.size())
+            return static_cast<UINT32>(_lineOffsets[sourceIndex] - _lineOffsetBase);
+    }
 
+    std::unique_lock lock(_rwMutex);
     if (sourceIndex >= _lines.size())
         return 0;
 
@@ -770,7 +950,7 @@ UINT32 Document::GetLineStartOffset(size_t sourceIndex) const
     if (! _offsetsValid || _lineOffsets.size() != _lines.size())
         return 0;
 
-    return _lineOffsets[sourceIndex];
+    return static_cast<UINT32>(_lineOffsets[sourceIndex] - _lineOffsetBase);
 }
 
 std::pair<size_t, UINT32> Document::GetLineAndOffsetUnsafe(UINT32 position) const
@@ -784,19 +964,20 @@ std::pair<size_t, UINT32> Document::GetLineAndOffsetUnsafe(UINT32 position) cons
     if (! _offsetsValid || _lineOffsets.size() != _lines.size())
         return {lastIdx, 0};
 
-    const UINT32 lastStart = _lineOffsets[lastIdx];
-    const UINT32 lastLen   = PrefixLength(_lines[lastIdx]) + static_cast<UINT32>(_lines[lastIdx].text.size());
-    const UINT32 totalLen  = lastStart + lastLen; // no trailing separator after last line
+    const uint64_t targetOffset = _lineOffsetBase + position;
+    const uint64_t lastStart    = _lineOffsets[lastIdx];
+    const UINT32 lastLen        = PrefixLength(_lines[lastIdx]) + static_cast<UINT32>(_lines[lastIdx].text.size());
+    const uint64_t totalEnd     = lastStart + lastLen; // no trailing separator after last line
 
-    if (position >= totalLen)
+    if (targetOffset >= totalEnd)
         return {lastIdx, lastLen};
 
-    // Find the line such that lineStart <= position < nextLineStart.
-    auto it                = std::upper_bound(_lineOffsets.begin(), _lineOffsets.end(), position);
-    const size_t idx       = (it == _lineOffsets.begin()) ? 0u : static_cast<size_t>((it - _lineOffsets.begin()) - 1);
-    const UINT32 lineStart = _lineOffsets[idx];
-    const UINT32 off       = position - lineStart;
-    const UINT32 lineLen   = PrefixLength(_lines[idx]) + static_cast<UINT32>(_lines[idx].text.size());
+    // Find the line such that lineStart <= targetOffset < nextLineStart.
+    auto it                  = std::upper_bound(_lineOffsets.begin(), _lineOffsets.end(), targetOffset);
+    const size_t idx         = (it == _lineOffsets.begin()) ? 0u : static_cast<size_t>((it - _lineOffsets.begin()) - 1);
+    const uint64_t lineStart = _lineOffsets[idx];
+    const UINT32 off         = static_cast<UINT32>(targetOffset - lineStart);
+    const UINT32 lineLen     = PrefixLength(_lines[idx]) + static_cast<UINT32>(_lines[idx].text.size());
     return {idx, std::min(off, lineLen)};
 }
 
@@ -914,7 +1095,11 @@ Document::FilteredTailResult Document::BuildFilteredTailText(size_t firstAll, si
     if (firstAll >= _lines.size())
         return result;
 
-    lastAll = std::min(lastAll, _lines.size() - 1);
+    EnsureOffsetsValid();
+    lastAll                 = std::min(lastAll, _lines.size() - 1);
+    result.firstSourceStart = static_cast<UINT32>(_lineOffsets[firstAll] - _lineOffsetBase);
+    const auto& lastLine    = _lines[lastAll];
+    result.lastSourceEnd    = static_cast<UINT32>(_lineOffsets[lastAll] - _lineOffsetBase) + PrefixLength(lastLine) + static_cast<UINT32>(lastLine.text.size());
     result.lines.reserve(lastAll - firstAll + 1);
 
     for (size_t i = firstAll; i <= lastAll; ++i)
@@ -936,8 +1121,11 @@ Document::FilteredTailResult Document::BuildFilteredTailText(size_t firstAll, si
             line.cachedDisplayValid = true;
         }
 
-        const UINT32 prefixLen = PrefixLength(line);
-        result.lines.push_back({i, prefixLen, static_cast<UINT32>(line.text.size()), line.hasMeta, line.meta.type});
+        const UINT32 prefixLen   = PrefixLength(line);
+        const UINT32 sourceStart = static_cast<UINT32>(_lineOffsets[i] - _lineOffsetBase);
+        const UINT32 displayTextLen =
+            (line.cachedDisplay.size() >= prefixLen) ? static_cast<UINT32>(line.cachedDisplay.size() - prefixLen) : static_cast<UINT32>(line.text.size());
+        result.lines.push_back({i, sourceStart, prefixLen, displayTextLen, line.hasMeta, line.meta.type, line.spans});
         result.text.append(line.cachedDisplay);
         result.text.append(L"\n");
     }
@@ -947,6 +1135,126 @@ Document::FilteredTailResult Document::BuildFilteredTailText(size_t firstAll, si
         result.text.pop_back();
 
     return result;
+}
+
+std::vector<Document::WidthCandidate> Document::CollectWidthCandidates(size_t firstLine, size_t lastLine, size_t maxCandidates) const
+{
+    std::unique_lock lock(_rwMutex);
+    std::vector<WidthCandidate> candidates;
+    if (_lines.empty() || firstLine >= _lines.size() || maxCandidates == 0u)
+        return candidates;
+
+    lastLine                = std::min(lastLine, _lines.size() - 1u);
+    const size_t rangeCount = (lastLine >= firstLine) ? (lastLine - firstLine + 1u) : 0u;
+    if (rangeCount == 0u)
+        return candidates;
+
+    struct RankedIndex
+    {
+        size_t sourceIndex = 0;
+        size_t charLength  = 0;
+    };
+    std::vector<RankedIndex> selected;
+    selected.reserve(std::min(rangeCount, maxCandidates));
+
+    for (size_t i = firstLine; i <= lastLine; ++i)
+    {
+        const size_t len = static_cast<size_t>(PrefixLength(_lines[i])) + _lines[i].text.size();
+        OnLineLengthChanged(i, 0, len);
+
+        if (selected.size() < maxCandidates)
+        {
+            selected.push_back({i, len});
+            if (selected.size() == maxCandidates)
+            {
+                std::make_heap(
+                    selected.begin(), selected.end(), [](const RankedIndex& a, const RankedIndex& b) noexcept { return a.charLength > b.charLength; });
+            }
+        }
+        else if (len > selected.front().charLength)
+        {
+            std::pop_heap(selected.begin(), selected.end(), [](const RankedIndex& a, const RankedIndex& b) noexcept { return a.charLength > b.charLength; });
+            selected.back() = {i, len};
+            std::push_heap(selected.begin(), selected.end(), [](const RankedIndex& a, const RankedIndex& b) noexcept { return a.charLength > b.charLength; });
+        }
+    }
+
+    std::sort(selected.begin(), selected.end(), [](const RankedIndex& a, const RankedIndex& b) noexcept { return a.sourceIndex < b.sourceIndex; });
+    candidates.reserve(selected.size());
+    for (const auto& item : selected)
+    {
+        auto& line = _lines[item.sourceIndex];
+        if (! line.cachedDisplayValid)
+        {
+            const auto& prefix = BuildPrefix(line);
+            line.cachedDisplay.clear();
+            line.cachedDisplay.reserve(prefix.size() + line.text.size());
+            line.cachedDisplay.append(prefix);
+            line.cachedDisplay.append(line.text);
+            line.cachedDisplay.erase(std::remove(line.cachedDisplay.begin(), line.cachedDisplay.end(), L'\r'), line.cachedDisplay.end());
+            line.cachedDisplayValid = true;
+        }
+        candidates.push_back({item.sourceIndex, item.charLength, line.cachedDisplay});
+    }
+    return candidates;
+}
+
+std::pair<size_t, size_t> Document::FindMatchesInRange(size_t startLine,
+                                                       size_t startOffset,
+                                                       std::wstring_view needle,
+                                                       std::wstring_view lowerNeedle,
+                                                       bool caseSensitive,
+                                                       const D2D1_COLOR_F& highlightColor,
+                                                       size_t maxMatches,
+                                                       std::vector<Line::ColorSpan>& outMatches) const
+{
+    std::unique_lock lock(_rwMutex);
+    if (needle.empty() || startLine >= _lines.size() || outMatches.size() >= maxMatches)
+        return {std::min(startLine, _lines.size()), startOffset};
+
+    EnsureOffsetsValid();
+    const size_t totalLines = _lines.size();
+    size_t lineIdx          = startLine;
+    size_t scanOffset       = startOffset;
+    while (lineIdx < totalLines && outMatches.size() < maxMatches)
+    {
+        if (! IsLineVisibleUnsafe(lineIdx))
+        {
+            ++lineIdx;
+            scanOffset = 0;
+            continue;
+        }
+
+        const auto& line            = _lines[lineIdx];
+        const UINT32 lineStart      = static_cast<UINT32>(_lineOffsets[lineIdx] - _lineOffsetBase);
+        const UINT32 prefixLen      = PrefixLength(line);
+        const std::wstring_view hay = line.text.Text();
+        size_t pos                  = std::min(scanOffset, hay.size());
+        bool lineCompleted          = true;
+        while (pos <= hay.size())
+        {
+            if (outMatches.size() >= maxMatches)
+            {
+                scanOffset    = pos;
+                lineCompleted = false;
+                break;
+            }
+
+            const size_t found = caseSensitive ? hay.find(needle, pos) : FindWithLowerNeedle(hay, lowerNeedle, pos);
+            if (found == std::wstring::npos)
+                break;
+
+            outMatches.push_back(Line::ColorSpan{lineStart + prefixLen + static_cast<UINT32>(found), static_cast<UINT32>(needle.size()), highlightColor});
+            pos = found + std::max<size_t>(1u, needle.size());
+        }
+
+        if (! lineCompleted)
+            break;
+
+        ++lineIdx;
+        scanOffset = 0;
+    }
+    return {lineIdx, scanOffset};
 }
 
 RedSalamanderMonitor::MonitorTextSnapshot Document::CaptureTextSnapshot() const
@@ -1047,13 +1355,12 @@ std::wstring Document::GetTextRange(UINT32 start, UINT32 length) const
 
 void Document::AddColorRange(UINT32 start, UINT32 length, const D2D1_COLOR_F& color)
 {
-    std::unique_lock lock(_rwMutex);
+    if (length == 0)
+        return;
 
-    // Map flat range to lines using GetLineAndOffsetUnsafe
-    lock.unlock(); // Release our write lock temporarily
-    auto [startLine, startOffset] = GetLineAndOffset(start);
-    auto [endLine, endOffset]     = GetLineAndOffset(start + length - 1);
-    lock.lock(); // Re-acquire write lock
+    std::unique_lock lock(_rwMutex);
+    auto [startLine, startOffset] = GetLineAndOffsetUnsafe(start);
+    auto [endLine, endOffset]     = GetLineAndOffsetUnsafe(start + length - 1);
 
     for (size_t lineIdx = startLine; lineIdx <= endLine && lineIdx < _lines.size(); ++lineIdx)
     {
@@ -1071,6 +1378,37 @@ void Document::AddColorRange(UINT32 start, UINT32 length, const D2D1_COLOR_F& co
         {
             localLen = std::min(localLen, static_cast<UINT32>(line.text.size()) - localStart);
             line.spans.push_back({localStart, localLen, color});
+        }
+    }
+}
+
+void Document::ColorizeWord(std::wstring_view word, const D2D1_COLOR_F& color, bool caseSensitive)
+{
+    if (word.empty())
+        return;
+
+    std::wstring lowerWord;
+    if (! caseSensitive)
+    {
+        lowerWord.assign(word.begin(), word.end());
+        std::transform(lowerWord.begin(), lowerWord.end(), lowerWord.begin(), ::towlower);
+    }
+
+    std::unique_lock lock(_rwMutex);
+    const UINT32 wordLen = static_cast<UINT32>(word.size());
+    for (size_t i = 0; i < _lines.size(); ++i)
+    {
+        auto& line                   = _lines[i];
+        const std::wstring_view view = line.text.Text();
+        size_t pos                   = 0;
+        while (pos <= view.size())
+        {
+            const size_t found = caseSensitive ? view.find(word, pos) : FindWithLowerNeedle(view, lowerWord, pos);
+            if (found == std::wstring::npos)
+                break;
+
+            line.spans.push_back({static_cast<UINT32>(found), wordLen, color});
+            pos = found + std::max<size_t>(1u, word.size());
         }
     }
 }

@@ -3120,9 +3120,12 @@ void UpdateStatusBar()
         HMENU hMenu = GetMenu(hMainWnd);
         if (hMenu)
         {
-            // Always sync menu to match actual auto-scroll state (no static variable needed)
-            UINT checkState = isAutoScrollEnabled ? MF_CHECKED : MF_UNCHECKED;
-            CheckMenuItem(hMenu, IDM_OPTION_AUTO_SCROLL, MF_BYCOMMAND | checkState);
+            const UINT desiredState = isAutoScrollEnabled ? MF_CHECKED : MF_UNCHECKED;
+            const UINT currentState = GetMenuState(hMenu, IDM_OPTION_AUTO_SCROLL, MF_BYCOMMAND);
+            if (currentState != static_cast<UINT>(-1) && (currentState & MF_CHECKED) != desiredState)
+            {
+                CheckMenuItem(hMenu, IDM_OPTION_AUTO_SCROLL, MF_BYCOMMAND | desiredState);
+            }
         }
     }
 
@@ -4627,8 +4630,25 @@ LRESULT OnTimerMainWindow(HWND hWnd, UINT_PTR timerId)
         currentCount = static_cast<uint64_t>(s.eventsProcessed);
     }
 
-    if (currentCount != g_lastMessageCount || (currentCount % 10 == 0))
+    static size_t s_lastVisibleLines   = static_cast<size_t>(-1);
+    static size_t s_lastTotalLines     = static_cast<size_t>(-1);
+    static uint64_t s_lastDroppedCount = static_cast<uint64_t>(-1);
+    static uint32_t s_lastFilterMask   = static_cast<uint32_t>(-1);
+    static int s_lastAutoScroll        = -1;
+
+    const size_t visibleLines   = g_colorView.GetVisibleLineCount();
+    const size_t totalLines     = g_colorView.GetTotalLineCount();
+    const uint64_t droppedCount = g_colorView.GetDroppedEventCount();
+    const int autoScroll        = g_colorView.GetAutoScroll() ? 1 : 0;
+
+    if (currentCount != g_lastMessageCount || visibleLines != s_lastVisibleLines || totalLines != s_lastTotalLines || droppedCount != s_lastDroppedCount ||
+        g_filterMask != s_lastFilterMask || autoScroll != s_lastAutoScroll)
     {
+        s_lastVisibleLines = visibleLines;
+        s_lastTotalLines   = totalLines;
+        s_lastDroppedCount = droppedCount;
+        s_lastFilterMask   = g_filterMask;
+        s_lastAutoScroll   = autoScroll;
         UpdateStatusBar();
     }
 
