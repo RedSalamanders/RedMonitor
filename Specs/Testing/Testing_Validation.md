@@ -4,6 +4,21 @@ Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush ex
 x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
 boundaries and required repository surfaces. format.ps1 -Check verifies native formatting.
 
+Affected selection compares the branch merge base with origin/main and independently includes committed,
+staged, working, deleted, rename-side and untracked paths. A missing comparison retains Debug work. Only
+owned Markdown guides and prose in Specs, docs, Changes and agent skill folders omit native execution;
+runtime/test/fixture/schema/build inputs and unknown paths remain native. Prose still runs real changelog
+validation, validate.ps1, formatting and all tooling controls. Malformed fragments or nonzero child exits fail.
+Source bytes must remain unchanged across planning/independent validation before prose success is reported.
+No-work reports NOTHING_SELECTED; prose reports PROSE_CHECKS_PASSED; neither qualifies the repository.
+Full/PrePush retain all local native profiles, live ETW, ARM64 cross-builds and contained installation controls.
+They never claim native ARM64 execution or separate manual/viewer/performance gates.
+
+Tests/Tooling.Tests.ScopedTesting.ps1 exercises the actual public wrapper in owned Git/child-process fixtures,
+using recording native entrypoints. It covers cumulative code followed by docs, staged reversals, Unicode,
+rename sides, missing bases, malformed fragments, nonzero command exits, source mutation and retained Full/
+PrePush obligations. These routing fixtures do not compile or qualify a native application.
+
 `Tests/Tooling.Tests.Build.ps1`, included by the tooling suite, uses fresh owned `.build` Git fixtures
 to check receipt identity against ignored CI cache/Git metadata churn, timestamp-only changes, tracked
 and untracked edits/additions/deletions/renames, tracked ignored inputs and Unicode paths. It also checks
