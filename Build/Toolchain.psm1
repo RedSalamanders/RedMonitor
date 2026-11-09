@@ -38,6 +38,55 @@ function Assert-RedMonitorOutputNotRunning {
     }
 }
 
+function Invoke-RedMonitorGitText {
+    param([string]$Root,[string[]]$Arguments)
+    $start=[Diagnostics.ProcessStartInfo]::new('git')
+    foreach($argument in @('-C',$Root)+$Arguments){$start.ArgumentList.Add($argument)}
+    $start.UseShellExecute=$false;$start.CreateNoWindow=$true
+    $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
+    $start.StandardOutputEncoding=[Text.UTF8Encoding]::new($false,$true)
+    $start.StandardErrorEncoding=[Text.UTF8Encoding]::new($false,$true)
+    $process=[Diagnostics.Process]::Start($start)
+    try{
+        $stdout=$process.StandardOutput.ReadToEndAsync();$stderr=$process.StandardError.ReadToEndAsync()
+        if(-not $process.WaitForExit(30000)){$process.Kill($true);$process.WaitForExit();throw 'Git source inventory timed out after 30 seconds.'}
+        if($process.ExitCode){throw "Git source inventory failed ($($process.ExitCode)): $($stderr.GetAwaiter().GetResult().Trim())"}
+        return $stdout.GetAwaiter().GetResult()
+    }finally{$process.Dispose()}
+}
+
+function Get-RedMonitorChangePlan {
+    [CmdletBinding()]
+    param([string]$Root=(Join-Path $PSScriptRoot '..'),[string]$BaseRef='origin/main')
+    $Root=[IO.Path]::GetFullPath($Root)
+    Import-Module (Join-Path $PSScriptRoot 'AgentGuidance.psm1') -ErrorAction Stop
+    Assert-RedMonitorOrdinaryGuidancePath $Root
+    try{
+        $base=(Invoke-RedMonitorGitText $Root @('rev-parse','--verify','--end-of-options',($BaseRef+'^{commit}'))).Trim()
+        $merge=(Invoke-RedMonitorGitText $Root @('merge-base',$base,'HEAD')).Trim()
+        $paths=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+        foreach($arguments in @(
+            @('diff','--no-ext-diff','--no-textconv','--name-only','--no-renames','-z',$merge,'HEAD','--'),
+            @('diff','--no-ext-diff','--no-textconv','--cached','--name-only','--no-renames','-z','--'),
+            @('diff','--no-ext-diff','--no-textconv','--name-only','--no-renames','-z','--'),
+            @('ls-files','--others','--exclude-standard','-z'))){
+            foreach($path in (Invoke-RedMonitorGitText $Root $arguments).Split([char]0,[StringSplitOptions]::RemoveEmptyEntries)){[void]$paths.Add($path)}
+        }
+    }catch{
+        # Missing Git/base/shared history never supplies permission to omit native work.
+        return [pscustomobject]@{kind='Native';paths=@();reason='Comparison unavailable; conservative Debug coverage. '+$_.Exception.Message}
+    }
+    $ordered=[string[]]@($paths);[Array]::Sort($ordered,[StringComparer]::Ordinal)
+    $native=$false
+    foreach($path in $ordered){
+        if($path -match '(^/|(^|/)\.\.(/|$)|:|\\)'){throw "Invalid changed Git path: $path"}
+        Assert-RedMonitorOrdinaryGuidancePath (Join-Path $Root $path)
+        if($path -notmatch '^(README|AGENTS|CLAUDE|CHANGELOG)\.md$|^Tests/README\.md$|^(Specs|docs|Changes|\.agents|\.github/skills)/.*\.md$'){$native=$true}
+    }
+    return [pscustomobject]@{kind=$(if($native){'Native'}elseif($ordered.Count){'Prose'}else{'None'});paths=$ordered;
+        reason=$(if($native){'Native/build/test or unknown inputs changed.'}elseif($ordered.Count){'Only owned prose changed; independent validation remains required.'}else{'No changed input since the branch merge base.'})}
+}
+
 function Get-RedMonitorSourceSnapshot {
     [CmdletBinding()]
     param([string]$Root = (Join-Path $PSScriptRoot '..'))
@@ -50,32 +99,10 @@ function Get-RedMonitorSourceSnapshot {
 
     # Bind tracked and non-ignored untracked bytes, never generated checkouts or Git metadata.
     # NUL-delimited UTF-8 preserves spaces, apostrophes and non-ASCII paths independently of the console.
-    $start = [Diagnostics.ProcessStartInfo]::new('git')
-    foreach ($argument in @('-C',$Root,'ls-files','--cached','--others','--exclude-standard','-z')) {
-        $start.ArgumentList.Add($argument)
+    $paths = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($path in (Invoke-RedMonitorGitText $Root @('ls-files','--cached','--others','--exclude-standard','-z')).Split([char]0,[StringSplitOptions]::RemoveEmptyEntries)) {
+        [void]$paths.Add($path)
     }
-    $start.UseShellExecute = $false
-    $start.CreateNoWindow = $true
-    $start.RedirectStandardOutput = $true
-    $start.RedirectStandardError = $true
-    $start.StandardOutputEncoding = [Text.UTF8Encoding]::new($false, $true)
-    $process = [Diagnostics.Process]::Start($start)
-    try {
-        $stdout = $process.StandardOutput.ReadToEndAsync()
-        $stderr = $process.StandardError.ReadToEndAsync()
-        if (-not $process.WaitForExit(60000)) {
-            $process.Kill($true)
-            $process.WaitForExit()
-            throw 'Git source inventory timed out after 60 seconds.'
-        }
-        if ($process.ExitCode -ne 0) {
-            throw "Git source inventory failed ($($process.ExitCode)): $($stderr.GetAwaiter().GetResult().Trim())"
-        }
-        $paths = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-        foreach ($path in $stdout.GetAwaiter().GetResult().Split([char]0, [StringSplitOptions]::RemoveEmptyEntries)) {
-            [void]$paths.Add($path)
-        }
-    } finally { $process.Dispose() }
     if (-not $paths.Count) { throw 'Git source inventory is empty; no source identity can be published.' }
     $orderedPaths = [string[]]@($paths)
     [Array]::Sort($orderedPaths, [StringComparer]::Ordinal)
@@ -119,4 +146,4 @@ function Enter-RedMonitorOperation {
     return $mutex
 }
 
-Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceSnapshot,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation
+Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceSnapshot,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation,Get-RedMonitorChangePlan
