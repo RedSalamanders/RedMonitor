@@ -64,7 +64,7 @@ jobs:
   security-recheck:
     needs: resolve
     if: github.event_name == 'workflow_dispatch' && needs.resolve.result == 'success'
-    uses: RedSalamanders/.github/.github/workflows/security.yml@1a42715d4f113bab0836558a05c86f70a7d78619
+    uses: RedSalamanders/.github/.github/workflows/security.yml@570351e14d469f2b1cefa7762fc64c1c24a4adf7
     with:
       engine_ref: 1a42715d4f113bab0836558a05c86f70a7d78619
       head: ${{ needs.resolve.outputs.head }}
