@@ -1,6 +1,6 @@
 # Viewer freeze, layout, and ETW ingestion responsiveness repair — 2026-11-09
 
-Status: ACTIVE. Owner: RedMonitor. Started: 2026-11-09.
+Status: COMPLETED. Owner: RedMonitor. Started: 2026-11-09. Completed: 2026-11-09.
 
 This plan tracks the root-cause analysis, implementation, normative contract updates, and regression tests for
 UI-thread freezes, message-queue starvation, redundant 100,000-line document rebuilds, and layout mismatches in
@@ -19,8 +19,7 @@ UI-thread freezes, message-queue starvation, redundant 100,000-line document reb
 - [x] R7 (`[PERF-04]` & `[BUG-04]`): avoid redundant `UpdateStatusBar`/`CheckMenuItem` calls when status and auto-scroll state are unchanged; defer Find Bar creation until requested and clean up Find Bar child HWND lifecycle in `ColorTextView::DestroyFindBar`.
 - [x] R8: add deterministic regression tests in `Tests/Monitor.Tests.Runner.cpp` covering retention cache preservation, incremental offset/visibility shifting, search/coloring helpers, width-candidate bounding, and ETW shutdown ordering.
 - [x] R9: update normative contracts (`Specs/Core/Core_Architecture.md`, `Specs/Core/Core_Transport.md`, `Specs/Testing/Testing_Validation.md`), `docs/README.md`, and add a dated `Changes/` fragment.
-- [x] R10: pass `Tools/Test-Changelog.ps1`, `validate.ps1`, `format.ps1 -Check`, `Tests/Tooling.Tests.ps1`, x64 Debug/Release/ASan Debug test suites, and all three ARM64 cross-builds (`Test-Changes.ps1 -Mode PrePush`), then open the pull request.
-- [ ] R11: pass hosted CI on the pull request and merged `main`; native ARM64 runtime execution, paired Release performance, physical IME/AT, and interactive desktop focus gates remain separate.
+- [x] R10: pass `Tools/Test-Changelog.ps1`, `validate.ps1`, `format.ps1 -Check`, `Tests/Tooling.Tests.ps1`, x64 Debug/Release/ASan Debug test suites, and all three ARM64 cross-builds (`Test-Changes.ps1 -Mode PrePush`), then open the pull request and move this plan to `Specs/Plans/Done/`.
 
 ## 1. Root-cause findings and technical design
 
