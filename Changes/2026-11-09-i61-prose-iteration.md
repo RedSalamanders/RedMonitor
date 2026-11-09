@@ -1,0 +1,1 @@
+- Keep prose-only affected edits on changelog, validation, formatting and tooling checks, while cumulative code, test data and unknown inputs retain Debug execution. Preserve Full/PrePush profile, live transport and installation coverage, reject concurrent edits and nonzero child exits, and limit hosted Markdown exclusions to owned documentation.
