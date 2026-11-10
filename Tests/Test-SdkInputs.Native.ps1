@@ -46,10 +46,21 @@ try{
       <PreprocessorDefinitions Condition="'$(SdkFixtureCase)'=='stl'">_DISABLE_STL_ANNOTATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(SdkFixtureCase)'=='vector'">_DISABLE_VECTOR_ANNOTATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(SdkFixtureCase)'=='string'">_DISABLE_STRING_ANNOTATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(SdkFixtureCase)'=='iterator'">_ITERATOR_DEBUG_LEVEL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(SdkFixtureCase)'=='secure-scl'">_SECURE_SCL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(SdkFixtureCase)'=='iterator-debugging'">_HAS_ITERATOR_DEBUGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StructMemberAlignment Condition="'$(SdkFixtureCase)'=='packing'">1Byte</StructMemberAlignment>
+      <TreatWChar_tAsBuiltInType Condition="'$(SdkFixtureCase)'=='wchar'">false</TreatWChar_tAsBuiltInType>
+      <CallingConvention Condition="'$(SdkFixtureCase)'=='calling-convention'">StdCall</CallingConvention>
       <PreprocessorDefinitions Condition="'$(SdkFixtureCase)'=='missing-ndebug'">UNICODE;_UNICODE</PreprocessorDefinitions>
       <AdditionalOptions Condition="'$(SdkFixtureCase)'=='opaque-crt'">/MT %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(SdkFixtureCase)'=='opaque-language'">/std:c++20 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(SdkFixtureCase)'=='opaque-annotation'">/D_DISABLE_STL_ANNOTATION %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(SdkFixtureCase)'=='opaque-iterator'">/D_ITERATOR_DEBUG_LEVEL=1 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(SdkFixtureCase)'=='opaque-quoted-iterator'">/D &quot;_ITERATOR_DEBUG_LEVEL=1&quot; %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(SdkFixtureCase)'=='opaque-undefine'">/U NDEBUG %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(SdkFixtureCase)'=='opaque-packing'">/Zp1 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(SdkFixtureCase)'=='opaque-wchar'">/Zc:wchar_t- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemGroup>
 </Project>
@@ -61,7 +72,7 @@ try{
     [IO.File]::WriteAllText($project,$xml,[Text.UTF8Encoding]::new($false))
     $msbuild=Get-RedMonitorMSBuild
     $rows=[Collections.Generic.List[object]]::new()
-    foreach($case in @('valid','crt','language','global-asan','file-asan','debug','stl','vector','string','missing-ndebug','opaque-crt','opaque-language','opaque-annotation')){
+    foreach($case in @('valid','crt','language','global-asan','file-asan','debug','stl','vector','string','iterator','secure-scl','iterator-debugging','packing','wchar','calling-convention','missing-ndebug','opaque-crt','opaque-language','opaque-annotation','opaque-iterator','opaque-quoted-iterator','opaque-undefine','opaque-packing','opaque-wchar')){
         $log=Join-Path $run ($case+'.log')
         & $msbuild $project /nologo /v:minimal '/t:ValidateDxUiSdkProfile;RedMonitorValidateSdkConsumer' ("/p:SdkFixtureCase="+$case) *> $log
         $exit=$LASTEXITCODE;$text=[IO.File]::ReadAllText($log)
