@@ -6,14 +6,13 @@
     <Error Condition="'$(DxUiRoot)'=='' and '$(RedMonitorDxUiSdkRoot)'==''" Text="Run restore.ps1 before building the RedMonitor viewer." />
     <Error Condition="'$(DxUiRoot)'!='' and '$(RedMonitorDxUiSdkRoot)'!=''" Text="Select exactly one DxUi source or SDK recipe." />
     <Error Condition="'$(RedMonitorDxUiSdkRoot)'!='' and ('$(RedMonitorDxUiSdkLease)'=='' or '$(RedMonitorCiEngineRoot)'=='')" Text="Use build.ps1 with an active pinned SDK reader." />
-    <Exec Condition="'$(RedMonitorDxUiSdkRoot)'!=''" Command="pwsh -NoProfile -NonInteractive -File &quot;$(RedMonitorCiEngineRoot)\Tools\Test-SdkConsumerLease.ps1&quot; -ProjectRoot &quot;$(RedMonitorRoot).&quot; -LeasePath &quot;$(RedMonitorDxUiSdkLease)&quot; -SdkRoot &quot;$(RedMonitorDxUiSdkRoot)&quot; -Platform &quot;$(Platform)&quot; -Configuration &quot;$(Configuration)&quot;" />
   </Target>
-  <Target Name="RedMonitorValidateSdkConsumer" BeforeTargets="PrepareForBuild;ClCompile" DependsOnTargets="RedMonitorRequireDxUi" Condition="'$(RedMonitorDxUiSdkRoot)'!=''">
-    <Error Condition="'$(EnableASAN)'=='true' or '$(DxUiDisableStlAnnotations)'=='true'" Text="Pinned SDK v1 requires a non-ASan consumer with STL annotations enabled." />
-    <Error Condition="'%(ClCompile.RuntimeLibrary)'!='MultiThreadedDLL' or '%(ClCompile.LanguageStandard)'!='stdcpplatest' or '%(ClCompile.EnableASAN)'=='true'" Text="Pinned SDK v1 requires /MD, stdcpplatest and no ASan in every consumer translation unit." />
-    <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(ClCompile.PreprocessorDefinitions)', '(^|;)(_DEBUG|_DISABLE_(STL|VECTOR|STRING)_ANNOTATION|_ITERATOR_DEBUG_LEVEL|_HAS_ITERATOR_DEBUGGING|_SECURE_SCL)(=|;|$)'))" Text="Pinned SDK v1 forbids Debug, disabled-annotation or custom iterator-layout consumer definitions." />
-    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('%(ClCompile.PreprocessorDefinitions)', '(^|;)NDEBUG(=1)?(;|$)'))" Text="Pinned SDK v1 requires NDEBUG in every consumer translation unit." />
-    <Error Condition="'%(ClCompile.TreatWChar_tAsBuiltInType)'=='false' or ('%(ClCompile.StructMemberAlignment)'!='' and '%(ClCompile.StructMemberAlignment)'!='Default') or ('%(ClCompile.CallingConvention)'!='' and '%(ClCompile.CallingConvention)'!='Cdecl')" Text="Pinned SDK v1 requires built-in wchar_t, default packing and default calling convention." />
-    <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(ClCompile.AdditionalOptions)', '(?i)(^|\s)[/-](MT|MDd|std:|fsanitize|Zp|vd|Zc:wchar_t-|[DU]\s*&quot;?(_DEBUG|NDEBUG|_DISABLE_(STL|VECTOR|STRING)_ANNOTATION|_ITERATOR_DEBUG_LEVEL|_HAS_ITERATOR_DEBUGGING|_SECURE_SCL))'))" Text="Opaque compiler options cannot replace the pinned SDK's supported ABI profile." />
-  </Target>
+  <PropertyGroup Condition="'$(RedMonitorDxUiSdkRoot)'!=''">
+    <CiSdkRoot>$(RedMonitorDxUiSdkRoot)</CiSdkRoot>
+    <CiSdkProjectRoot>$(RedMonitorRoot).</CiSdkProjectRoot>
+    <CiSdkLeasePath>$(RedMonitorDxUiSdkLease)</CiSdkLeasePath>
+  </PropertyGroup>
+  <Import Project="$(RedMonitorCiEngineRoot)\Tools\MSBuild\Ci.SdkConsumer.targets" Condition="'$(RedMonitorDxUiSdkRoot)'!=''" />
+  <!-- Compatibility target for existing explicit policy controls. The shared target owns the guard. -->
+  <Target Name="RedMonitorValidateSdkConsumer" BeforeTargets="PrepareForBuild;ClCompile" DependsOnTargets="CiValidateSdkConsumer" Condition="'$(RedMonitorDxUiSdkRoot)'!=''" />
 </Project>

@@ -55,15 +55,8 @@ Assert-RedMonitorOutputNotRunning $output
 $sdkProperties=@();$dependencyRecipe=[ordered]@{recipe='PinnedSource'}
 if($DxUiSdkInputDescriptor){
     $engineRoot=Join-Path $PSScriptRoot '.ci-engine'
-    $enginePin=(Get-Content (Join-Path $PSScriptRoot '.ci/project.json') -Raw|ConvertFrom-Json).engine.ref
-    $engineHead=(& git -C $engineRoot rev-parse --verify HEAD).Trim()
-    if($LASTEXITCODE -or $engineHead -cne $enginePin){throw 'Restore the exact pinned CI engine before SDK use.'}
-    $engineDirty=@(& git -C $engineRoot status --porcelain --untracked-files=all)
-    if($LASTEXITCODE -or $engineDirty.Count){throw 'SDK consumer engine must be clean.'}
     Import-Module (Join-Path $engineRoot 'Tools/Modules/Ci.SdkConsumer.psm1')
-    $dxuiPin=Get-Content (Join-Path $PSScriptRoot 'Dependencies/DxUi.lock.json') -Raw|ConvertFrom-Json
-    if($dxuiPin.repository -cne 'https://github.com/RedSalamanders/DxUi' -or @($dxuiPin.targets).Count -ne 1 -or $dxuiPin.targets[0] -cne 'DxUi'){throw 'SDK consumer requires the existing exact DxUi lock.'}
-    $sdkInput=Open-CiPinnedSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -ExpectedSourceCommit $dxuiPin.commit -ExpectedApiRevision $dxuiPin.apiRevision -Platform $Platform -Configuration $Configuration
+    $sdkInput=Open-CiApplicationSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -Platform $Platform -Configuration $Configuration
     if($null -ne $sdkInput){
         foreach($path in @($sdkInput.SdkRoot,$sdkInput.LeasePath,$engineRoot)){if($path -match '[%;"\r\n]'){throw 'SDK paths contain unsupported MSBuild delimiters.'}}
         $sdkProperties=@("/p:RedMonitorDxUiSdkRoot=$($sdkInput.SdkRoot)","/p:RedMonitorDxUiSdkLease=$($sdkInput.LeasePath)","/p:RedMonitorCiEngineRoot=$engineRoot")
