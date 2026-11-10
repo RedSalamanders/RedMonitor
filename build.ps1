@@ -52,14 +52,16 @@ $sdkInput=$null;$buildFailure=$null
 try {
 $output=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ".build/$Platform/$Configuration")
 Assert-RedMonitorOutputNotRunning $output
+$msbuild=Get-RedMonitorMSBuild
 $sdkProperties=@();$dependencyRecipe=[ordered]@{recipe='PinnedSource'}
 if($DxUiSdkInputDescriptor){
     $engineRoot=Join-Path $PSScriptRoot '.ci-engine'
     Import-Module (Join-Path $engineRoot 'Tools/Modules/Ci.SdkConsumer.psm1')
-    $sdkInput=Open-CiApplicationSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -Platform $Platform -Configuration $Configuration
+    $sdkInput=Open-CiApplicationSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -Platform $Platform -Configuration $Configuration -MSBuildPath $msbuild
     if($null -ne $sdkInput){
         foreach($path in @($sdkInput.SdkRoot,$sdkInput.LeasePath,$engineRoot)){if($path -match '[%;"\r\n]'){throw 'SDK paths contain unsupported MSBuild delimiters.'}}
         $sdkProperties=@("/p:RedMonitorDxUiSdkRoot=$($sdkInput.SdkRoot)","/p:RedMonitorDxUiSdkLease=$($sdkInput.LeasePath)","/p:RedMonitorCiEngineRoot=$engineRoot")
+        if($sdkInput.Evidence.recipe -ceq 'PinnedQualifiedReleaseSdkV2'){$sdkProperties+=@('/p:CiSdkContract=QualifiedAbiV2')}
         $dependencyRecipe=$sdkInput.Evidence
         Write-Host "Using byte-verified pinned DxUi SDK input $($dependencyRecipe.inputKey)."
     }else{Write-Host 'Exact pinned SDK input unavailable; restoring the governed source recipe.'}
@@ -74,7 +76,6 @@ $receipt=Join-Path $output 'build-receipt.json'
 if(Test-Path -LiteralPath $receipt){Remove-Item -LiteralPath $receipt}
 $sourceBefore=Get-RedMonitorSourceSnapshot
 $identity=$sourceBefore.Identity
-$msbuild=Get-RedMonitorMSBuild
 $started=[DateTime]::UtcNow
 $viewerTestsEnabled=if($ViewerTests -eq 'Auto'){$Configuration -ne 'Release'}else{$ViewerTests -eq 'true'}
 & $msbuild (Join-Path $PSScriptRoot 'RedMonitor.proj') /nologo /m:4 /v:minimal "/p:Platform=$Platform" "/p:Configuration=$Configuration" "/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())" "/p:RedMonitorProductionOnly=$($ProductionOnly.IsPresent.ToString().ToLowerInvariant())" "/p:RedMonitorBuildNumber=$BuildNumber" "/flp:LogFile=$output/build.log;Verbosity=normal" @sdkProperties

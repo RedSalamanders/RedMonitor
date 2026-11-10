@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "role": "ControlledOriginSdkApplicationQualification",
+  "liveHostedOriginQualified": false,
+  "nativeArm64RuntimeQualified": false,
+  "controller": "64364b1e375b76c248b556fa70e5777fefa58ba3",
+  "applicationSourceIdentity": "2613a1c0bd170df2e9390e2f53ef3caa299399f78c286008b32b38d85496390b",
+  "platform": "x64",
+  "configuration": "Release",
+  "testEnabledBuildPassed": true,
+  "productionBuildPassed": true,
+  "diagnostics": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "dependency": {
+    "recipe": "PinnedQualifiedReleaseSdkV2",
+    "inputKey": "5868120cc91a06d158d7c4ccf617517e457546b0dcc92201099ad707a231fc98",
+    "manifestSha256": "8bb5b8de037adf5e4ee522bd96cfa8db9ea82629c10edae5121c205162499ee1",
+    "identity": {
+      "schemaVersion": 1,
+      "role": "DependencySdkInputs",
+      "sourceRepository": "RedSalamanders/DxUi",
+      "sourceCommit": "f2e328a0a26a18ca66bf4b2aea77bf010c9515e1",
+      "sourceBytes": "fdcc91006d4ac75d9fb2eaddc2709358aa1354cc5aa365f634eaa6c014d0d773",
+      "apiRevision": 4,
+      "platform": "x64",
+      "configuration": "Release",
+      "runtimeFamily": "MD",
+      "annotationPolicy": "enabled",
+      "languageStandard": "stdcpplatest",
+      "optimizationPolicy": "GL-LTCG-full",
+      "toolchainIdentity": "33861927a16550a2fe5d9bd84d81bb6eb22b4ba15d92661e6a9bcf99669e3352",
+      "compilerProfileIdentity": "aaf4603e077a74697695caeb60716d1753041fe202eea65bf55f8a6f17012744",
+      "dependencyIdentity": "ced0e108d251d1911dec328475844de27ab967e3e8d603da1938a81922bb0d08",
+      "integrationPolicyIdentity": "42cdb62688af3a4bc08945b84ec5a1c3ed98dc6334d5bda5ee3e0b317ce118ec",
+      "environmentIdentity": "5669a893097882a211bb936cbdf1fdbfb68897188071c40001f30fa668119c01"
+    },
+    "toolchainReference": "a46852d85f7f4b35fbc9514b1a0c97483e8e20751a05dd97867db5e3a0578c92",
+    "producerRun": "6111102",
+    "attempt": 1,
+    "archiveSha256": "b1abe329ab5e08e7160ad6033b79f91cb06085acae740cf2aa2d525992f05e12",
+    "publicHeadersGitTree": "afca31c268d9d750beecc7d8c4023467d9ce4d1e",
+    "storageEngineRef": "64364b1e375b76c248b556fa70e5777fefa58ba3",
+    "storageEngineBytes": "ab3d50f0180b1ce3cffd4f979f9e3d509a502b0e9c2e9c66b895645aa0c9fcbb"
+  },
+  "nativeScenarios": [
+    "diagnostics-gate",
+    "scrollbar-model",
+    "document-model",
+    "client-contract",
+    "settings-contract",
+    "transport-roundtrip",
+    "installed-production-metadata"
+  ],
+  "installationControlsPassed": 14,
+  "packageSha256": "e06cc910a340d09c591bae5a5accb1060b621572a3f9ee0b151cd56e2ca56b76",
+  "sequenceElapsedMs": 152121,
+  "overallSpeedTargetEstablished": false
+}

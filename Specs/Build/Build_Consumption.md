@@ -53,6 +53,16 @@ must recheck inputs/bytes successfully before a build receipt is published. Its 
 `PinnedReleaseSdkV1` key, manifest, complete native identity and storage-engine identity; this is distinct from
 the source wrapper recipe and is never a product test verdict. Default builds retain their source recipe.
 
+The separately authenticated `HostedQualifiedDependencyInput` descriptor selects
+`PinnedQualifiedReleaseSdkV2`. It retains the original producer key/manifest and
+SDK receipt, checks the consumer's actual complete tool/header/library byte
+reference, and requires its selected native MSBuild, per-project tool/search
+settings and per-file ABI profile to match the live reader. It does not recompute
+the producer's checkout-bound v1 environment recipe in the application. Open and
+close reauthenticate the retained original archive and input bytes. Unknown SDK
+recipes cannot be packaged. Live hosted-origin acceptance is a separate gate
+from controlled-origin local application validation.
+
 `package.ps1 -DxUiSdkInputDescriptor <descriptor>` reopens the same key/manifest when the build used SDK
 inputs and copies the complete notices from that verified payload under a reader lease. Missing or another
 SDK refuses packaging. Original source builds preserve their existing notice closure. Runtime, extraction,
