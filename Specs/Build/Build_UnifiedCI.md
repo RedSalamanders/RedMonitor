@@ -1,5 +1,12 @@
 # Unified organization CI contract
 
+SDK-linked projects use the pinned engine's shared MSBuild ABI/root/reader guard,
+and build/package entrypoints bind the actual dependency lock through
+`Open-CiApplicationSdkInput`. A verified exact SDK miss retains source fallback
+and now archives both expected/observed hash identities and changed fields in the
+native workspace evidence. A passing source fallback is native coverage, not
+SDK-hit acceptance. Both architecture regression and production gates remain.
+
 This specification owns the project's CI routing. The versioned implementation and policy tests live in
 [RedSalamanders/.github](https://github.com/RedSalamanders/.github). The exact reviewed full commit is recorded
 in .ci/project.json and every reusable workflow caller. Update those pins together through a reviewed PR.

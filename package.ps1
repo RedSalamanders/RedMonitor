@@ -46,12 +46,8 @@ $usedSdk=$receipt.PSObject.Properties.Name -contains 'dxuiRecipe' -and $receipt.
 if($usedSdk){
     if(-not $DxUiSdkInputDescriptor){throw 'Reopen the build SDK using -DxUiSdkInputDescriptor before packaging its exact notices.'}
     $engineRoot=Join-Path $PSScriptRoot '.ci-engine'
-    $enginePin=(Get-Content (Join-Path $PSScriptRoot '.ci/project.json') -Raw|ConvertFrom-Json).engine.ref
-    if((& git -C $engineRoot rev-parse HEAD).Trim() -cne $enginePin -or $LASTEXITCODE){throw 'SDK packaging requires the exact pinned engine.'}
-    $engineDirty=@(& git -C $engineRoot status --porcelain --untracked-files=all)
-    if($LASTEXITCODE -or $engineDirty.Count){throw 'SDK packaging engine must be clean.'}
     Import-Module (Join-Path $engineRoot 'Tools/Modules/Ci.SdkConsumer.psm1')
-    $sdk=Open-CiPinnedSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -ExpectedSourceCommit $dxuiPin.commit -ExpectedApiRevision $dxuiPin.apiRevision -Platform $Platform -Configuration $Configuration
+    $sdk=Open-CiApplicationSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -Platform $Platform -Configuration $Configuration
     if($null -eq $sdk){throw 'The exact SDK notice payload is unavailable; preserve the existing build and use its original inputs.'}
     $noticeFailure=$null
     try{
