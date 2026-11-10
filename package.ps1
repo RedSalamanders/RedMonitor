@@ -42,12 +42,14 @@ if($Configuration -eq 'ASan Debug'){
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE.txt') -Destination $stage
 $dxuiPin=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Dependencies/DxUi.lock.json') -Raw|ConvertFrom-Json
-$usedSdk=$receipt.PSObject.Properties.Name -contains 'dxuiRecipe' -and $receipt.dxuiRecipe.recipe -ceq 'PinnedReleaseSdkV1'
+$knownSdkRecipes=@('PinnedReleaseSdkV1','PinnedQualifiedReleaseSdkV2')
+if($receipt.PSObject.Properties.Name -contains 'dxuiRecipe' -and $receipt.dxuiRecipe.recipe -cnotin (@('PinnedSource')+$knownSdkRecipes)){throw 'Unsupported build dependency recipe; rebuild through a reviewed reader.'}
+$usedSdk=$receipt.PSObject.Properties.Name -contains 'dxuiRecipe' -and $receipt.dxuiRecipe.recipe -cin $knownSdkRecipes
 if($usedSdk){
     if(-not $DxUiSdkInputDescriptor){throw 'Reopen the build SDK using -DxUiSdkInputDescriptor before packaging its exact notices.'}
     $engineRoot=Join-Path $PSScriptRoot '.ci-engine'
     Import-Module (Join-Path $engineRoot 'Tools/Modules/Ci.SdkConsumer.psm1')
-    $sdk=Open-CiApplicationSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -Platform $Platform -Configuration $Configuration
+    $sdk=Open-CiApplicationSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -Platform $Platform -Configuration $Configuration -MSBuildPath (Get-RedMonitorMSBuild)
     if($null -eq $sdk){throw 'The exact SDK notice payload is unavailable; preserve the existing build and use its original inputs.'}
     $noticeFailure=$null
     try{

@@ -32,6 +32,27 @@ function Git([string[]]$CommandArguments){
     if($LASTEXITCODE -ne 0){throw "Fixture Git failed: $($CommandArguments -join ' ')"}
 }
 function Identity {Get-RedMonitorSourceIdentity -Root $fixture}
+
+# Execute the actual resolver with a controlled installation and no Visual Studio
+# requirement: the legacy Bin executable must not mask a missing native host.
+$resolver=${function:Get-RedMonitorMSBuild}.ToString()
+$nativeRelative=if([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64'){'MSBuild/Current/Bin/arm64/MSBuild.exe'}else{'MSBuild/Current/Bin/amd64/MSBuild.exe'}
+$nativeTool=Join-Path $fixture $nativeRelative
+[void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($nativeTool))
+[IO.File]::WriteAllText($nativeTool,'Native fixture; never executed.')
+$resolveFixture={param($body,$installation)
+    function Import-Module {param($Name,[switch]$Force)}
+    function Get-RedMonitorVisualStudioInstallation {return $installation}
+    & ([scriptblock]::Create("param(`$PSScriptRoot)`n"+$body)) (Join-Path $installation 'Build')
+}
+Require ((& $resolveFixture $resolver $fixture) -ceq $nativeTool) 'Build resolver did not select the native MSBuild host.'
+[IO.File]::Delete($nativeTool)
+$legacyTool=Join-Path $fixture 'MSBuild/Current/Bin/MSBuild.exe'
+[void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($legacyTool))
+[IO.File]::WriteAllText($legacyTool,'Legacy fixture; never executed.')
+Refuses {& $resolveFixture $resolver $fixture} 'MSBuild missing'
+[IO.Directory]::Delete((Assert-RedMonitorOutputPath (Join-Path $fixture 'MSBuild')),$true)
+
 Git @('init','--quiet')
 Put '.gitignore' ".build/`n.ci-engine/`n.vs/`n*.user`n"
 Put 'src/tracked.cpp' 'int fixture = 1;'

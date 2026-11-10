@@ -101,6 +101,15 @@ provenance or corrupt data fails. Static, local builds, Debug/ASan and manual qu
 This is dependency input reuse only; native regressions, assertion probe, production identity and package
 smoke gates remain required on both architectures.
 
+Qualified v2 descriptors preserve the producer's original input key/manifest and
+native receipt while checking actual complete consumer tool/header/library bytes.
+The build passes its selected MSBuild to the reader and enables the v2 actual-tool
+guard only from the verified reader's recipe. Packaging explicitly recognizes v1
+and v2 SDK recipes, rejects unknown recipes and reopens the same input. Controlled
+origin/local qualification does not establish live hosted-origin acceptance.
+The native host's MSBuild is selected explicitly (`Bin/amd64` on x64 and
+`Bin/arm64` on ARM64); the legacy Bin executable is not a fallback.
+
 The pinned shared engine restores vcpkg's ABI-indexed package cache for normal and manual native qualification. Exact engine/input keys are preferred; fallback lookup stays within the same runner OS, host architecture and target platform, and the pinned vcpkg restore still selects each package by its computed ABI. A miss rebuilds the package. This supplies dependency inputs only: product objects, DxUi SDK outputs and build/test receipts are not restored by this cache. Dependency pins, native execution, failure detectors and production/publication gates remain required. The owning behavior is the shared engine's Specs/CI.md.
 
 Markdown exclusions name owned prose locations and known guides. A global Markdown-extension exclusion is forbidden: new implementation/test data and notice files remain native inputs unless explicitly reviewed as prose. Runtime include exceptions take precedence.

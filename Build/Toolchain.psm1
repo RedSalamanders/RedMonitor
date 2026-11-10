@@ -5,7 +5,7 @@ function Get-RedMonitorMSBuild {
     $installation = Get-RedMonitorVisualStudioInstallation
     $relative = if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') {
         'MSBuild/Current/Bin/arm64/MSBuild.exe'
-    } else { 'MSBuild/Current/Bin/MSBuild.exe' }
+    } else { 'MSBuild/Current/Bin/amd64/MSBuild.exe' }
     $path = Join-Path $installation $relative
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "MSBuild missing: $path" }
     return $path
