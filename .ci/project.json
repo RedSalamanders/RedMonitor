@@ -4,7 +4,7 @@
   "repository": "RedSalamanders/RedMonitor",
   "engine": {
     "repository": "RedSalamanders/.github",
-    "ref": "f0b00971058692dce89ed898b7379c1c9669934c"
+    "ref": "e6bcaf342f4c592d216e3f412889d5ccec40e4d4"
   },
   "kind": "application",
   "adapter": "Tools/Invoke-ProjectCi.ps1",

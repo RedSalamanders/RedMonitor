@@ -86,6 +86,14 @@ with workspace paths in one artifact input; the Windows drive-root common ancest
 This preserves diagnostics after failure without moving test data or bypassing native acceptance.
 ## Dependency cache reuse
 
+Admitted main ReleaseTestBuild/Production roles independently prepare the exact pinned DxUi SDK through the
+shared engine's authenticated distribution and full input-key contract. The build holds its verified reader
+through MSBuild; production packaging reopens the same descriptor for complete notice closure. Missing
+distribution or a verified compiler/dependency/environment mismatch retains source restore/build. Invalid
+provenance or corrupt data fails. Static, local builds, Debug/ASan and manual qualification retain source.
+This is dependency input reuse only; native regressions, assertion probe, production identity and package
+smoke gates remain required on both architectures.
+
 The pinned shared engine restores vcpkg's ABI-indexed package cache for normal and manual native qualification. Exact engine/input keys are preferred; fallback lookup stays within the same runner OS, host architecture and target platform, and the pinned vcpkg restore still selects each package by its computed ABI. A miss rebuilds the package. This supplies dependency inputs only: product objects, DxUi SDK outputs and build/test receipts are not restored by this cache. Dependency pins, native execution, failure detectors and production/publication gates remain required. The owning behavior is the shared engine's Specs/CI.md.
 
 Markdown exclusions name owned prose locations and known guides. A global Markdown-extension exclusion is forbidden: new implementation/test data and notice files remain native inputs unless explicitly reviewed as prose. Runtime include exceptions take precedence.

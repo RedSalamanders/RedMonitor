@@ -44,6 +44,9 @@ source recipe. Exact misses fall back to source restore/build; malformed, change
 The SDK recipe imports packaged public headers/library/compiler-PDB/integration policy and adds no source
 DxUi project reference. MSBuild checks the actual live parent reader handle, project, payload and profile
 before compilation. A leftover witness or stale property file cannot authorize later direct MSBuild use.
+Per-translation-unit definitions and effective metadata reject custom iterator-layout macros, packing,
+wchar_t and calling-convention changes. Opaque compiler switches cannot override these settings or undefine
+the required profile macros. Unsupported ABI variants must use the governed source recipe.
 
 All existing product warning/error, version/test-surface, source-change and artifact checks remain. SDK close
 must recheck inputs/bytes successfully before a build receipt is published. Its `dxuiRecipe` records the actual
