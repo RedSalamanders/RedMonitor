@@ -1,0 +1,1 @@
+- Restore winget availability during hosted Windows 11 ARM64 install validation by registering the image's inbox App Installer when winget is absent. The current shared CI engine includes this behavior; native installation checks and the explicit publication gates remain required.

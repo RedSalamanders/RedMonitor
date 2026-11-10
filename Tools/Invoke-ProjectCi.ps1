@@ -22,6 +22,8 @@ Canonical test evidence, source-bound receipts and qualified ZIPs; GitHub job ou
 .NOTES
 Requires PowerShell 7.4 and Git. Native work is hosted-only and uses the matching architecture.
 Static never invokes compiler fixtures. No publication or source/pin updates.
+Admitted main Release build roles prepare authenticated exact-pin SDK inputs when available;
+an exact compiler/dependency/environment miss retains the governed source build. Local/manual modes retain source.
 See Specs/Build/Build_UnifiedCI.md for roles, input rules, evidence and manual actions.
 .EXAMPLE
 ./Tools/Invoke-ProjectCi.ps1 -Phase Static -EngineRoot ../RedSalamanders.CI -Base origin/main -DevelopmentEngine
@@ -59,13 +61,22 @@ $evidenceDirectory = Join-Path $root '.build/test-runs'
 if ($env:GITHUB_OUTPUT) { Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value ('evidence_directory=' + $evidenceDirectory) }
 if ($Phase -in @('ReleaseTestBuild','Qualification','Production')) {
     $buildArguments = $profile + @('-BuildNumber',$number)
+    $sdkDescriptor=$null
+    if($Configuration -ceq 'Release' -and $Phase -cin @('ReleaseTestBuild','Production')){
+        Import-Module (Join-Path $EngineRoot 'Tools/Modules/Ci.SdkPreparation.psm1')
+        $pin=Get-Content (Join-Path $root 'Dependencies/DxUi.lock.json') -Raw|ConvertFrom-Json
+        $sdkDescriptor=Initialize-CiPinnedSdkInput -Context $context -SourceCommit $pin.commit -ApiRevision $pin.apiRevision
+        if($sdkDescriptor){$buildArguments+=@('-DxUiSdkInputDescriptor',$sdkDescriptor)}
+    }
     if ($Phase -eq 'Production') { $buildArguments += @('-ProductionOnly','-ViewerTests','false') }
     elseif ($Configuration -eq 'Release') { $buildArguments += @('-ViewerTests','true') }
     Run 'build.ps1' $buildArguments
     if ($Phase -eq 'ReleaseTestBuild') { return }
 }
 if ($Phase -eq 'Production') {
-    Run 'package.ps1' $profile
+    $packageArguments=@($profile)
+    if($sdkDescriptor){$packageArguments+=@('-DxUiSdkInputDescriptor',$sdkDescriptor)}
+    Run 'package.ps1' $packageArguments
     $archives = @(Get-ChildItem (Join-Path $root '.build/packages') -Recurse -Filter '*.zip' -File | ForEach-Object FullName)
     Write-CiProductionReceipt -Context $context -Archives $archives -TestModeDisabled $true -SmokePassed $true
     return

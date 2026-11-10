@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "role": "LocalSourceProfileQualification",
+  "sourceIdentity": "df3973eee166112caa0d8919b27be5256f06af68b76e9cd912c8e71578b5e725",
+  "controller": "a0db31a5d4a57ed7275333d1f47b1b1c0efb9bee",
+  "prePushOutcome": "LOCAL_OBLIGATIONS_PASSED",
+  "builds": [
+    {
+      "platform": "x64",
+      "configuration": "Debug",
+      "sourceIdentity": "df3973eee166112caa0d8919b27be5256f06af68b76e9cd912c8e71578b5e725",
+      "recipe": "PinnedSource",
+      "receiptSha256": "dca486e7c5cf9ae0a4706c3045821567b5371123b818b2a38c6809e8058146d4",
+      "runtimeExecuted": false
+    },
+    {
+      "platform": "x64",
+      "configuration": "Release",
+      "sourceIdentity": "df3973eee166112caa0d8919b27be5256f06af68b76e9cd912c8e71578b5e725",
+      "recipe": "PinnedSource",
+      "receiptSha256": "eab77ea8629a0a1f0e286619d23fc5ef9dfb3dbd4f4488abf15f4262d5f7790b",
+      "runtimeExecuted": false
+    },
+    {
+      "platform": "x64",
+      "configuration": "ASan Debug",
+      "sourceIdentity": "df3973eee166112caa0d8919b27be5256f06af68b76e9cd912c8e71578b5e725",
+      "recipe": "PinnedSource",
+      "receiptSha256": "f2ace385e230d513e668c07a1266148bdb7aecfb2889dd6967cc2bd428407778",
+      "runtimeExecuted": false
+    },
+    {
+      "platform": "ARM64",
+      "configuration": "Debug",
+      "sourceIdentity": "df3973eee166112caa0d8919b27be5256f06af68b76e9cd912c8e71578b5e725",
+      "recipe": "PinnedSource",
+      "receiptSha256": "eab5a6e2b498af329b9f45964bf005c505ec16dffee82966f168ac8208d09b02",
+      "runtimeExecuted": false
+    },
+    {
+      "platform": "ARM64",
+      "configuration": "Release",
+      "sourceIdentity": "df3973eee166112caa0d8919b27be5256f06af68b76e9cd912c8e71578b5e725",
+      "recipe": "PinnedSource",
+      "receiptSha256": "dd87459d1e892bdedc0bbb36ac8ebfa2040e37cd5aaad37ca2e3fb397f36e556",
+      "runtimeExecuted": false
+    },
+    {
+      "platform": "ARM64",
+      "configuration": "ASan Debug",
+      "sourceIdentity": "df3973eee166112caa0d8919b27be5256f06af68b76e9cd912c8e71578b5e725",
+      "recipe": "PinnedSource",
+      "receiptSha256": "6194a49f63539bf071456dcf053ff892c7758ffdaa81a2658b486eada5fb4748",
+      "runtimeExecuted": false
+    }
+  ],
+  "nativeRuns": [
+    {
+      "run": "20261110T124414852Z-28e8c8beeec7480690f0d3699733714b",
+      "configuration": "Debug",
+      "liveEtwRequested": true,
+      "scenarios": [
+        {
+          "scenario": "diagnostics-gate",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 45.9901
+        },
+        {
+          "scenario": "scrollbar-model",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 24.2279
+        },
+        {
+          "scenario": "document-model",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 425.817
+        },
+        {
+          "scenario": "client-contract",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 40.2953
+        },
+        {
+          "scenario": "settings-contract",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 52.1833
+        },
+        {
+          "scenario": "transport-roundtrip",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 2047.2334
+        },
+        {
+          "scenario": "installed-production-metadata",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 21.4501
+        }
+      ],
+      "receiptSha256": "8b38348113db788912096aebfed6632a983e9f76c9e2d0395bec84db9f3468da"
+    },
+    {
+      "run": "20261110T124646613Z-23d7553e5e164d558aad60baeee9c761",
+      "configuration": "Release",
+      "liveEtwRequested": true,
+      "scenarios": [
+        {
+          "scenario": "diagnostics-gate",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 28.1024
+        },
+        {
+          "scenario": "scrollbar-model",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 25.3548
+        },
+        {
+          "scenario": "document-model",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 107.1917
+        },
+        {
+          "scenario": "client-contract",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 24.5158
+        },
+        {
+          "scenario": "settings-contract",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 31.6548
+        },
+        {
+          "scenario": "transport-roundtrip",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 2052.6409
+        },
+        {
+          "scenario": "installed-production-metadata",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 24.1379
+        }
+      ],
+      "receiptSha256": "27362839ae681883fa3cb7627fde2519252ef3fd3620a621e0e2a7b153ea8197"
+    },
+    {
+      "run": "20261110T124935727Z-70939e3c98a0414ca03e47d65b96ffec",
+      "configuration": "ASan Debug",
+      "liveEtwRequested": true,
+      "scenarios": [
+        {
+          "scenario": "diagnostics-gate",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 59.6855
+        },
+        {
+          "scenario": "scrollbar-model",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 45.5458
+        },
+        {
+          "scenario": "document-model",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 1339.6177
+        },
+        {
+          "scenario": "client-contract",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 45.7147
+        },
+        {
+          "scenario": "settings-contract",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 67.0068
+        },
+        {
+          "scenario": "transport-roundtrip",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 2072.1462
+        },
+        {
+          "scenario": "installed-production-metadata",
+          "exitCode": 0,
+          "passed": true,
+          "expectedAsanDetection": false,
+          "elapsedMs": 43.6984
+        },
+        {
+          "scenario": "asan-detection",
+          "exitCode": 1,
+          "passed": true,
+          "expectedAsanDetection": true,
+          "elapsedMs": 63.5615
+        }
+      ],
+      "receiptSha256": "1c10eb44a91937fdec0000294b6b558a7f5a280124dd8c62a352aad98e4c48b3"
+    }
+  ],
+  "nativeArm64RuntimeQualified": false,
+  "packageRecipeNegativeControlsPassed": 3,
+  "log": ".build/i61-qualified-reader-prepush.log",
+  "logSha256": "640aa92f7ca418982d8efbb00cceeccd2f8b7062218395e8b9e00de64db4eba2"
+}

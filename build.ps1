@@ -17,6 +17,9 @@ Auto enables viewer test hooks in Debug/ASan and disables them in Release. Expli
 Build only the production viewer and satellites; excludes console test targets.
 .PARAMETER BuildNumber
 Explicit frozen batch version component. Zero preserves the local default version.
+.PARAMETER DxUiSdkInputDescriptor
+Explicit independent local pinned Release SDK descriptor under this project's .build. Holds the verified
+immutable reader through compilation; an exact cache miss uses the existing source recipe.
 .OUTPUTS
 Console progress and artifact/log/receipt paths. Build products, logs and receipts are written beneath .build.
 .NOTES
@@ -30,7 +33,8 @@ No application is launched. Used by developers, test.ps1 and the project CI adap
 param([ValidateSet('x64','ARM64')][string] $Platform='x64',
       [ValidateSet('Debug','Release','ASan Debug')][string] $Configuration='Debug', [switch] $SkipRestore,
       [ValidateSet('Auto','true','false')][string]$ViewerTests='Auto',
-      [switch]$ProductionOnly, [ValidateRange(0,65535)][int]$BuildNumber=0)
+      [switch]$ProductionOnly, [ValidateRange(0,65535)][int]$BuildNumber=0,
+      [string]$DxUiSdkInputDescriptor='')
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $nativeEntryElapsed=[Diagnostics.Stopwatch]::StartNew()
@@ -38,24 +42,43 @@ if ($env:CI_NATIVE_BUILDS_DISABLED -eq 'true') { throw 'Native builds are forbid
 if($ProductionOnly -and ($Configuration -ne 'Release' -or $ViewerTests -eq 'true')){
     throw 'ProductionOnly requires a test-disabled Release viewer.'
 }
+if($DxUiSdkInputDescriptor -and $Configuration -cne 'Release'){throw 'Pinned SDK inputs require Release; use source builds for Debug/ASan.'}
 Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Build/BuildConsole.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot 'Build/BuildPresentation.psm1') -ErrorAction Stop
 Write-RedMonitorBuildBanner -Platform $Platform -Configuration $Configuration -ProductionOnly:$ProductionOnly
 $lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
+$sdkInput=$null;$buildFailure=$null
 try {
 $output=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ".build/$Platform/$Configuration")
 Assert-RedMonitorOutputNotRunning $output
-if (-not $SkipRestore) { & (Join-Path $PSScriptRoot 'restore.ps1') -Platform $Platform }
+$msbuild=Get-RedMonitorMSBuild
+$sdkProperties=@();$dependencyRecipe=[ordered]@{recipe='PinnedSource'}
+if($DxUiSdkInputDescriptor){
+    $engineRoot=Join-Path $PSScriptRoot '.ci-engine'
+    Import-Module (Join-Path $engineRoot 'Tools/Modules/Ci.SdkConsumer.psm1')
+    $sdkInput=Open-CiApplicationSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -Platform $Platform -Configuration $Configuration -MSBuildPath $msbuild
+    if($null -ne $sdkInput){
+        foreach($path in @($sdkInput.SdkRoot,$sdkInput.LeasePath,$engineRoot)){if($path -match '[%;"\r\n]'){throw 'SDK paths contain unsupported MSBuild delimiters.'}}
+        $sdkProperties=@("/p:RedMonitorDxUiSdkRoot=$($sdkInput.SdkRoot)","/p:RedMonitorDxUiSdkLease=$($sdkInput.LeasePath)","/p:RedMonitorCiEngineRoot=$engineRoot")
+        if($sdkInput.Evidence.recipe -ceq 'PinnedQualifiedReleaseSdkV2'){$sdkProperties+=@('/p:CiSdkContract=QualifiedAbiV2')}
+        $dependencyRecipe=$sdkInput.Evidence
+        Write-Host "Using byte-verified pinned DxUi SDK input $($dependencyRecipe.inputKey)."
+    }else{Write-Host 'Exact pinned SDK input unavailable; restoring the governed source recipe.'}
+}
+if (-not $SkipRestore) {
+    if($null -ne $sdkInput){& (Join-Path $PSScriptRoot 'vcpkg-install.ps1') -Platform $Platform}
+    else{& (Join-Path $PSScriptRoot 'restore.ps1') -Platform $Platform}
+    if(-not $? -or $LASTEXITCODE){throw 'RedMonitor dependency restore failed.'}
+}
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $receipt=Join-Path $output 'build-receipt.json'
 if(Test-Path -LiteralPath $receipt){Remove-Item -LiteralPath $receipt}
 $sourceBefore=Get-RedMonitorSourceSnapshot
 $identity=$sourceBefore.Identity
-$msbuild=Get-RedMonitorMSBuild
 $started=[DateTime]::UtcNow
 $viewerTestsEnabled=if($ViewerTests -eq 'Auto'){$Configuration -ne 'Release'}else{$ViewerTests -eq 'true'}
-& $msbuild (Join-Path $PSScriptRoot 'RedMonitor.proj') /nologo /m:4 /v:minimal "/p:Platform=$Platform" "/p:Configuration=$Configuration" "/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())" "/p:RedMonitorProductionOnly=$($ProductionOnly.IsPresent.ToString().ToLowerInvariant())" "/p:RedMonitorBuildNumber=$BuildNumber" "/flp:LogFile=$output/build.log;Verbosity=normal"
+& $msbuild (Join-Path $PSScriptRoot 'RedMonitor.proj') /nologo /m:4 /v:minimal "/p:Platform=$Platform" "/p:Configuration=$Configuration" "/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())" "/p:RedMonitorProductionOnly=$($ProductionOnly.IsPresent.ToString().ToLowerInvariant())" "/p:RedMonitorBuildNumber=$BuildNumber" "/flp:LogFile=$output/build.log;Verbosity=normal" @sdkProperties
 if($LASTEXITCODE -ne 0){throw "RedMonitor build failed: $output/build.log"}
 Assert-NativeBuildDiagnostics -LogPath (Join-Path $output 'build.log')
 $version=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $output 'RedMonitor.exe'))
@@ -73,6 +96,7 @@ if($identity -cne $sourceAfter.Identity){
     $sourceAfter|ConvertTo-Json -Depth 4|Set-Content -LiteralPath (Join-Path $output 'build-source-after.json') -Encoding utf8
     throw "Source changed during build ($($changed -join ', ')); no receipt published. Snapshots: $output/build-source-{before,after}.json"
 }
+if($null -ne $sdkInput){Close-CiPinnedSdkInput $sdkInput}
 $artifacts=@(Get-ChildItem -LiteralPath $output -Recurse -File | Where-Object {
     ($_.DirectoryName -ieq $output -and $_.Extension -in '.exe','.dll','.pdb' -and $_.Name -ne 'yyjson.dll') -or
     $_.Name -eq 'SettingsStore.schema.json' -or $_.FullName -match '[\\/](Lang|Themes)[\\/]'
@@ -82,10 +106,16 @@ $artifacts=@(Get-ChildItem -LiteralPath $output -Recurse -File | Where-Object {
 [ordered]@{schemaVersion=1;passed=$true;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;viewerTestsEnabled=$viewerTestsEnabled;
   buildNumber=$BuildNumber;productionOnly=[bool]$ProductionOnly;
   dxui=Get-Content (Join-Path $PSScriptRoot 'Dependencies/DxUi.lock.json') -Raw|ConvertFrom-Json;
+  dxuiRecipe=$dependencyRecipe;
   toolchainSha256=(Get-FileHash -LiteralPath $msbuild).Hash;artifacts=$artifacts;
   startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');runtimeExecuted=$false}|
   ConvertTo-Json -Depth 8|Set-Content -LiteralPath $receipt -Encoding utf8
 Write-NativeBuildResult -Project RedMonitor -Platform $Platform -Configuration $Configuration `
     -LogPath (Join-Path $output 'build.log') -Artifacts @((Join-Path $output 'RedMonitor.exe'),$receipt) `
     -Executable (Join-Path $output 'RedMonitor.exe') -Duration $nativeEntryElapsed.Elapsed
-} finally {$lease.ReleaseMutex();$lease.Dispose()}
+} catch {$buildFailure=$_;throw}
+finally {
+    try{if($null -ne $sdkInput -and -not $sdkInput.Closed){Close-CiPinnedSdkInput $sdkInput}}
+    catch{if($null -eq $buildFailure){throw}else{Write-Warning ('SDK close also failed: '+$_.Exception.Message)}}
+    finally{$lease.ReleaseMutex();$lease.Dispose()}
+}

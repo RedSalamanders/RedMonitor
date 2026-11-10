@@ -1,0 +1,554 @@
+{
+  "schemaVersion": 1,
+  "role": "PinnedSdkApplicationPilot",
+  "workloadOwner": "RedMonitor",
+  "recordedUtc": "2026-11-09T21:04:05.2368511Z",
+  "fixture": "Standalone application, shipped console scenarios, real owned ETW roundtrip and extracted runtime contract",
+  "benchmarkInputs": "Exact unchanged DxUi API-4 f2e328a0 x64 Release SDK, independently acquired input key, canonical 6c89bb60 producer and shared f0b00971 consumer",
+  "sourceCommit": "cdd700db2a7652218ec828494a2b83dd311a828b",
+  "workingTree": true,
+  "sourceIdentity": "41a79d7f042467764858206cc61fb50dead3b0ef3f18dc456e45e2446f5ec635",
+  "nativePolicyControls": {
+    "schemaVersion": 1,
+    "role": "SdkConsumerPolicyControls",
+    "passed": true,
+    "sourceIdentity": "41a79d7f042467764858206cc61fb50dead3b0ef3f18dc456e45e2446f5ec635",
+    "dependency": {
+      "recipe": "PinnedReleaseSdkV1",
+      "inputKey": "766c9e4b9351a7f896f913fce9f08b74f598fc0a5edb0fa0b97aa199bd00a9fb",
+      "manifestSha256": "50b5a816c693b61fb737ea8093c998ef81c748f10595742994ece009450ede87",
+      "identity": {
+        "schemaVersion": 1,
+        "role": "DependencySdkInputs",
+        "sourceRepository": "RedSalamanders/DxUi",
+        "sourceCommit": "f2e328a0a26a18ca66bf4b2aea77bf010c9515e1",
+        "sourceBytes": "fdcc91006d4ac75d9fb2eaddc2709358aa1354cc5aa365f634eaa6c014d0d773",
+        "apiRevision": 4,
+        "platform": "x64",
+        "configuration": "Release",
+        "runtimeFamily": "MD",
+        "annotationPolicy": "enabled",
+        "languageStandard": "stdcpplatest",
+        "optimizationPolicy": "GL-LTCG-full",
+        "toolchainIdentity": "0b5d03be524fa2390e807e31f8149f92903b68f52cfacc99a3120ea744c72f91",
+        "compilerProfileIdentity": "ae4acaea8b96cd122cfac50098dcd3db35d1331f73e21abd96c64bde58c10c9e",
+        "dependencyIdentity": "ced0e108d251d1911dec328475844de27ab967e3e8d603da1938a81922bb0d08",
+        "integrationPolicyIdentity": "42cdb62688af3a4bc08945b84ec5a1c3ed98dc6334d5bda5ee3e0b317ce118ec",
+        "environmentIdentity": "5669a893097882a211bb936cbdf1fdbfb68897188071c40001f30fa668119c01"
+      },
+      "storageEngineRef": "e3c637bd9a44bd409f30b5a1c1f28f155d2319dd",
+      "storageEngineBytes": "d03230d729ad68cbef6ae5ba8c4c2a7531d8b7e52fd1a7baabc2e5af475a9aa9"
+    },
+    "cases": [
+      {
+        "case": "valid",
+        "exitCode": 0,
+        "passed": true
+      },
+      {
+        "case": "crt",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "language",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "global-asan",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "file-asan",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "debug",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "stl",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "vector",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "string",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "missing-ndebug",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "opaque-crt",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "opaque-language",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "opaque-annotation",
+        "exitCode": 1,
+        "passed": true
+      },
+      {
+        "case": "closed-reader",
+        "exitCode": 1,
+        "passed": true
+      }
+    ],
+    "runtimeQualified": false
+  },
+  "build": {
+    "schemaVersion": 1,
+    "passed": true,
+    "sourceIdentity": "41a79d7f042467764858206cc61fb50dead3b0ef3f18dc456e45e2446f5ec635",
+    "platform": "x64",
+    "configuration": "Release",
+    "viewerTestsEnabled": false,
+    "buildNumber": 0,
+    "productionOnly": false,
+    "dxui": {
+      "repository": "https://github.com/RedSalamanders/DxUi",
+      "commit": "f2e328a0a26a18ca66bf4b2aea77bf010c9515e1",
+      "apiRevision": 4,
+      "targets": [
+        "DxUi"
+      ]
+    },
+    "dxuiRecipe": {
+      "recipe": "PinnedReleaseSdkV1",
+      "inputKey": "766c9e4b9351a7f896f913fce9f08b74f598fc0a5edb0fa0b97aa199bd00a9fb",
+      "manifestSha256": "50b5a816c693b61fb737ea8093c998ef81c748f10595742994ece009450ede87",
+      "identity": {
+        "schemaVersion": 1,
+        "role": "DependencySdkInputs",
+        "sourceRepository": "RedSalamanders/DxUi",
+        "sourceCommit": "f2e328a0a26a18ca66bf4b2aea77bf010c9515e1",
+        "sourceBytes": "fdcc91006d4ac75d9fb2eaddc2709358aa1354cc5aa365f634eaa6c014d0d773",
+        "apiRevision": 4,
+        "platform": "x64",
+        "configuration": "Release",
+        "runtimeFamily": "MD",
+        "annotationPolicy": "enabled",
+        "languageStandard": "stdcpplatest",
+        "optimizationPolicy": "GL-LTCG-full",
+        "toolchainIdentity": "0b5d03be524fa2390e807e31f8149f92903b68f52cfacc99a3120ea744c72f91",
+        "compilerProfileIdentity": "ae4acaea8b96cd122cfac50098dcd3db35d1331f73e21abd96c64bde58c10c9e",
+        "dependencyIdentity": "ced0e108d251d1911dec328475844de27ab967e3e8d603da1938a81922bb0d08",
+        "integrationPolicyIdentity": "42cdb62688af3a4bc08945b84ec5a1c3ed98dc6334d5bda5ee3e0b317ce118ec",
+        "environmentIdentity": "5669a893097882a211bb936cbdf1fdbfb68897188071c40001f30fa668119c01"
+      },
+      "storageEngineRef": "e3c637bd9a44bd409f30b5a1c1f28f155d2319dd",
+      "storageEngineBytes": "d03230d729ad68cbef6ae5ba8c4c2a7531d8b7e52fd1a7baabc2e5af475a9aa9"
+    },
+    "toolchainSha256": "25929034E73EBE6259F600F37CAF5567D20C0F645571674951B442D639D5C18C",
+    "artifacts": [
+      {
+        "path": "ClientContractTests.exe",
+        "sha256": "C39CC85A4E57DB69E47931DC55DEA41DBFEF5E25DF52B6B01FC45C5331E1B7AA"
+      },
+      {
+        "path": "ClientContractTests.pdb",
+        "sha256": "374952A5097086550554215AC8F1EAFADDF69ABA734F4EFE7FEB4645B51F7BB4"
+      },
+      {
+        "path": "MonitorTest.exe",
+        "sha256": "4B71511E0D2816BF74FF7393273DB73DE582DF8C5F15E7CCDB37C77B0C43095D"
+      },
+      {
+        "path": "MonitorTest.pdb",
+        "sha256": "DDD654F9D3CDB7022CB543A685070E61AE8E52E371C8CDEF127B713983AA4ADB"
+      },
+      {
+        "path": "RedMonitor.exe",
+        "sha256": "25C426F1529AA37DCD363D1093FDE1FCA3A36BFB042D7653D7250680DCEBCE53"
+      },
+      {
+        "path": "RedMonitor.pdb",
+        "sha256": "FFBDBDA6C0C061F7971248D7CF7746294B5813395D42342D5D3D6C953E7073BB"
+      },
+      {
+        "path": "RedMonitorSupport.pdb",
+        "sha256": "596BFC1C26AA3315EB3D8D37E1E2DF48A5077F44071724BB42CD4B6867CD8F49"
+      },
+      {
+        "path": "SettingsContractTests.exe",
+        "sha256": "75808DE035E3C8CA89A41EFD508ED3DF5C5A152C889375244D8D2A7D729FB1CC"
+      },
+      {
+        "path": "SettingsContractTests.pdb",
+        "sha256": "EB256E5EAB93366DCA83FE33D9F498593D8264C08CC3E430D4CE4B9B36493C66"
+      },
+      {
+        "path": "SettingsStore.schema.json",
+        "sha256": "A401417E3F99B7F868171174AA90B2BCC6AA10C8B79F7F7297593F5F7D47DD04"
+      },
+      {
+        "path": "TransportRoundtripTests.exe",
+        "sha256": "98D4B3B642B45FD1DDC182C5B5A071B47F55EEAC39C7CF0184FD9B1B01E71717"
+      },
+      {
+        "path": "TransportRoundtripTests.pdb",
+        "sha256": "B2F132977A652756A635F896F266C100A7671203524296377106703C2C7CE657"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-cs-CZ.dll",
+        "sha256": "0E16605FF92AACD6831250512021DFE43213C2228D659B198407678B8E664D8B"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-cs-CZ.pdb",
+        "sha256": "F24D8005A1117FE3DEC9EB7EF5B4EE90D1DF380ACE255139434403F27EB7F7D4"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-fr-FR.dll",
+        "sha256": "A04771FCF0B4D6A28C6FF748D51D95E854221A6D6C841534BC935CD2E1125C67"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-fr-FR.pdb",
+        "sha256": "2D652F4F8287BB2D998DDF55AE0666FFCD9BDFFADC50133214F0931751CF0A7B"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-ja-JP.dll",
+        "sha256": "785C0B7D5EB9A3E3FCA72DE1FAB9F6B3A5BCE183F928E8BC19A9382524C8DC4C"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-ja-JP.pdb",
+        "sha256": "0A3018EE951215F5E341AE3A9F893FE5A9786C2B97C5130A48989834A1AD0E9D"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-sk-SK.dll",
+        "sha256": "B9AA48AC3A7DFF8162D04D9951B535EB7F2057379E0D7FD240330352E68D9BE9"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-sk-SK.pdb",
+        "sha256": "5306A472C9DC2808F71A34B316E8C37E98F4D308F49907784670528B701D4BEB"
+      },
+      {
+        "path": "Themes\\CatppuccinFrappe.theme.json5",
+        "sha256": "FFDBEDF5CA5C5F5BA8383B336FCA65B2B4CED22756497A7AE4C81508CCDC7307"
+      },
+      {
+        "path": "Themes\\CatppuccinLatte.theme.json5",
+        "sha256": "77E6520C26AA61381F7E433A84015A46B29666D30E34AC2C1B64E15729906116"
+      },
+      {
+        "path": "Themes\\CatppuccinMocha.theme.json5",
+        "sha256": "D597FE5F74AA1EC70D96B16DC4361DDA71B357B3591AE0003894BC2BA1BC621E"
+      },
+      {
+        "path": "Themes\\Dracula.theme.json5",
+        "sha256": "5952105DB481F0E793CAEDD5C5668069A0AF8ECD198B2539D19B17C18B47640E"
+      },
+      {
+        "path": "Themes\\ForestMist.theme.json5",
+        "sha256": "2F23507E68A2A3D270963073F26A420FADACADC1A93FE871F58142C2C44B8993"
+      },
+      {
+        "path": "Themes\\NeonTokyo.theme.json5",
+        "sha256": "2A8717D81F4E06E987C420CBEB946A0FCBE641EF50C5D0ECB5AA6920BC4E9DDD"
+      },
+      {
+        "path": "Themes\\PaperAndInk.theme.json5",
+        "sha256": "538A8875CF30998EFCE851DD984195230D936E28CA8C997DDA77BE1D10DBC9D0"
+      },
+      {
+        "path": "Themes\\RetroTerminal.theme.json5",
+        "sha256": "4A541F76C100E94D141A58A3A4545959A1283BF6141FD20BF6A199F0D07A883D"
+      },
+      {
+        "path": "Themes\\SolarFlare.theme.json5",
+        "sha256": "99153A1788AD06CE69F58A566C51370F984ABADE2DC9EAC7574C814C6EA63FA5"
+      },
+      {
+        "path": "Themes\\THIRD-PARTY-NOTICES.md",
+        "sha256": "FA4E2E1DE3E5898DD12C40B37E7A75C3DD889D292A441BDC56E1ACB052CE4C10"
+      },
+      {
+        "path": "Themes\\Ugly.theme.json5",
+        "sha256": "F3B52D205C473B55678F9067FEC8A5594BF68F47758960F3E2B64AA190121B0C"
+      },
+      {
+        "path": "Themes\\Licenses\\Catppuccin.LICENSE.txt",
+        "sha256": "4D965BB15C5DED86BFC855D81E29C4FE3A45D9431CB6FFF73FCF990758C554C2"
+      },
+      {
+        "path": "Themes\\Licenses\\Dracula.LICENSE.txt",
+        "sha256": "FA795692B4FB7A8A63DF82EDD98A4649B8352511CA27B4B1EF54F7815FA59D65"
+      }
+    ],
+    "startedUtc": "2026-11-09T20:58:39.7181978Z",
+    "finishedUtc": "2026-11-09T20:59:06.1269533Z",
+    "runtimeExecuted": false
+  },
+  "regression": {
+    "schemaVersion": 1,
+    "passed": true,
+    "sourceIdentity": "41a79d7f042467764858206cc61fb50dead3b0ef3f18dc456e45e2446f5ec635",
+    "platform": "x64",
+    "configuration": "Release",
+    "buildReceiptSha256": "1F8AC5AAFDBB639B56334CC09E7FC2E081FB4B836EC0821EFE9C1D42825DBC84",
+    "scenarios": [
+      {
+        "scenario": "diagnostics-gate",
+        "exitCode": 0,
+        "passed": true,
+        "expectedAsanDetection": false,
+        "elapsedMs": 24.3601
+      },
+      {
+        "scenario": "scrollbar-model",
+        "exitCode": 0,
+        "passed": true,
+        "expectedAsanDetection": false,
+        "elapsedMs": 23.7833
+      },
+      {
+        "scenario": "document-model",
+        "exitCode": 0,
+        "passed": true,
+        "expectedAsanDetection": false,
+        "elapsedMs": 110.9432
+      },
+      {
+        "scenario": "client-contract",
+        "exitCode": 0,
+        "passed": true,
+        "expectedAsanDetection": false,
+        "elapsedMs": 34.5966
+      },
+      {
+        "scenario": "settings-contract",
+        "exitCode": 0,
+        "passed": true,
+        "expectedAsanDetection": false,
+        "elapsedMs": 24.1478
+      },
+      {
+        "scenario": "transport-roundtrip",
+        "exitCode": 0,
+        "passed": true,
+        "expectedAsanDetection": false,
+        "elapsedMs": 2033.8718
+      },
+      {
+        "scenario": "installed-production-metadata",
+        "exitCode": 0,
+        "passed": true,
+        "expectedAsanDetection": false,
+        "elapsedMs": 15.9741
+      }
+    ],
+    "liveEtwRequested": true,
+    "startedUtc": "2026-11-09T20:59:06.357903Z",
+    "finishedUtc": "2026-11-09T20:59:08.7214644Z",
+    "interactive": false
+  },
+  "package": {
+    "schemaVersion": 1,
+    "commit": "cdd700db2a7652218ec828494a2b83dd311a828b",
+    "apiRevision": 1,
+    "platform": "x64",
+    "configuration": "Release",
+    "sourceIdentity": "41a79d7f042467764858206cc61fb50dead3b0ef3f18dc456e45e2446f5ec635",
+    "files": [
+      {
+        "path": "build-receipt.json",
+        "sha256": "1F8AC5AAFDBB639B56334CC09E7FC2E081FB4B836EC0821EFE9C1D42825DBC84"
+      },
+      {
+        "path": "concrt140.dll",
+        "sha256": "7707C325B7CC7A238B6D49113415606095D34B71FD87D9BD0FA02C4996CF0A0E"
+      },
+      {
+        "path": "DxUi-LICENSE.txt",
+        "sha256": "DE1D3B6BDEAFEF327008F4678099670E52C658B1BBC1AB261F94619C0F2CB8A9"
+      },
+      {
+        "path": "DxUi-THIRD-PARTY-NOTICES.md",
+        "sha256": "36BEB0ABC8F0E53E2966AF32559B582E28647BDB3AC80FB35B99050BB8884DD4"
+      },
+      {
+        "path": "Install-RedMonitor.ps1",
+        "sha256": "8E63A49477B1C5E5B2238612FE2C74B928CBC7BA20305664EEA80B8E270E736B"
+      },
+      {
+        "path": "LICENSE.txt",
+        "sha256": "A87E6F9A63109021B6CE56C14CE281278B9815C226A4B413F56A9FE577EB5139"
+      },
+      {
+        "path": "msvcp140_1.dll",
+        "sha256": "BC62834072E3E2174924D486140E2DC4CAC49F051122146A26373BCEFC7404EE"
+      },
+      {
+        "path": "msvcp140_2.dll",
+        "sha256": "04F59EF26E5B13B0CACF3EB23B4CB31BB6EB6F82D488BB9621787F9FD291A95E"
+      },
+      {
+        "path": "msvcp140_atomic_wait.dll",
+        "sha256": "060D73773FE26183A3EC3BC4DC2E3C0823D64699ABB12A599F8A3793E16E968B"
+      },
+      {
+        "path": "msvcp140_codecvt_ids.dll",
+        "sha256": "A60DAE421C4BC9F027A62096452082B42CC426AD3312C6BA4F3CF68EC9AB4032"
+      },
+      {
+        "path": "msvcp140.dll",
+        "sha256": "DC1A23807996FA7876A73DF67568E1D447E11C100BDCD55BD93C16102B342264"
+      },
+      {
+        "path": "RedMonitor.exe",
+        "sha256": "25C426F1529AA37DCD363D1093FDE1FCA3A36BFB042D7653D7250680DCEBCE53"
+      },
+      {
+        "path": "SettingsStore.schema.json",
+        "sha256": "A401417E3F99B7F868171174AA90B2BCC6AA10C8B79F7F7297593F5F7D47DD04"
+      },
+      {
+        "path": "vccorlib140.dll",
+        "sha256": "4A4730B1C8651824615496CD3567443A38CE0D5D6882C43169F0C5A99EC9AA83"
+      },
+      {
+        "path": "vcruntime140_1.dll",
+        "sha256": "6355AE86DA8AA1AE02ABD22DEC90EF1CF84157EB208312380674DFE056912A47"
+      },
+      {
+        "path": "vcruntime140_threads.dll",
+        "sha256": "56C2245321016FB228AB344D453E043108BB666A0BB64464CB6F90E6BE8FAAF4"
+      },
+      {
+        "path": "vcruntime140.dll",
+        "sha256": "79FFF492268D30DD8A9B0D36AD40F9FB1128FE9C94F3B1FB5059F31A38584055"
+      },
+      {
+        "path": "wil-LICENSE.txt",
+        "sha256": "27EBDA9D51F0A56B7E281CCD8230A27236DCB51C05F64B07869ECF6E965D68B0"
+      },
+      {
+        "path": "yyjson-LICENSE.txt",
+        "sha256": "45E384D3D52C73CBA3A64D6E6C25D47CD738CD8A55C30629E3201046EDA62947"
+      },
+      {
+        "path": "DxUi-licenses\\katex-LICENSE.txt",
+        "sha256": "4313255416487A4A7602F134A7CDD2B33DD9F7E7B41D3AF63DC9F785BCA425A0"
+      },
+      {
+        "path": "DxUi-licenses\\LICENSE.txt",
+        "sha256": "DE1D3B6BDEAFEF327008F4678099670E52C658B1BBC1AB261F94619C0F2CB8A9"
+      },
+      {
+        "path": "DxUi-licenses\\rapidyaml-bundled-NOTICES.txt",
+        "sha256": "FDEA696D1C84D1AC7A11E22FBD3E1A4205176EA546B9EAB644DA59F617EE98E7"
+      },
+      {
+        "path": "DxUi-licenses\\rapidyaml-LICENSE.txt",
+        "sha256": "4E69D6B03C9138B9D748E18834935BD66C0FF7A9FCD03C20081D387385059A3C"
+      },
+      {
+        "path": "DxUi-licenses\\THIRD-PARTY-NOTICES.md",
+        "sha256": "36BEB0ABC8F0E53E2966AF32559B582E28647BDB3AC80FB35B99050BB8884DD4"
+      },
+      {
+        "path": "DxUi-licenses\\tomlplusplus-LICENSE.txt",
+        "sha256": "2312836EA26699DDA4FA894316B60EF7BE1A0C8526A2FD97C5BFF7F546A3A3AF"
+      },
+      {
+        "path": "DxUi-licenses\\WIL-LICENSE.txt",
+        "sha256": "27EBDA9D51F0A56B7E281CCD8230A27236DCB51C05F64B07869ECF6E965D68B0"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-cs-CZ.dll",
+        "sha256": "0E16605FF92AACD6831250512021DFE43213C2228D659B198407678B8E664D8B"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-fr-FR.dll",
+        "sha256": "A04771FCF0B4D6A28C6FF748D51D95E854221A6D6C841534BC935CD2E1125C67"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-ja-JP.dll",
+        "sha256": "785C0B7D5EB9A3E3FCA72DE1FAB9F6B3A5BCE183F928E8BC19A9382524C8DC4C"
+      },
+      {
+        "path": "Lang\\RedSalamanderMonitor-sk-SK.dll",
+        "sha256": "B9AA48AC3A7DFF8162D04D9951B535EB7F2057379E0D7FD240330352E68D9BE9"
+      },
+      {
+        "path": "Themes\\CatppuccinFrappe.theme.json5",
+        "sha256": "FFDBEDF5CA5C5F5BA8383B336FCA65B2B4CED22756497A7AE4C81508CCDC7307"
+      },
+      {
+        "path": "Themes\\CatppuccinLatte.theme.json5",
+        "sha256": "77E6520C26AA61381F7E433A84015A46B29666D30E34AC2C1B64E15729906116"
+      },
+      {
+        "path": "Themes\\CatppuccinMocha.theme.json5",
+        "sha256": "D597FE5F74AA1EC70D96B16DC4361DDA71B357B3591AE0003894BC2BA1BC621E"
+      },
+      {
+        "path": "Themes\\Dracula.theme.json5",
+        "sha256": "5952105DB481F0E793CAEDD5C5668069A0AF8ECD198B2539D19B17C18B47640E"
+      },
+      {
+        "path": "Themes\\ForestMist.theme.json5",
+        "sha256": "2F23507E68A2A3D270963073F26A420FADACADC1A93FE871F58142C2C44B8993"
+      },
+      {
+        "path": "Themes\\NeonTokyo.theme.json5",
+        "sha256": "2A8717D81F4E06E987C420CBEB946A0FCBE641EF50C5D0ECB5AA6920BC4E9DDD"
+      },
+      {
+        "path": "Themes\\PaperAndInk.theme.json5",
+        "sha256": "538A8875CF30998EFCE851DD984195230D936E28CA8C997DDA77BE1D10DBC9D0"
+      },
+      {
+        "path": "Themes\\RetroTerminal.theme.json5",
+        "sha256": "4A541F76C100E94D141A58A3A4545959A1283BF6141FD20BF6A199F0D07A883D"
+      },
+      {
+        "path": "Themes\\SolarFlare.theme.json5",
+        "sha256": "99153A1788AD06CE69F58A566C51370F984ABADE2DC9EAC7574C814C6EA63FA5"
+      },
+      {
+        "path": "Themes\\THIRD-PARTY-NOTICES.md",
+        "sha256": "FA4E2E1DE3E5898DD12C40B37E7A75C3DD889D292A441BDC56E1ACB052CE4C10"
+      },
+      {
+        "path": "Themes\\Ugly.theme.json5",
+        "sha256": "F3B52D205C473B55678F9067FEC8A5594BF68F47758960F3E2B64AA190121B0C"
+      },
+      {
+        "path": "Themes\\Licenses\\Catppuccin.LICENSE.txt",
+        "sha256": "4D965BB15C5DED86BFC855D81E29C4FE3A45D9431CB6FFF73FCF990758C554C2"
+      },
+      {
+        "path": "Themes\\Licenses\\Dracula.LICENSE.txt",
+        "sha256": "FA795692B4FB7A8A63DF82EDD98A4649B8352511CA27B4B1EF54F7815FA59D65"
+      }
+    ]
+  },
+  "zipSha256": "cfddfe19f27fcfe474f0026abe872c3071c306117fa579ac27fed9324576bda1",
+  "sourceReaderLibraryPresent": false,
+  "applicationSourceDependencyRestored": false,
+  "warmSdkBuildElapsedSeconds": 61,
+  "limits": [
+    "Native execution covers x64 Release only, not complete repository or UI/device/performance qualification.",
+    "The source identity identifies the frozen reviewed working tree before this evidence document was added; it is not a claim of execution on a later commit.",
+    "Warm SDK time is one diagnostic, not a controlled source/cache comparison. Local source remains default.",
+    "The first SDK application build refused 28 macro warnings; its preserved log is .build/i61-sdk-first-build-warnings.log. Conditional definitions fixed them without warning suppression.",
+    "An earlier 14-case policy pass left the expected failing native exit code; public success normalization was fixed and all controls reran successfully."
+  ]
+}

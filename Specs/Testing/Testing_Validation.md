@@ -25,6 +25,14 @@ and untracked edits/additions/deletions/renames, tracked ignored inputs and Unic
 the ASCII banner, color/plain modes, safe launch links and refusal to print success for warnings/errors.
 These controls do not invoke a compiler, launch an application or establish native runtime qualification.
 
+`Tests/Test-SdkInputs.Native.ps1 -Descriptor <absolute .build descriptor>` is an explicit MSBuild-dependent
+SDK policy control, excluded from compiler-free PR tooling. It holds the actual verified SDK reader while
+executing the actual imported admission targets. The accepted profile passes; incompatible CRT, language,
+global/per-file ASan, Debug/STL/vector/string annotations, missing NDEBUG and opaque ABI overrides refuse.
+After close, the same direct MSBuild settings refuse. Each case retains its log and a separate policy receipt.
+Expected negative native exits reset to zero only after every control and integrity close succeeds; exceptions
+remain fatal. These controls do not replace application build/runtime, architecture or performance acceptance.
+
 Formatting prefers the repository's exact pinned install, followed by the discovered Visual Studio C++
 Clang bundle and then standalone PATH LLVM. Every selected tool must match the pin. The command reports the executable/version
 and parses the unchanged repository style before checking or rewriting source. An incompatible formatter

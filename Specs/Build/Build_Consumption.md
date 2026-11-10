@@ -29,6 +29,45 @@ this implementation. Older receipts require a new build after an identity algori
 An actual source change during compilation still prevents receipt publication. The error lists changed
 paths and retains before/after source snapshots beneath the selected profile output for diagnosis.
 Compiler success alone never establishes runtime or Full qualification.
+
+## Explicit pinned Release SDK inputs
+
+`build.ps1 -Configuration Release -DxUiSdkInputDescriptor <absolute .build descriptor>` selects the shared
+engine's local pinned SDK recipe. The independent descriptor lives below this repository's `.build`, outside
+the immutable byte store. It names existing full canonical source/tooling/storage-engine checkouts, the exact
+lock/API/platform and an independently retained manifest SHA-256. The pinned shared controller checks raw
+checkout bytes before importing producer tools, independently acquires the complete native SDK input key,
+verifies every stored byte and holds its reader lease through MSBuild. The existing lock is never advanced.
+
+Only Release/MD/stdcpplatest/enabled-annotation/full-LTCG SDK inputs are supported. Debug/ASan use the existing
+source recipe. Exact misses fall back to source restore/build; malformed, changed or incompatible inputs fail.
+The SDK recipe imports packaged public headers/library/compiler-PDB/integration policy and adds no source
+DxUi project reference. MSBuild checks the actual live parent reader handle, project, payload and profile
+before compilation. A leftover witness or stale property file cannot authorize later direct MSBuild use.
+Per-translation-unit definitions and effective metadata reject custom iterator-layout macros, packing,
+wchar_t and calling-convention changes. Opaque compiler switches cannot override these settings or undefine
+the required profile macros. Unsupported ABI variants must use the governed source recipe.
+
+All existing product warning/error, version/test-surface, source-change and artifact checks remain. SDK close
+must recheck inputs/bytes successfully before a build receipt is published. Its `dxuiRecipe` records the actual
+`PinnedReleaseSdkV1` key, manifest, complete native identity and storage-engine identity; this is distinct from
+the source wrapper recipe and is never a product test verdict. Default builds retain their source recipe.
+
+The separately authenticated `HostedQualifiedDependencyInput` descriptor selects
+`PinnedQualifiedReleaseSdkV2`. It retains the original producer key/manifest and
+SDK receipt, checks the consumer's actual complete tool/header/library byte
+reference, and requires its selected native MSBuild, per-project tool/search
+settings and per-file ABI profile to match the live reader. It does not recompute
+the producer's checkout-bound v1 environment recipe in the application. Open and
+close reauthenticate the retained original archive and input bytes. Unknown SDK
+recipes cannot be packaged. Live hosted-origin acceptance is a separate gate
+from controlled-origin local application validation.
+
+`package.ps1 -DxUiSdkInputDescriptor <descriptor>` reopens the same key/manifest when the build used SDK
+inputs and copies the complete notices from that verified payload under a reader lease. Missing or another
+SDK refuses packaging. Original source builds preserve their existing notice closure. Runtime, extraction,
+architecture, sanitizer, performance and Full qualification remain required under their owning contracts.
+Hosted artifact authentication and automatic cross-repository SDK selection are separate rollout work.
 Ordinary Debug enables incremental linking to match the pinned DxUi library's Edit and Continue
 objects. Release and ASan Debug retain non-incremental linking. A linker compatibility warning is
 a failed build, not a warning to suppress in the success summary.

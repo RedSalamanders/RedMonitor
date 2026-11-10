@@ -1,5 +1,12 @@
 # Unified organization CI contract
 
+SDK-linked projects use the pinned engine's shared MSBuild ABI/root/reader guard,
+and build/package entrypoints bind the actual dependency lock through
+`Open-CiApplicationSdkInput`. A verified exact SDK miss retains source fallback
+and now archives both expected/observed hash identities and changed fields in the
+native workspace evidence. A passing source fallback is native coverage, not
+SDK-hit acceptance. Both architecture regression and production gates remain.
+
 This specification owns the project's CI routing. The versioned implementation and policy tests live in
 [RedSalamanders/.github](https://github.com/RedSalamanders/.github). The exact reviewed full commit is recorded
 in .ci/project.json and every reusable workflow caller. Update those pins together through a reviewed PR.
@@ -85,6 +92,23 @@ Qualification uploads retain adapter evidence separately from workspace logs. Ne
 with workspace paths in one artifact input; the Windows drive-root common ancestor can become drive-relative.
 This preserves diagnostics after failure without moving test data or bypassing native acceptance.
 ## Dependency cache reuse
+
+Admitted main ReleaseTestBuild/Production roles independently prepare the exact pinned DxUi SDK through the
+shared engine's authenticated distribution and full input-key contract. The build holds its verified reader
+through MSBuild; production packaging reopens the same descriptor for complete notice closure. Missing
+distribution or a verified compiler/dependency/environment mismatch retains source restore/build. Invalid
+provenance or corrupt data fails. Static, local builds, Debug/ASan and manual qualification retain source.
+This is dependency input reuse only; native regressions, assertion probe, production identity and package
+smoke gates remain required on both architectures.
+
+Qualified v2 descriptors preserve the producer's original input key/manifest and
+native receipt while checking actual complete consumer tool/header/library bytes.
+The build passes its selected MSBuild to the reader and enables the v2 actual-tool
+guard only from the verified reader's recipe. Packaging explicitly recognizes v1
+and v2 SDK recipes, rejects unknown recipes and reopens the same input. Controlled
+origin/local qualification does not establish live hosted-origin acceptance.
+The native host's MSBuild is selected explicitly (`Bin/amd64` on x64 and
+`Bin/arm64` on ARM64); the legacy Bin executable is not a fallback.
 
 The pinned shared engine restores vcpkg's ABI-indexed package cache for normal and manual native qualification. Exact engine/input keys are preferred; fallback lookup stays within the same runner OS, host architecture and target platform, and the pinned vcpkg restore still selects each package by its computed ABI. A miss rebuilds the package. This supplies dependency inputs only: product objects, DxUi SDK outputs and build/test receipts are not restored by this cache. Dependency pins, native execution, failure detectors and production/publication gates remain required. The owning behavior is the shared engine's Specs/CI.md.
 

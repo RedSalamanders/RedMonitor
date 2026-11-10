@@ -7,10 +7,13 @@ x64 or ARM64 target.
 Release by default; Debug and ASan Debug are diagnostic packages.
 .PARAMETER PassThru
 Return the generated ZIP, staging and extraction paths for a verified consumer staging operation.
+.PARAMETER DxUiSdkInputDescriptor
+Independent local descriptor required to reopen the exact leased SDK notice payload when the build used SDK inputs.
 #>
 [CmdletBinding()]
 param([ValidateSet('x64','ARM64')][string]$Platform='x64',
-      [ValidateSet('Debug','Release','ASan Debug')][string]$Configuration='Release', [switch]$PassThru)
+      [ValidateSet('Debug','Release','ASan Debug')][string]$Configuration='Release', [switch]$PassThru,
+      [string]$DxUiSdkInputDescriptor='')
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
@@ -39,6 +42,26 @@ if($Configuration -eq 'ASan Debug'){
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE.txt') -Destination $stage
 $dxuiPin=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Dependencies/DxUi.lock.json') -Raw|ConvertFrom-Json
+$knownSdkRecipes=@('PinnedReleaseSdkV1','PinnedQualifiedReleaseSdkV2')
+if($receipt.PSObject.Properties.Name -contains 'dxuiRecipe' -and $receipt.dxuiRecipe.recipe -cnotin (@('PinnedSource')+$knownSdkRecipes)){throw 'Unsupported build dependency recipe; rebuild through a reviewed reader.'}
+$usedSdk=$receipt.PSObject.Properties.Name -contains 'dxuiRecipe' -and $receipt.dxuiRecipe.recipe -cin $knownSdkRecipes
+if($usedSdk){
+    if(-not $DxUiSdkInputDescriptor){throw 'Reopen the build SDK using -DxUiSdkInputDescriptor before packaging its exact notices.'}
+    $engineRoot=Join-Path $PSScriptRoot '.ci-engine'
+    Import-Module (Join-Path $engineRoot 'Tools/Modules/Ci.SdkConsumer.psm1')
+    $sdk=Open-CiApplicationSdkInput -ProjectRoot $PSScriptRoot -Descriptor $DxUiSdkInputDescriptor -Platform $Platform -Configuration $Configuration -MSBuildPath (Get-RedMonitorMSBuild)
+    if($null -eq $sdk){throw 'The exact SDK notice payload is unavailable; preserve the existing build and use its original inputs.'}
+    $noticeFailure=$null
+    try{
+        if($sdk.Evidence.inputKey -cne $receipt.dxuiRecipe.inputKey -or $sdk.Evidence.manifestSha256 -cne $receipt.dxuiRecipe.manifestSha256){throw 'Package SDK differs from the actual build dependency.'}
+        Copy-Item -LiteralPath (Join-Path $sdk.SdkRoot 'licenses/LICENSE.txt') -Destination (Join-Path $stage 'DxUi-LICENSE.txt')
+        Copy-Item -LiteralPath (Join-Path $sdk.SdkRoot 'licenses/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $stage 'DxUi-THIRD-PARTY-NOTICES.md')
+        Copy-Item -LiteralPath (Join-Path $sdk.SdkRoot 'licenses') -Destination (Join-Path $stage 'DxUi-licenses') -Recurse
+    }catch{$noticeFailure=$_;throw}
+    finally{
+        try{Close-CiPinnedSdkInput $sdk}catch{if($null -eq $noticeFailure){throw}else{Write-Warning ('SDK notice close also failed: '+$_.Exception.Message)}}
+    }
+}else{
 $dxuiSource=Join-Path $PSScriptRoot ".build/dependencies/DxUi/source/$($dxuiPin.commit)"
 Copy-Item -LiteralPath (Join-Path $dxuiSource 'LICENSE.txt') -Destination (Join-Path $stage 'DxUi-LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $dxuiSource 'THIRD-PARTY-NOTICES.md') -Destination (Join-Path $stage 'DxUi-THIRD-PARTY-NOTICES.md')
@@ -46,6 +69,7 @@ Copy-Item -LiteralPath (Join-Path $dxuiSource 'THIRD-PARTY-NOTICES.md') -Destina
 New-Item -ItemType Directory -Path (Join-Path $stage 'DxUi-licenses')|Out-Null
 foreach($notice in 'katex.txt','rapidyaml.txt','rapidyaml-bundled.txt','tomlplusplus.txt'){
     Copy-Item -LiteralPath (Join-Path $dxuiSource "docs/licenses/$notice") -Destination (Join-Path $stage "DxUi-licenses/$notice")
+}
 }
 if($Configuration -eq 'Release'){
     Import-Module (Join-Path $PSScriptRoot 'Tools/VisualStudio.psm1') -Force

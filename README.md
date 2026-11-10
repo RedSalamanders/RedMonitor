@@ -35,4 +35,9 @@ MIT source origin and private support imports are recorded in [SourceImport](Spe
 
 See [application adoption](docs/Consumers.md) for the single-header SDK, offline verification and separately installed Release helper.
 
+Release builds can explicitly select verified immutable DxUi SDK inputs through
+`-DxUiSdkInputDescriptor <absolute path below .build>`. Default builds use source. The
+[build contract](Specs/Build/Build_Consumption.md#explicit-pinned-release-sdk-inputs) describes the supported
+profile, live reader ownership, source fallback and the matching packaging option.
+
 CI behavior and manual actions: [Unified CI contract](Specs/Build/Build_UnifiedCI.md).

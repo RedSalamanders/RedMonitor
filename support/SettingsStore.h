@@ -21,8 +21,12 @@
 #pragma warning(push)
 // Windows headers: C4710 (not inlined), C4711 (auto inline), C4514 (unreferenced inline)
 #pragma warning(disable : 4710 4711 4514)
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #pragma warning(pop)
 

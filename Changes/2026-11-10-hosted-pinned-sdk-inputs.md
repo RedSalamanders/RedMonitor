@@ -1,0 +1,1 @@
+- Prepare authenticated exact-pin DxUi SDK bytes for admitted main Release build roles, with source fallback on a verified input miss and the same reader descriptor retained for production notices. Preserve every native regression and package gate; static, local and manual qualification retain their existing source recipe.
