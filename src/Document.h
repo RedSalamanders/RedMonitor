@@ -125,6 +125,7 @@ public:
 
     // Get text slice without full copy (use source indices)
     std::wstring GetTextRange(UINT32 start, UINT32 length) const;
+    std::wstring GetFilteredTextRange(UINT32 startOffset, UINT32 endOffset) const;
     std::wstring GetDisplayText(size_t visibleIndex) const;
     std::wstring GetDisplayTextAll(size_t sourceIndex) const;
 

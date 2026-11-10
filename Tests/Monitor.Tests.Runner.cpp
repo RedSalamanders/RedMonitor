@@ -215,6 +215,37 @@ namespace
         return false;
     }
 
+    // Verify GetFilteredTextRange extracts only visible lines across a range that spans hidden lines.
+    const std::wstring expectedFilteredFull = document.GetDisplayTextAll(1u) + L"\n" + document.GetDisplayTextAll(2u);
+    if (document.GetFilteredTextRange(0u, static_cast<UINT32>(document.TotalLength())) != expectedFilteredFull)
+    {
+        return false;
+    }
+    const UINT32 line1Start         = document.GetLineStartOffset(1u);
+    const UINT32 line2Start         = document.GetLineStartOffset(2u);
+    const std::wstring line1Display = document.GetDisplayTextAll(1u);
+    const std::wstring line2Display = document.GetDisplayTextAll(2u);
+    if (line1Display.size() < 4u || line2Display.size() < 4u)
+    {
+        return false;
+    }
+    const std::wstring expectedPartialFiltered = line1Display.substr(2u) + L"\n" + line2Display.substr(0u, 4u);
+    if (document.GetFilteredTextRange(line1Start + 2u, line2Start + 4u) != expectedPartialFiltered)
+    {
+        return false;
+    }
+
+    // Verify SetTextSnapshot computes newlineCount and retainedTextBytes from moved blocks.
+    RedSalamanderMonitor::MonitorTextSnapshot snapshot;
+    snapshot.lines.push_back(RedSalamanderMonitor::MonitorTextBlock(L"first\nwrapped"));
+    snapshot.lines.push_back(RedSalamanderMonitor::MonitorTextBlock(L"second"));
+    Document snapshotDoc;
+    snapshotDoc.SetTextSnapshot(std::move(snapshot));
+    if (snapshotDoc.TotalLineCount() != 2u || snapshotDoc.TotalDisplayRows() != 3u || snapshotDoc.RetainedTextBytes() != (13u + 6u) * sizeof(wchar_t))
+    {
+        return false;
+    }
+
     return true;
 }
 
@@ -286,8 +317,17 @@ namespace
     byteBounded.AppendInfoLine(L"ABCDEFGHIJ", MakeTestInfo(Debug::InfoParam::Type::Info, 22u));
     const uint64_t oneLineBytes                  = 10u * sizeof(wchar_t);
     const Document::RetentionResult byteEviction = byteBounded.EnforceRetentionLimits(10u, oneLineBytes);
-    return byteEviction.linesEvicted == 2u && byteEviction.textBytesEvicted == 2u * oneLineBytes && byteBounded.TotalLineCount() == 1u &&
-           byteBounded.RetainedTextBytes() == oneLineBytes && byteBounded.GetSourceLine(0u).text == L"ABCDEFGHIJ";
+    if (byteEviction.linesEvicted != 2u || byteEviction.textBytesEvicted != 2u * oneLineBytes || byteBounded.TotalLineCount() != 1u ||
+        byteBounded.RetainedTextBytes() != oneLineBytes || byteBounded.GetSourceLine(0u).text != L"ABCDEFGHIJ")
+    {
+        return false;
+    }
+
+    // Verify evicting the sole remaining line does not add a phantom trailing newline separator to characterPositionsEvicted.
+    const size_t soleLineLength                  = byteBounded.TotalLength();
+    const Document::RetentionResult soleEviction = byteBounded.EnforceRetentionLimits(10u, sizeof(wchar_t));
+    return soleEviction.linesEvicted == 1u && soleEviction.characterPositionsEvicted == soleLineLength && byteBounded.TotalLineCount() == 0u &&
+           byteBounded.TotalLength() == 0u;
 }
 
 [[nodiscard]] bool RunMonitorFileReaderSelfTest()

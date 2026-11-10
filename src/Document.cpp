@@ -266,12 +266,13 @@ void Document::SetTextSnapshot(RedSalamanderMonitor::MonitorTextSnapshot&& snaps
     std::unique_lock lock(_rwMutex);
     _lines.clear();
     _visibleLines.clear();
-    _retainedTextBytes = snapshot.retainedTextBytes;
+    _retainedTextBytes = 0u;
     for (RedSalamanderMonitor::MonitorTextBlock& text : snapshot.lines)
     {
         Line line;
-        line.text               = std::move(text);
-        line.newlineCount       = 0u;
+        line.text = std::move(text);
+        _retainedTextBytes += static_cast<uint64_t>(line.text.size()) * sizeof(wchar_t);
+        line.newlineCount       = static_cast<UINT32>(std::count(line.text.begin(), line.text.end(), L'\n'));
         line.cachedDisplayValid = false;
         _lines.push_back(std::move(line));
     }
@@ -495,7 +496,7 @@ Document::RetentionResult Document::EnforceRetentionLimits(size_t maxLines, uint
         const Line& line         = _lines.front();
         const uint64_t textBytes = static_cast<uint64_t>(line.text.size()) * sizeof(wchar_t);
         result.textBytesEvicted += textBytes;
-        result.characterPositionsEvicted += static_cast<uint64_t>(PrefixLength(line)) + line.text.size() + 1u;
+        result.characterPositionsEvicted += static_cast<uint64_t>(PrefixLength(line)) + line.text.size() + (_lines.size() > 1u ? 1u : 0u);
         if (IsLineVisibleUnsafe(0u))
         {
             result.displayRowsEvicted += static_cast<uint64_t>(line.newlineCount) + 1u;
@@ -1350,6 +1351,70 @@ std::wstring Document::GetTextRange(UINT32 start, UINT32 length) const
         const UINT32 upto = endOffset + 1; // inclusive end
         appendSlice(ll, 0, std::min<UINT32>(upto, PrefixLength(ll) + static_cast<UINT32>(ll.text.size())));
     }
+    return result;
+}
+
+std::wstring Document::GetFilteredTextRange(UINT32 startOffset, UINT32 endOffset) const
+{
+    std::unique_lock lock(_rwMutex);
+    if (endOffset <= startOffset || _lines.empty() || _visibleLines.empty())
+        return L"";
+
+    EnsureOffsetsValid();
+    if (! _offsetsValid || _lineOffsets.size() != _lines.size())
+        return L"";
+
+    const auto [firstLine, firstOff] = GetLineAndOffsetUnsafe(startOffset);
+    const auto [lastLine, lastOff]   = GetLineAndOffsetUnsafe(endOffset - 1u);
+    static_cast<void>(firstOff);
+    static_cast<void>(lastOff);
+
+    auto it = std::lower_bound(_visibleLines.begin(), _visibleLines.end(), firstLine, [](const VisibleLine& vl, size_t src) { return vl.sourceIndex < src; });
+
+    std::wstring result;
+    bool firstChunk = true;
+    for (; it != _visibleLines.end() && it->sourceIndex <= lastLine; ++it)
+    {
+        const size_t srcIndex = it->sourceIndex;
+        if (srcIndex >= _lines.size())
+            break;
+
+        auto& line            = _lines[srcIndex];
+        const UINT32 lineBase = static_cast<UINT32>(_lineOffsets[srcIndex] - _lineOffsetBase);
+        const UINT32 lineLen  = PrefixLength(line) + static_cast<UINT32>(line.text.size());
+        const UINT32 lineEnd  = lineBase + lineLen;
+
+        const UINT32 segStart = std::max(startOffset, lineBase);
+        const UINT32 segEnd   = std::min(endOffset, lineEnd);
+        if (segEnd <= segStart)
+            continue;
+
+        if (! line.cachedDisplayValid)
+        {
+            const auto& prefix = BuildPrefix(line);
+            line.cachedDisplay.clear();
+            line.cachedDisplay.reserve(prefix.size() + line.text.size());
+            line.cachedDisplay.append(prefix);
+            line.cachedDisplay.append(line.text);
+            line.cachedDisplay.erase(std::remove(line.cachedDisplay.begin(), line.cachedDisplay.end(), L'\r'), line.cachedDisplay.end());
+            line.cachedDisplayValid = true;
+        }
+
+        const UINT32 localOff = segStart - lineBase;
+        const UINT32 localLen = segEnd - segStart;
+        if (localOff >= line.cachedDisplay.size() || localLen == 0u)
+            continue;
+
+        const UINT32 clampedLen = std::min(localLen, static_cast<UINT32>(line.cachedDisplay.size() - localOff));
+        if (clampedLen == 0u)
+            continue;
+
+        if (! firstChunk)
+            result.push_back(L'\n');
+        firstChunk = false;
+        result.append(line.cachedDisplay, localOff, clampedLen);
+    }
+
     return result;
 }
 

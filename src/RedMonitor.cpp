@@ -3113,6 +3113,7 @@ void UpdateStatusBar()
     // Synchronize auto-scroll menu checkmark with ColorTextView's auto-scroll state
     // ColorTextView manages its own auto-scroll state and we query it here
     const bool isAutoScrollEnabled = g_colorView.GetAutoScroll();
+    g_autoScrollEnabled            = isAutoScrollEnabled;
 
     HWND hMainWnd = GetParent(g_hStatusBar.get());
     if (hMainWnd)
@@ -4708,6 +4709,7 @@ LRESULT OnCommandMainWindow(HWND hWnd, UINT id, UINT codeNotify, HWND hwndCtl)
         case IDM_FILE_NEW:
             g_colorView.ClearColoring();
             g_colorView.ClearText();
+            UpdateStatusBar();
             break;
         case IDM_FILE_OPEN: DoFileOpen(hWnd); break;
         case IDM_FILE_SAVE_AS: DoFileSaveAs(hWnd); break;

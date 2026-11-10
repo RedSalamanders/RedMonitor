@@ -64,7 +64,9 @@ UI-thread freezes, message-queue starvation, redundant 100,000-line document reb
   - `RebuildTailLayout` also used `GetLineStartOffset` + `GetTextRange` + per-line lock loops in unfiltered mode instead of `BuildFilteredTailText`.
 - **Fix**:
   - Unify `RebuildTailLayout` and `ApplyColoringToTailLayout` to use `Document::BuildFilteredTailText` (for both filtered and unfiltered modes), recording `_tailStartPos`, `_tailEndPos`, `_tailIsFiltered`, and `_tailFilteredRuns`, and applying both metadata prefix colors and per-line custom `ColorSpan`s.
-  - In `DrawHighlights`, `DrawSelection`, `DrawCaret`, and `GetCaretRectPx`, use `_tailLayout` and its bottom-anchored `yBase = documentBottom - metrics.height` whenever `_renderMode == RenderMode::AUTO_SCROLL && _tailLayoutValid && _tailLayout`.
+  - Keep `_scrollY` aligned with the bottom-anchored `_tailLayout` across `ResetAfterDocumentReplacement`, `SetFilterMask`, `SetFont`, `SetLinePadding`, `EnableShowIds`, `AppendText`, `AppendInfoLine`, and `EndBatchAppend` when in `RenderMode::AUTO_SCROLL`, and transition to `RenderMode::SCROLL_BACK` when `EnsureCaretVisible` or `VK_PRIOR` scrolls upward.
+  - Do not invalidate `_tailLayoutValid` inside `InvalidateSliceBitmap()`.
+  - In `DrawHighlights`, `DrawSelection`, `DrawCaret`, `GetCaretRectPx`, `PosFromPoint`, `EnsureCaretVisible`, and `MoveCaretToLine`, use `_tailLayout` and its bottom-anchored `yBase = documentBottom - metrics.height` whenever `_renderMode == RenderMode::AUTO_SCROLL && _tailLayoutValid && _tailLayout`.
 
 ### 1.5 `[PERF-03]` & `[BUG-05]` Zero-copy visible-line queries, fast incremental search, and locked `ColorizeWord`
 
@@ -73,8 +75,8 @@ UI-thread freezes, message-queue starvation, redundant 100,000-line document reb
   - `ColorTextView::AppendMatchesForRange` copied each `Line` struct by value, called `GetLineStartOffset` per match, and re-allocated/lowercased the search needle on every line in `FindCaseIncensitive`.
   - `ColorTextView::ColorizeWord` computed unlocked manual offsets across lines and acquired a separate `unique_lock` per match.
 - **Fix**:
-  - Add zero-copy locked lookup helpers on `Document` (`VisibleIndexForSource`, `SourceIndexForVisible`, `GetVisibleLineEntry`, `CopyVisibleLinesRange`) and replace full-vector `VisibleLines()` copies in `GetVisibleLineRange`, `DrawLineNumbers`, `MaybeRefreshVirtualSliceOnScroll`, `StartLayoutWorker`, and `CreateFallbackLayoutIfNeeded`.
-  - Precompute lowercase search needles once and add `Document::FindMatchesInRange` and `Document::ColorizeWord` to scan lines under a single lock without copying `Line` structs.
+  - Add zero-copy locked lookup helpers on `Document` (`VisibleIndexForSource`, `SourceIndexForVisible`, `GetVisibleLineEntry`, `CopyVisibleLinesRange`, `GetFilteredTextRange`) and replace full-vector `VisibleLines()` copies in `GetVisibleLineRange`, `DrawLineNumbers`, `MaybeRefreshVirtualSliceOnScroll`, `StartLayoutWorker`, `CreateFallbackLayoutIfNeeded`, and `CopySelectionToClipboard`.
+  - Precompute lowercase search needles once and add `Document::FindMatchesInRange` and `Document::ColorizeWord` to scan lines under a single lock without copying `Line` structs; clear stale DirectWrite drawing effects and cached slice layouts when recoloring or clearing coloring.
 
 ### 1.6 `[BUG-03]` Immediate real-time ETW session stop in `EtwListener::Stop`
 
