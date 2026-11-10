@@ -1,6 +1,6 @@
 <Project>
-  <Import Project="$(DxUiRoot)\Build\DxUi.Consumer.targets" Condition="'$(DxUiRoot)'!=''" />
-  <ItemGroup Condition="'$(DxUiRoot)'!=''">
+  <Import Project="$(DxUiRoot)\Build\DxUi.Consumer.targets" Condition="'$(RedMonitorDxUiSdkRoot)'=='' and '$(DxUiRoot)'!=''" />
+  <ItemGroup Condition="'$(RedMonitorDxUiSdkRoot)'=='' and '$(DxUiRoot)'!=''">
     <ProjectReference Update="$(DxUiResolvedRoot)src\DxUi.vcxproj">
       <AdditionalProperties>%(ProjectReference.AdditionalProperties);PreferredToolArchitecture=$(PreferredToolArchitecture)</AdditionalProperties>
     </ProjectReference>

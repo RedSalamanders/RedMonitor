@@ -1,7 +1,18 @@
 <Project>
-  <Import Project="$(RedMonitorRoot).build\dependencies\DxUi\DxUi.resolved.$(Platform).props" Condition="Exists('$(RedMonitorRoot).build\dependencies\DxUi\DxUi.resolved.$(Platform).props')" />
-  <Import Project="$(DxUiRoot)\Build\DxUi.Consumer.props" Condition="'$(DxUiRoot)'!=''" />
+  <Import Project="$(RedMonitorRoot).build\dependencies\DxUi\DxUi.resolved.$(Platform).props" Condition="'$(RedMonitorDxUiSdkRoot)'=='' and Exists('$(RedMonitorRoot).build\dependencies\DxUi\DxUi.resolved.$(Platform).props')" />
+  <Import Project="$(DxUiRoot)\Build\DxUi.Consumer.props" Condition="'$(RedMonitorDxUiSdkRoot)'=='' and '$(DxUiRoot)'!=''" />
+  <Import Project="$(RedMonitorDxUiSdkRoot)\DxUi.Sdk.props" Condition="'$(RedMonitorDxUiSdkRoot)'!=''" />
   <Target Name="RedMonitorRequireDxUi" BeforeTargets="PrepareForBuild">
-    <Error Condition="'$(DxUiRoot)'==''" Text="Run restore.ps1 before building the RedMonitor viewer." />
+    <Error Condition="'$(DxUiRoot)'=='' and '$(RedMonitorDxUiSdkRoot)'==''" Text="Run restore.ps1 before building the RedMonitor viewer." />
+    <Error Condition="'$(DxUiRoot)'!='' and '$(RedMonitorDxUiSdkRoot)'!=''" Text="Select exactly one DxUi source or SDK recipe." />
+    <Error Condition="'$(RedMonitorDxUiSdkRoot)'!='' and ('$(RedMonitorDxUiSdkLease)'=='' or '$(RedMonitorCiEngineRoot)'=='')" Text="Use build.ps1 with an active pinned SDK reader." />
+    <Exec Condition="'$(RedMonitorDxUiSdkRoot)'!=''" Command="pwsh -NoProfile -NonInteractive -File &quot;$(RedMonitorCiEngineRoot)\Tools\Test-SdkConsumerLease.ps1&quot; -ProjectRoot &quot;$(RedMonitorRoot).&quot; -LeasePath &quot;$(RedMonitorDxUiSdkLease)&quot; -SdkRoot &quot;$(RedMonitorDxUiSdkRoot)&quot; -Platform &quot;$(Platform)&quot; -Configuration &quot;$(Configuration)&quot;" />
+  </Target>
+  <Target Name="RedMonitorValidateSdkConsumer" BeforeTargets="PrepareForBuild;ClCompile" DependsOnTargets="RedMonitorRequireDxUi" Condition="'$(RedMonitorDxUiSdkRoot)'!=''">
+    <Error Condition="'$(EnableASAN)'=='true' or '$(DxUiDisableStlAnnotations)'=='true'" Text="Pinned SDK v1 requires a non-ASan consumer with STL annotations enabled." />
+    <Error Condition="'%(ClCompile.RuntimeLibrary)'!='MultiThreadedDLL' or '%(ClCompile.LanguageStandard)'!='stdcpplatest' or '%(ClCompile.EnableASAN)'=='true'" Text="Pinned SDK v1 requires /MD, stdcpplatest and no ASan in every consumer translation unit." />
+    <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(ClCompile.PreprocessorDefinitions)', '(^|;)(_DEBUG|_DISABLE_(STL|VECTOR|STRING)_ANNOTATION)(=|;|$)'))" Text="Pinned SDK v1 forbids Debug or disabled-annotation consumer definitions." />
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('%(ClCompile.PreprocessorDefinitions)', '(^|;)NDEBUG(=1)?(;|$)'))" Text="Pinned SDK v1 requires NDEBUG in every consumer translation unit." />
+    <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(ClCompile.AdditionalOptions)', '(?i)(^|\s)[/-](MT|MDd|std:|fsanitize|D\s*(_DEBUG|_DISABLE_(STL|VECTOR|STRING)_ANNOTATION))'))" Text="Opaque compiler options cannot replace the pinned SDK's supported ABI profile." />
   </Target>
 </Project>
