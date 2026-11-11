@@ -89,6 +89,19 @@ a failed build, not a warning to suppress in the success summary.
 
 ## Header-only consumption
 
+The explicit Tools/Build-LocalSdkCandidate.ps1 command consumes a frozen local-only SDK descriptor and its
+independent SHA-256 without changing the managed lock. It builds the real viewer project and its support
+archive into a fresh operation below .build/local-unpinned. Both projects import the existing live local
+SDK/output guard; the support archive still does not link a second DxUi library. The final application link
+must name the held immutable archive. Ordinary source, pinned SDK, custom measurement and production roles
+retain their existing behavior.
+
+App dependency restoration for this role uses .build/local-sdk-dependencies, never ordinary profile package
+inputs. Same-platform local operations hold their dedicated native/dependency lease. The local cache's shared
+bootstrap/restore uses a separate lease, released before native compilation; different platforms can compile
+independently. Failed operations retain diagnostics. The local build record grants no runtime, test,
+repository, native-platform, production or publication acceptance.
+
 Consumers vendor only `include/RedMonitor/Client.h` and `LICENSE.txt` in ThirdParty/RedMonitor.
 Their lock records the immutable upstream commit, API revision and SHA-256 of each Git blob.
 The vendored subtree uses `-text` to preserve exact Git bytes on Windows. Ordinary builds verify
