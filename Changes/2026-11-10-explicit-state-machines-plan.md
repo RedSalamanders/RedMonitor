@@ -1,0 +1,2 @@
+- Record the `ExplicitStateMachines_2026-11-10.md` active WIP plan covering `ColorTextView` `PresentPlan` scroll accumulation, filter layout sequence invalidation, `WM_CAPTURECHANGED` cleanup, `IDM_FILE_NEW` async-open cancellation, `Document` lock-scoped color ranges, and `EtwListener` session phases while keeping `include/RedMonitor/Client.h` unchanged.
+  Validation: `validate.ps1` and `Tools/Test-Changelog.ps1 -Base origin/main` pass; plan only, no runtime source changed.
