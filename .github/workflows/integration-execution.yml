@@ -18,14 +18,15 @@ permissions:
   contents: read
   actions: read
   pull-requests: read
+  checks: read
 concurrency:
   group: native-shadow-${{ github.ref }}-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   shadow:
-    uses: RedSalamanders/.github/.github/workflows/integration-execution.yml@dffe8b6bfc6d2d6d5f700378d59c85b35bf44bec
+    uses: RedSalamanders/.github/.github/workflows/integration-execution.yml@318eaebe1aca58536d2c91972ea24f9479505440
     with:
-      engine_ref: dffe8b6bfc6d2d6d5f700378d59c85b35bf44bec
+      engine_ref: 318eaebe1aca58536d2c91972ea24f9479505440
       pull_request: ${{ inputs.pull_request }}
       identity: ${{ inputs.identity }}
       nonce: ${{ inputs.nonce }}

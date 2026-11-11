@@ -133,3 +133,10 @@ Those gates remain with the current contracts until their separate implementatio
 and hosted enforcement are qualified. Use the exact pinned shared engine's
 `Specs/Integration_Candidates.md` and `Tools/Start-CandidateShadow.ps1`; no caller
 may run candidate code in a main cache/writer context or cancel another execution.
+
+Native main, manual qualification, SDK and optional candidate shadow jobs share one
+repository/platform lane. Queued candidate jobs repeat the complete canonical
+source/base/engine/ref and exact-head readiness checks before native setup/cache
+restore. Direct manual shadow dispatch also requires readiness before frozen inputs
+are emitted. This engine rollout supplies no required native merge check, local
+coverage delegation or cross-run main adoption. Those gates remain separately open.
