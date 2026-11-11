@@ -22,9 +22,15 @@ The Git checkout is required even with `-SkipRestore`. Source identity uses NUL-
 `git ls-files --cached --others --exclude-standard` paths in ordinal order, binding each path and current
 SHA-256 file content. Missing tracked files have an explicit marker. Tracked ignored files remain inputs;
 non-ignored untracked additions, edits, deletions and renames change identity. Timestamps, Git administrative
-files and ignored generated caches (including `.build`, `.vs` and `.ci-engine`) do not. Reparse source
+files and ignored generated caches (including `.build`, `.vs` and `.ci-engine`) do not enter the product file inventory; the actual engine is bound separately below. Reparse source
 paths, failed Git inventories and unreadable inputs fail closed. Build, test and package commands share
 this implementation. Older receipts require a new build after an identity algorithm change.
+
+The snapshot also binds the actual ignored CI engine through the shared pinned-input
+reader. Its separate `EngineInputsIdentity` is included in the source digest, without
+adding fictional product file rows. Missing, dirty, foreign or wrong-pin engines fail
+before reuse. Generated engine output is excluded and Windows casing aliases preserve
+the same physical checkout identity.
 
 An actual source change during compilation still prevents receipt publication. The error lists changed
 paths and retains before/after source snapshots beneath the selected profile output for diagnosis.

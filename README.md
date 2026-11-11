@@ -17,6 +17,10 @@ The view uses Direct2D/DirectWrite/D3D11 and an exact pinned DxUi library.
 index. `./Tests/Tooling.Tests.ps1` exercises the tooling with owned `.build` fixtures. Neither command builds
 native code or establishes viewer/runtime qualification; see [validation](Specs/Testing/Testing_Validation.md).
 
+`Test-Changes.ps1` preserves independently completed validation, formatting and tooling
+checks when later native tests fail. Identical retries reuse their original local evidence;
+`-Force` reruns them. Native, live ETW, packaging and installation work keeps its existing gates.
+
 Requires Windows 11 build 22000.2600+, Visual Studio 2026 Desktop C++ tools, a Windows SDK,
 Git and PowerShell 7. The build discovers Visual Studio. x64 and ARM64 each support Debug,
 Release and ASan Debug; cross-builds do not establish native ARM64 runtime support.
@@ -32,7 +36,8 @@ For an existing clean `.ci-engine`, fetch the pinned commit before checking it o
 preserve any local changes for their owner. Hosted CI restores this checkout automatically.
 Command-line builds show a colored ASCII banner and a green summary with elapsed time, executable,
 log and receipt paths after all checks pass. Set `NO_COLOR` for plain output. Source receipts bind
-tracked and non-ignored untracked file contents; generated caches such as `.ci-engine` do not invalidate them.
+tracked and non-ignored untracked file contents plus the actual clean pinned `.ci-engine`
+implementation. Generated engine `.build` output does not invalidate them.
 
 Source, dependencies and generated outputs stay independent of sibling repositories. Run the viewer
 from `.build/<platform>/<configuration>/RedMonitor.exe`. ETW session permissions may require
