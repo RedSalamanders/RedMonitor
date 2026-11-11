@@ -1,5 +1,30 @@
 # Validation and evidence
 
+Local source snapshots and build receipts bind the actual ignored `.ci-engine`
+through the shared `Get-CiPinnedEngineInputsIdentity`. The generated checkout must
+be ordinary, independent, clean and at `.ci/project.json`'s exact pin. Fresh raw
+engine bytes participate; generated engine `.build` output does not. This input
+is separate from product file/affected discovery, grants no qualification or CI
+delegation, and preserves the current local and main gates.
+
+`Test-Changes.ps1` records Validation, Format and Tooling separately immediately
+after each command succeeds and the original source/tool/environment identity is
+reverified. That identity includes full product source bytes, actual pinned engine
+inputs, selected formatter/Git/PowerShell host and automation-assembly bytes, runtime,
+OS, architecture and the declared discovery/CI environment. Formatter discovery and
+exact version validation use the same helper as `format.ps1`.
+
+A later native failure preserves the original successful attempt bytes. An identical
+retry may reuse those independent checks; it still executes all requested native,
+live ETW, cross-build, packaging and installation obligations. `-Force` reruns the
+independent checks. Before execution, the latest-state index is marked started;
+failure or interruption cannot fall back to an older green attempt. Failed or
+input-mutating checks stop before native work. Corrupt/missing/mismatched evidence
+is never a pass. Attempts are create-only records beneath `.build/validation-evidence/independent`,
+with a bounded digest-checked latest-state index. The independent operation lease
+does not cover later native execution. Final source drift refuses current-tree
+success. No independent receipt grants native or repository-wide qualification.
+
 Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush explicitly account for
 x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
 boundaries and required repository surfaces. format.ps1 -Check verifies native formatting.

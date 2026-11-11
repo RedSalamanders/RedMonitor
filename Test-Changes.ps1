@@ -5,9 +5,11 @@ Explains or runs affected validation and explicit local Full/PrePush qualificati
 Print required coverage without executing it.
 .PARAMETER Mode
 Affected compares cumulative committed and dirty work: owned prose runs independent checks, native/unknown work also tests Debug, and no change evaluates nothing. Full/PrePush retain all local profiles; PrePush also checks CHANGELOG.md against origin/main. No hosted CI pass is inferred.
+.PARAMETER Force
+Executes independent checks again instead of reusing exact local success. Native, live transport and installation obligations always retain their existing execution.
 #>
 [CmdletBinding()]
-param([switch]$Explain,[ValidateSet('Affected','Full','PrePush')][string]$Mode='Affected')
+param([switch]$Explain,[ValidateSet('Affected','Full','PrePush')][string]$Mode='Affected',[switch]$Force)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 function Invoke-CheckedChangeCommand {
@@ -35,9 +37,14 @@ if($Mode -eq 'Affected' -and $plan.kind -ceq 'None'){
 }
 # Pending fragments are expected: they are folded on the default branch after merge. CHANGELOG.md may change only by such a fold.
 if($Mode -ne 'PrePush'){Invoke-CheckedChangeCommand 'Tools/Test-Changelog.ps1'}
-Invoke-CheckedChangeCommand 'validate.ps1'
-Invoke-CheckedChangeCommand 'format.ps1' @{Check=$true}
-Invoke-CheckedChangeCommand 'Tests/Tooling.Tests.ps1'
+Import-Module (Join-Path $PSScriptRoot 'Build/IndependentValidation.psm1')
+$independentLease=Enter-RedMonitorOperation -Scope 'independent-validation'
+try{
+    $independentIdentity=Get-RedMonitorIndependentIdentity -Root $PSScriptRoot
+    Invoke-RedMonitorIndependentCheck $PSScriptRoot Validation {Invoke-CheckedChangeCommand 'validate.ps1'} $independentIdentity -Force:$Force
+    Invoke-RedMonitorIndependentCheck $PSScriptRoot Format {Invoke-CheckedChangeCommand 'format.ps1' @{Check=$true}} $independentIdentity -Force:$Force
+    Invoke-RedMonitorIndependentCheck $PSScriptRoot Tooling {Invoke-CheckedChangeCommand 'Tests/Tooling.Tests.ps1'} $independentIdentity -Force:$Force
+}finally{$independentLease.ReleaseMutex();$independentLease.Dispose()}
 if((Get-RedMonitorSourceIdentity -Root $PSScriptRoot) -cne $sourceBefore){throw 'Inputs changed during independent validation; run again on the current tree.'}
 if($Mode -eq 'Affected' -and $plan.kind -ceq 'Prose'){Write-Host 'PROSE_CHECKS_PASSED; repository NOT_EVALUATED';return}
 $configs=if($Mode -eq 'Affected'){@('Debug')}else{@('Debug','Release','ASan Debug')}
@@ -47,5 +54,6 @@ if($Mode -ne 'Affected'){
     $package=Invoke-CheckedChangeCommand 'package.ps1' @{PassThru=$true}
     Invoke-CheckedChangeCommand 'Tests/Tooling.Tests.Installation.ps1' @{PackageDirectory=$package.extracted}
 }
+if((Get-RedMonitorSourceIdentity -Root $PSScriptRoot) -cne $sourceBefore){throw 'Inputs changed during native validation; run again on the current tree.'}
 if($Mode -eq 'Affected'){Write-Host 'SELECTED_DEBUG_PASSED; repository NOT_EVALUATED'}
 else{Write-Host 'LOCAL_OBLIGATIONS_PASSED; native ARM64/manual gates remain separate'}
