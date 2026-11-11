@@ -25,7 +25,7 @@ function Get-RedMonitorClangFormat {
     param([string]$Root=(Join-Path $PSScriptRoot '..'))
     Import-Module (Join-Path $PSScriptRoot 'AgentGuidance.psm1') -ErrorAction Stop
     $pin=Get-Content -LiteralPath (Join-Path $Root 'Build/clang-format.json') -Raw|ConvertFrom-Json
-    $repositoryFormatter=Join-Path $Root ('.build/format/'+$pin.entryPath)
+    $repositoryFormatter=Assert-RedMonitorOutputPath (Join-Path $Root ('.build/format/'+$pin.entryPath))
     $installation='';$pathFormatter=''
     if(-not(Test-Path -LiteralPath $repositoryFormatter -PathType Leaf)){
         try{

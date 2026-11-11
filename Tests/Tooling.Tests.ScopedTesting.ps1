@@ -202,7 +202,9 @@ Case 'corrupt or interrupted latest evidence never reuses an older independent p
     }
 }
 Case 'complete independent identity detects source and discovery-environment changes without rewriting input' {
-    Import-Module (Join-Path $fixture 'Build/IndependentValidation.psm1')
+    # Keep fixture modules inside fixture child processes; importing one here would
+    # replace same-named commands in the real caller after this tooling script returns.
+    Import-Module (Join-Path $root 'Build/IndependentValidation.psm1')
     $before=Get-RedMonitorIndependentIdentity -Root $fixture
     $environment=[Environment]::GetEnvironmentVariable('CI_NATIVE_BUILDS_DISABLED','Process')
     try{
