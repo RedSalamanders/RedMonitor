@@ -46,6 +46,8 @@ if($DxUiSdkInputDescriptor -and $Configuration -cne 'Release'){throw 'Pinned SDK
 Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Build/BuildConsole.psm1') -ErrorAction Stop
 Import-Module (Join-Path $PSScriptRoot 'Build/BuildPresentation.psm1') -ErrorAction Stop
+$engineRoot=Join-Path $PSScriptRoot '.ci-engine'
+Import-Module (Join-Path $engineRoot 'Tools/Modules/Ci.Policy.psm1') -ErrorAction Stop
 Write-RedMonitorBuildBanner -Platform $Platform -Configuration $Configuration -ProductionOnly:$ProductionOnly
 $lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
 $sdkInput=$null;$buildFailure=$null
@@ -78,7 +80,11 @@ $sourceBefore=Get-RedMonitorSourceSnapshot
 $identity=$sourceBefore.Identity
 $started=[DateTime]::UtcNow
 $viewerTestsEnabled=if($ViewerTests -eq 'Auto'){$Configuration -ne 'Release'}else{$ViewerTests -eq 'true'}
-& $msbuild (Join-Path $PSScriptRoot 'RedMonitor.proj') /nologo /m:4 /v:minimal "/p:Platform=$Platform" "/p:Configuration=$Configuration" "/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())" "/p:RedMonitorProductionOnly=$($ProductionOnly.IsPresent.ToString().ToLowerInvariant())" "/p:RedMonitorBuildNumber=$BuildNumber" "/flp:LogFile=$output/build.log;Verbosity=normal" @sdkProperties
+Invoke-CiNativeCommand -FilePath $msbuild -WorkingDirectory $PSScriptRoot -Arguments (@(
+    (Join-Path $PSScriptRoot 'RedMonitor.proj'),'/nologo','/m:4','/v:minimal',"/p:Platform=$Platform",
+    "/p:Configuration=$Configuration","/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())",
+    "/p:RedMonitorProductionOnly=$($ProductionOnly.IsPresent.ToString().ToLowerInvariant())",
+    "/p:RedMonitorBuildNumber=$BuildNumber","/flp:LogFile=$output/build.log;Verbosity=normal")+$sdkProperties)
 if($LASTEXITCODE -ne 0){throw "RedMonitor build failed: $output/build.log"}
 Assert-NativeBuildDiagnostics -LogPath (Join-Path $output 'build.log')
 $version=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $output 'RedMonitor.exe'))
