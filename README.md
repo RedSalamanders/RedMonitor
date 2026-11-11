@@ -20,6 +20,16 @@ native code or establishes viewer/runtime qualification; see [validation](Specs/
 Requires Windows 11 build 22000.2600+, Visual Studio 2026 Desktop C++ tools, a Windows SDK,
 Git and PowerShell 7. The build discovers Visual Studio. x64 and ARM64 each support Debug,
 Release and ASan Debug; cross-builds do not establish native ARM64 runtime support.
+Before a local native build, restore the shared launcher at the manifest's exact pin:
+
+```powershell
+git clone https://github.com/RedSalamanders/.github.git .ci-engine
+$enginePin = (Get-Content .ci/project.json -Raw | ConvertFrom-Json).engine.ref
+git -C .ci-engine checkout --detach $enginePin
+```
+
+For an existing clean `.ci-engine`, fetch the pinned commit before checking it out;
+preserve any local changes for their owner. Hosted CI restores this checkout automatically.
 Command-line builds show a colored ASCII banner and a green summary with elapsed time, executable,
 log and receipt paths after all checks pass. Set `NO_COLOR` for plain output. Source receipts bind
 tracked and non-ignored untracked file contents; generated caches such as `.ci-engine` do not invalidate them.

@@ -30,6 +30,15 @@ An actual source change during compilation still prevents receipt publication. T
 paths and retains before/after source snapshots beneath the selected profile output for diagnosis.
 Compiler success alone never establishes runtime or Full qualification.
 
+MSBuild runs through the exact pinned shared engine's `Invoke-CiNativeCommand`.
+Its child PowerShell host assigns a fresh private MSVC metadata-service endpoint
+without changing the calling process's environment or location. Output remains live,
+arguments remain literal, and the original native exit code feeds the existing
+zero-warning, source and receipt gates. Compiler/linker switches and runtime ownership
+are unchanged. This keeps concurrent owned builds from sharing a metadata service
+whose lifetime can end when one build retires. Restore `.ci-engine` at the exact
+`.ci/project.json` engine commit before local native builds, as hosted CI already does.
+
 ## Explicit pinned Release SDK inputs
 
 `build.ps1 -Configuration Release -DxUiSdkInputDescriptor <absolute .build descriptor>` selects the shared
