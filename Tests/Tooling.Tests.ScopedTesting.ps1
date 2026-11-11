@@ -74,7 +74,7 @@ Case 'actual ignored engine participates in source and build identity independen
     if($LASTEXITCODE){throw "Owned engine fixture clone failed: $clone"}
     $before=Get-RedMonitorSourceSnapshot $fixture
     Require ($before.EngineInputsIdentity -match '^[0-9a-f]{64}$') 'Actual engine input digest was missing'
-    Require ((Get-RedMonitorSourceIdentity $fixture.ToUpperInvariant()) -ceq $before.Identity) 'Windows casing aliases invalidated source identity'
+    if([OperatingSystem]::IsWindows()){Require ((Get-RedMonitorSourceIdentity $fixture.ToUpperInvariant()) -ceq $before.Identity) 'Windows casing aliases invalidated source identity'}
     Require (@($before.Files.Keys|Where-Object {$_ -like '.ci-engine/*'}).Count -eq 0) 'Engine identity polluted product file discovery'
     [void][IO.Directory]::CreateDirectory((Join-Path $engine '.build'))
     [IO.File]::WriteAllText((Join-Path $engine '.build/synthetic.json'), '{"generated":true}')
