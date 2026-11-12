@@ -1,15 +1,16 @@
 <#
-.SYNOPSIS Builds the viewer against an explicit local SDK in separate unpinned outputs.
+.SYNOPSIS Builds the viewer and its normal Release test union against an explicit local SDK.
 .PARAMETER Descriptor Absolute producer local SDK snapshot descriptor.
 .PARAMETER DescriptorSha256 Independently retained SHA-256 of that descriptor.
 .PARAMETER Platform x64 or ARM64 Release target; cross-compilation is not native execution.
 .PARAMETER BuildNumber Resource build number for this operation.
-.OUTPUTS Fresh .build/local-unpinned operation, logs, actual link proof and a local-only build record.
+.OUTPUTS Fresh .build/local-unpinned viewer/test union, logs, actual link proof and a local-only build record.
 .NOTES Requires local Windows, exact pinned shared engine, selected native MSBuild and matching API/ABI.
 Restores app dependencies only below .build/local-sdk-dependencies, separate from ordinary profile inputs.
 Local operations serialize by platform; shared local dependency bootstrap/restore has its own short lease.
-The viewer and support archive receive the live SDK/output guard. Managed pins, ordinary outputs, tests,
-packages, installation and publication are unchanged. No application is launched and no qualification is granted.
+The viewer and support archive receive the SDK guard; every native aggregate child receives output preflight.
+Managed pins, ordinary outputs, pinned tests, packages, installation and publication are unchanged.
+No application is launched and no qualification is granted. Use test.ps1's explicit local SDK mode for runtime.
 .EXAMPLE ./Tools/Build-LocalSdkCandidate.ps1 -Descriptor Z:/src/DxUi/.build/local-sdk-capture/example/local-unpinned-snapshot.json -DescriptorSha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 #>
 [CmdletBinding()]
@@ -22,7 +23,7 @@ if(-not $IsWindows -or $env:GITHUB_ACTIONS -ceq 'true' -or $env:CI_NATIVE_BUILDS
 $root=Split-Path $PSScriptRoot -Parent
 Import-Module (Join-Path $root 'Build/Toolchain.psm1')
 Import-Module (Join-Path $root '.ci-engine/Tools/Modules/Ci.LocalSdkBuild.psm1') -ErrorAction Stop
-$buildContract=[ordered]@{buildFile='src/RedMonitor.vcxproj';metadataProject='src/RedMonitor.vcxproj';target='Build';sdkProperty='RedMonitorDxUiSdkRoot';engineProperty='RedMonitorCiEngineRoot';outputProperty='RedMonitorOutputRoot';testsProperty='RedMonitorViewerTestsEnabled';versionProperty='RedMonitorBuildNumber';executable='RedMonitor.exe'}
+$buildContract=[ordered]@{buildFile='RedMonitor.proj';metadataProject='src/RedMonitor.vcxproj';target='Build';sdkProperty='RedMonitorDxUiSdkRoot';engineProperty='RedMonitorCiEngineRoot';outputProperty='RedMonitorOutputRoot';testsProperty='RedMonitorViewerTestsEnabled';versionProperty='RedMonitorBuildNumber';executable='RedMonitor.exe'}
 $prepareDependencies={
     $restore=Enter-RedMonitorOperation 'local-sdk-dependency-restore'
     try{

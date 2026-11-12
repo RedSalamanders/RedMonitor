@@ -12,19 +12,44 @@ Debug, Release or ASan Debug.
 Reuse only a source-compatible successful build receipt.
 .PARAMETER IncludeLiveEtw
 Require a real ETW producer/listener roundtrip; permission denial fails this requested gate.
+.PARAMETER LocalSdkBuildReceipt
+Original local SDK candidate build record. Runs the same Release scenarios against its complete held output;
+requires LocalSdkBuildSha256, native execution and SkipBuild. Never supplies pinned PrePush/main acceptance.
+.PARAMETER LocalSdkBuildSha256
+Independently retained SHA-256 of the original local candidate build record.
 #>
 [CmdletBinding()]
 param([ValidateSet('x64','ARM64')][string]$Platform='x64',
-      [ValidateSet('Debug','Release','ASan Debug')][string]$Configuration='Debug',[switch]$SkipBuild,[switch]$IncludeLiveEtw)
+      [ValidateSet('Debug','Release','ASan Debug')][string]$Configuration='Debug',[switch]$SkipBuild,[switch]$IncludeLiveEtw,
+      [string]$LocalSdkBuildReceipt='', [string]$LocalSdkBuildSha256='')
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
+$localSdkMode=[bool]($LocalSdkBuildReceipt -or $LocalSdkBuildSha256)
+if($localSdkMode -and (-not $IsWindows -or $env:GITHUB_ACTIONS -ceq 'true' -or $env:CI_NATIVE_BUILDS_DISABLED -ceq 'true')){
+    throw 'Local SDK runtime requires local Windows native execution.'
+}
+if($localSdkMode -and (-not $LocalSdkBuildReceipt -or $LocalSdkBuildSha256 -cnotmatch '^[a-f0-9]{64}$' -or $Configuration -cne 'Release' -or -not $SkipBuild)){
+    throw 'Local SDK runtime requires the original build record/digest, Release and explicit SkipBuild.'
+}
 Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
 if($Platform -eq 'ARM64' -and [Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne 'Arm64'){
     throw 'ARM64 runtime tests require a native ARM64 host.'
 }
 if(-not $SkipBuild){& (Join-Path $PSScriptRoot 'build.ps1') -Platform $Platform -Configuration $Configuration}
-$lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
+$lease=$null;$runtimeInput=$null
 try {
+if($localSdkMode){
+    Import-Module (Join-Path $PSScriptRoot '.ci-engine/Tools/Modules/Ci.LocalSdkRuntime.psm1')
+    $runtimeInput=Open-CiLocalSdkApplicationRuntimeInput -ProjectRoot $PSScriptRoot -BuildReceipt $LocalSdkBuildReceipt -ExpectedBuildSha256 $LocalSdkBuildSha256 -MSBuildPath (Get-RedMonitorMSBuild)
+    if($runtimeInput.Build.platform -cne $Platform){throw 'Local SDK runtime platform differs from the requested native target.'}
+    $output=$runtimeInput.Build.runtimeRoot
+    $version=[Diagnostics.FileVersionInfo]::GetVersionInfo($runtimeInput.Build.executable)
+    if($version.SpecialBuild -cne 'RedSalamander.TestSurface=ENABLE_TESTS'){throw 'Local SDK runtime requires the actual test-enabled viewer.'}
+    $identity=Get-RedMonitorSourceIdentity
+    $build=[pscustomobject]@{viewerTestsEnabled=$true}
+    $buildReceiptHash=$LocalSdkBuildSha256
+}else{
+$lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
 $output=Join-Path $PSScriptRoot ".build/$Platform/$Configuration"
 $build=Get-Content -LiteralPath (Join-Path $output 'build-receipt.json') -Raw|ConvertFrom-Json
 $identity=Get-RedMonitorSourceIdentity
@@ -35,11 +60,15 @@ foreach($artifact in $build.artifacts){
     $path=Assert-RedMonitorOutputPath (Join-Path $output $artifact.path)
     if((Get-FileHash -LiteralPath $path).Hash -cne $artifact.sha256){throw "Artifact changed: $path"}
 }
-$run=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ('.build/test-runs/'+[DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ')+'-'+[guid]::NewGuid().ToString('N')))
+$buildReceiptHash=(Get-FileHash -LiteralPath (Join-Path $output 'build-receipt.json')).Hash
+}
+$runBase=if($localSdkMode){'.build/local-sdk-test-runs/'}else{'.build/test-runs/'}
+$run=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ($runBase+[DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ')+'-'+[guid]::NewGuid().ToString('N')))
 New-Item -ItemType Directory -Path $run|Out-Null
 $previousRoot=[Environment]::GetEnvironmentVariable('REDMONITOR_TEST_ROOT','Process')
 $rows=[Collections.Generic.List[object]]::new()
 $started=[DateTime]::UtcNow
+$primaryFailure=$null
 try{
     $env:REDMONITOR_TEST_ROOT=$run
     $scenarios=@(
@@ -74,16 +103,32 @@ try{
             Write-Host "$scenario : exit $($process.ExitCode), passed=$scenarioPassed, $([math]::Round($timer.Elapsed.TotalMilliseconds,2)) ms"
         }finally{$process.Dispose()}
     }
-}finally{
+}catch{$primaryFailure=$_;throw}finally{
     [Environment]::SetEnvironmentVariable('REDMONITOR_TEST_ROOT',$previousRoot,'Process')
+    $closeFailure=$null
+    if($null -ne $runtimeInput -and -not $runtimeInput.Closed){
+        try{Close-CiLocalSdkApplicationRuntimeInput $runtimeInput}catch{$closeFailure=$_}
+    }
     $expected=if($IncludeLiveEtw){7}else{6}
     if($Configuration -eq 'ASan Debug'){$expected++}
-    $passed=$rows.Count -eq $expected -and @($rows|Where-Object passed -eq $false).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
-    [ordered]@{schemaVersion=1;passed=$passed;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;
-        buildReceiptSha256=(Get-FileHash -LiteralPath (Join-Path $output 'build-receipt.json')).Hash;
-        scenarios=@($rows.ToArray());liveEtwRequested=[bool]$IncludeLiveEtw;startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');interactive=$false}|
-        ConvertTo-Json -Depth 8|Set-Content -LiteralPath (Join-Path $run 'receipt.json') -Encoding utf8
+    $passed=$null -eq $primaryFailure -and $null -eq $closeFailure -and $rows.Count -eq $expected -and @($rows|Where-Object passed -eq $false).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
+    $record=[ordered]@{schemaVersion=1;passed=$passed;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;
+        buildReceiptSha256=$buildReceiptHash;
+        scenarios=@($rows.ToArray());liveEtwRequested=[bool]$IncludeLiveEtw;startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');interactive=$false}
+    if($localSdkMode){
+        $record.role='LocalUnpinnedApplicationRuntimeResult';$record.recipe='LocalUnpinnedReleaseSdk'
+        $record.sourceBytes=$runtimeInput.Build.sourceBytes;$record.engineInputs=$runtimeInput.Build.engineInputs
+        $record.dependency=$runtimeInput.Build.dependency;$record.runtimeBytesDigest=$runtimeInput.Build.runtimeBytes.digest
+        $record.testsExecuted=$rows.Count -gt 0;$record.repositoryQualified=$false;$record.productionQualified=$false
+        if($closeFailure){$record.closeError=$closeFailure.Exception.Message}
+        if($primaryFailure){$record.error=$primaryFailure.Exception.Message}
+    }
+    $record|ConvertTo-Json -Depth 10|Set-Content -LiteralPath (Join-Path $run 'receipt.json') -Encoding utf8
     Write-Host "Evidence: $run"
+    if($closeFailure){if($null -eq $primaryFailure){throw $closeFailure}else{Write-Warning ('Runtime close also failed: '+$closeFailure.Exception.Message)}}
 }
 if(-not $passed){throw 'One or more RedMonitor scenarios failed; see the retained receipt.'}
-} finally {$lease.ReleaseMutex();$lease.Dispose()}
+} finally {
+    if($null -ne $runtimeInput -and -not $runtimeInput.Closed){Close-CiLocalSdkApplicationRuntimeInput $runtimeInput}
+    if($null -ne $lease){$lease.ReleaseMutex();$lease.Dispose()}
+}

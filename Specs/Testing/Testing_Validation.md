@@ -39,6 +39,23 @@ No-work reports NOTHING_SELECTED; prose reports PROSE_CHECKS_PASSED; neither qua
 Full/PrePush retain all local native profiles, live ETW, ARM64 cross-builds and contained installation controls.
 They never claim native ARM64 execution or separate manual/viewer/performance gates.
 
+`test.ps1` also accepts an explicit local SDK Release record and independently retained SHA-256 through
+`-LocalSdkBuildReceipt` and `-LocalSdkBuildSha256`, with `-SkipBuild`. The shared live runtime reader must
+accept the original complete output catalog, source/engine/dependency/API/ABI and native architecture;
+the actual viewer must carry its ENABLE_TESTS resource marker. The same declared Release console scenarios,
+including optional explicitly required live ETW and the installed-viewer metadata check, run against those
+held binaries. No ordinary build is invoked or ordinary build receipt created. Output operations remain
+exclusive through the shared candidate lease; unrelated ordinary profiles need no lock for this route.
+
+Local SDK runtime results have role `LocalUnpinnedApplicationRuntimeResult`, bind the original build digest,
+dependency and complete runtime-byte digest, and live only under `.build/local-sdk-test-runs`, outside hosted
+`.build/test-runs` discovery. The reader rechecks all payload and SDK/source/engine inputs after child drain,
+before a result can pass. Runtime, source or close failure retains a failed record and releases ownership.
+Hosted/compiler-free requests, incomplete digest/profile requests and old partial build records refuse before
+runtime launch. Local SDK results never satisfy pinned Full/PrePush, main, packaging or production gates;
+their repository/production qualification flags stay false. Viewer/foreground/performance coverage keeps
+its separately declared scope; these console results do not imply it.
+
 Tests/Tooling.Tests.ScopedTesting.ps1 exercises the actual public wrapper in owned Git/child-process fixtures,
 using recording native entrypoints. It covers cumulative code followed by docs, staged reversals, Unicode,
 rename sides, missing bases, malformed fragments, nonzero command exits, source mutation and retained Full/
