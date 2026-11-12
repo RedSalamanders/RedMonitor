@@ -6,6 +6,13 @@ Debug/Release/ASan Debug, Unicode stdcpplatest and /W4 /WX /permissive- /sdl.
 Pinned vcpkg and DxUi restores, outputs and exact source/profile receipts remain local under .build.
 No RedSalamander Common.dll or sibling build is required.
 
+The selected app package include directory is an `ExternalIncludePath` MSBuild property,
+so the actual compiler classifies vcpkg headers as external in both viewer and support
+projects, including isolated local SDK dependencies. Extend it in `Directory.Build.targets`
+after Microsoft.Cpp.props supplies its system SDK defaults; an early nonempty value can
+prevent those defaults from being initialized. It is not a per-source item metadata field.
+First-party diagnostics and the zero-warning acceptance check remain enforced.
+
 ## Command-line build output and source receipts
 
 `build.ps1` prints the RedMonitor ASCII wordmark and target profile before restore/compilation.
@@ -88,6 +95,19 @@ objects. Release and ASan Debug retain non-incremental linking. A linker compati
 a failed build, not a warning to suppress in the success summary.
 
 ## Header-only consumption
+
+The explicit Tools/Build-LocalSdkCandidate.ps1 command consumes a frozen local-only SDK descriptor and its
+independent SHA-256 without changing the managed lock. It builds the real viewer project and its support
+archive into a fresh operation below .build/local-unpinned. Both projects import the existing live local
+SDK/output guard; the support archive still does not link a second DxUi library. The final application link
+must name the held immutable archive. Ordinary source, pinned SDK, custom measurement and production roles
+retain their existing behavior.
+
+App dependency restoration for this role uses .build/local-sdk-dependencies, never ordinary profile package
+inputs. Same-platform local operations hold their dedicated native/dependency lease. The local cache's shared
+bootstrap/restore uses a separate lease, released before native compilation; different platforms can compile
+independently. Failed operations retain diagnostics. The local build record grants no runtime, test,
+repository, native-platform, production or publication acceptance.
 
 Consumers vendor only `include/RedMonitor/Client.h` and `LICENSE.txt` in ThirdParty/RedMonitor.
 Their lock records the immutable upstream commit, API revision and SHA-256 of each Git blob.

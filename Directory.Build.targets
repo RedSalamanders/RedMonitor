@@ -1,4 +1,8 @@
 <Project>
+  <PropertyGroup>
+    <!-- Extend after Microsoft.Cpp.props has supplied the system include defaults. -->
+    <ExternalIncludePath>$(RedMonitorPackages)include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
   <Target Name="RedMonitorValidateProfile" BeforeTargets="PrepareForBuild">
     <Error Condition="'$(Platform)'!='x64' and '$(Platform)'!='ARM64'" Text="RedMonitor requires x64 or ARM64." />
     <Error Condition="'$(Configuration)'!='Debug' and '$(Configuration)'!='Release' and '$(Configuration)'!='ASan Debug'" Text="Invalid RedMonitor configuration." />

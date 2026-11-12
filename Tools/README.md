@@ -5,6 +5,7 @@ Generated outputs remain below `.build`; independently launched applications are
 
 | Tool | Purpose and side effects |
 | --- | --- |
+| `Build-LocalSdkCandidate.ps1` | Explicit local Release SDK viewer/support build; isolated operation outputs and local dependency cache, live lease and actual link proof; no test, package or publication acceptance |
 | `Fold-Changelog.ps1` | Folds Changes fragments into CHANGELOG.md on the default branch, normally through `Submit-ChangelogFold.ps1`; Check and WhatIf are read-only |
 | `Submit-ChangelogFold.ps1` | Folds the fetched default branch in a temporary worktree, pushes `changelog/fold-<commit>` and opens its pull request with `gh`; uses the network and never changes this checkout |
 | `Test-Changelog.ps1` | Read-only fragment validation; `-Base <ref>` also refuses any CHANGELOG.md change that is not an exact fold of fragments already on that base |

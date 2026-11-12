@@ -8,6 +8,7 @@
     <Error Condition="'$(RedMonitorDxUiSdkRoot)'!='' and ('$(RedMonitorDxUiSdkLease)'=='' or '$(RedMonitorCiEngineRoot)'=='')" Text="Use build.ps1 with an active pinned SDK reader." />
   </Target>
   <PropertyGroup Condition="'$(RedMonitorDxUiSdkRoot)'!=''">
+    <RedMonitorDxUiSdkLease Condition="'$(CiSdkContract)'=='LocalUnpinnedAbiV1' and '$(RedMonitorDxUiSdkLease)'==''">$(CiSdkLeasePath)</RedMonitorDxUiSdkLease>
     <CiSdkRoot>$(RedMonitorDxUiSdkRoot)</CiSdkRoot>
     <CiSdkProjectRoot>$(RedMonitorRoot).</CiSdkProjectRoot>
     <CiSdkLeasePath>$(RedMonitorDxUiSdkLease)</CiSdkLeasePath>
