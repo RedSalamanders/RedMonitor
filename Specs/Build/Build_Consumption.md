@@ -6,6 +6,13 @@ Debug/Release/ASan Debug, Unicode stdcpplatest and /W4 /WX /permissive- /sdl.
 Pinned vcpkg and DxUi restores, outputs and exact source/profile receipts remain local under .build.
 No RedSalamander Common.dll or sibling build is required.
 
+The selected app package include directory is an `ExternalIncludePath` MSBuild property,
+so the actual compiler classifies vcpkg headers as external in both viewer and support
+projects, including isolated local SDK dependencies. Extend it in `Directory.Build.targets`
+after Microsoft.Cpp.props supplies its system SDK defaults; an early nonempty value can
+prevent those defaults from being initialized. It is not a per-source item metadata field.
+First-party diagnostics and the zero-warning acceptance check remain enforced.
+
 ## Command-line build output and source receipts
 
 `build.ps1` prints the RedMonitor ASCII wordmark and target profile before restore/compilation.
@@ -22,13 +29,28 @@ The Git checkout is required even with `-SkipRestore`. Source identity uses NUL-
 `git ls-files --cached --others --exclude-standard` paths in ordinal order, binding each path and current
 SHA-256 file content. Missing tracked files have an explicit marker. Tracked ignored files remain inputs;
 non-ignored untracked additions, edits, deletions and renames change identity. Timestamps, Git administrative
-files and ignored generated caches (including `.build`, `.vs` and `.ci-engine`) do not. Reparse source
+files and ignored generated caches (including `.build`, `.vs` and `.ci-engine`) do not enter the product file inventory; the actual engine is bound separately below. Reparse source
 paths, failed Git inventories and unreadable inputs fail closed. Build, test and package commands share
 this implementation. Older receipts require a new build after an identity algorithm change.
+
+The snapshot also binds the actual ignored CI engine through the shared pinned-input
+reader. Its separate `EngineInputsIdentity` is included in the source digest, without
+adding fictional product file rows. Missing, dirty, foreign or wrong-pin engines fail
+before reuse. Generated engine output is excluded and Windows casing aliases preserve
+the same physical checkout identity.
 
 An actual source change during compilation still prevents receipt publication. The error lists changed
 paths and retains before/after source snapshots beneath the selected profile output for diagnosis.
 Compiler success alone never establishes runtime or Full qualification.
+
+MSBuild runs through the exact pinned shared engine's `Invoke-CiNativeCommand`.
+Its child PowerShell host assigns a fresh private MSVC metadata-service endpoint
+without changing the calling process's environment or location. Output remains live,
+arguments remain literal, and the original native exit code feeds the existing
+zero-warning, source and receipt gates. Compiler/linker switches and runtime ownership
+are unchanged. This keeps concurrent owned builds from sharing a metadata service
+whose lifetime can end when one build retires. Restore `.ci-engine` at the exact
+`.ci/project.json` engine commit before local native builds, as hosted CI already does.
 
 ## Explicit pinned Release SDK inputs
 
@@ -73,6 +95,22 @@ objects. Release and ASan Debug retain non-incremental linking. A linker compati
 a failed build, not a warning to suppress in the success summary.
 
 ## Header-only consumption
+
+The explicit Tools/Build-LocalSdkCandidate.ps1 command consumes a frozen local-only SDK descriptor and its
+independent SHA-256 without changing the managed lock. It builds the existing RedMonitor.proj Release
+aggregate, including the viewer, support archive, satellites and normal console test executables, into a fresh
+operation below .build/local-unpinned. Viewer/support import the existing live SDK guard; every native child,
+including resource-only and console projects, passes output preflight before writes. The support archive still
+does not link a second DxUi library. The final application link
+must name the held immutable archive. Ordinary source, pinned SDK, custom measurement and production roles
+retain their existing behavior.
+
+App dependency restoration for this role uses .build/local-sdk-dependencies, never ordinary profile package
+inputs. Same-platform local operations hold their dedicated native/dependency lease. The local cache's shared
+bootstrap/restore uses a separate lease, released before native compilation; different platforms can compile
+independently. Failed operations retain diagnostics. The local build record grants no runtime, test,
+repository, native-platform, production or publication acceptance. The record binds the complete output catalog
+and original descriptor for explicit local runtime admission; it never impersonates an ordinary build receipt.
 
 Consumers vendor only `include/RedMonitor/Client.h` and `LICENSE.txt` in ThirdParty/RedMonitor.
 Their lock records the immutable upstream commit, API revision and SHA-256 of each Git blob.

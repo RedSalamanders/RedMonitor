@@ -1,4 +1,15 @@
 <Project>
+  <Target Name="RedMonitorValidateLocalSdkOutput" BeforeTargets="PrepareForBuild;ClCompile;ResourceCompile;Lib;Link"
+          Condition="'$(CiSdkContract)'=='LocalUnpinnedAbiV1'">
+    <!-- Every aggregate child owns outputs, including console/resource-only projects
+         that do not consume DxUi and therefore do not import its ABI props. -->
+    <Error Condition="'$(RedMonitorCiEngineRoot)'=='' or '$(CiSdkLeasePath)'==''" Text="Use the explicit local SDK build with its live output lease." />
+    <Exec Command="pwsh -NoProfile -NonInteractive -File &quot;$(RedMonitorCiEngineRoot)\Tools\Test-SdkConsumerLease.ps1&quot; -ProjectRoot &quot;$(CiSdkProjectRoot)&quot; -LeasePath &quot;$(CiSdkLeasePath)&quot; -SdkRoot &quot;$(CiSdkRoot)&quot; -Platform &quot;$(Platform)&quot; -Configuration &quot;$(Configuration)&quot; -SdkContract &quot;$(CiSdkContract)&quot; -PreflightLocalOutputs -OutputDirectory &quot;$(OutDir)/.&quot; -IntermediateDirectory &quot;$(IntDir)/.&quot;" />
+  </Target>
+  <PropertyGroup>
+    <!-- Extend after Microsoft.Cpp.props has supplied the system include defaults. -->
+    <ExternalIncludePath>$(RedMonitorPackages)include;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
   <Target Name="RedMonitorValidateProfile" BeforeTargets="PrepareForBuild">
     <Error Condition="'$(Platform)'!='x64' and '$(Platform)'!='ARM64'" Text="RedMonitor requires x64 or ARM64." />
     <Error Condition="'$(Configuration)'!='Debug' and '$(Configuration)'!='Release' and '$(Configuration)'!='ASan Debug'" Text="Invalid RedMonitor configuration." />

@@ -1,0 +1,1 @@
+- Isolate each native build's compiler metadata service through the pinned shared launcher while preserving live output, literal arguments, exit codes and build acceptance checks.

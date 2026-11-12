@@ -120,8 +120,16 @@ function Get-RedMonitorSourceSnapshot {
         $files.Add($path, $hash)
         [void]$text.Append($path).Append([char]0).Append($hash).Append([char]0)
     }
+    # Generated engine implementation executes local tooling even though product Git ignores it.
+    # Keep its identity separate from file inventory and affected-change discovery.
+    $engineInputs = $null
+    if (Test-Path -LiteralPath (Join-Path $Root '.ci/project.json') -PathType Leaf) {
+        Import-Module (Join-Path $Root '.ci-engine/Tools/Modules/Ci.SourceInputs.psm1') -ErrorAction Stop
+        $engineInputs = Get-CiPinnedEngineInputsIdentity -Root $Root
+        [void]$text.Append('engine_inputs').Append([char]0).Append($engineInputs).Append([char]0)
+    }
     $identity = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($text.ToString()))).ToLowerInvariant()
-    return [pscustomobject]@{Identity=$identity;Files=$files}
+    return [pscustomobject]@{Identity=$identity;Files=$files;EngineInputsIdentity=$engineInputs}
 }
 
 function Get-RedMonitorSourceIdentity {

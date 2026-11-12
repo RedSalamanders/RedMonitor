@@ -1,5 +1,30 @@
 # Validation and evidence
 
+Local source snapshots and build receipts bind the actual ignored `.ci-engine`
+through the shared `Get-CiPinnedEngineInputsIdentity`. The generated checkout must
+be ordinary, independent, clean and at `.ci/project.json`'s exact pin. Fresh raw
+engine bytes participate; generated engine `.build` output does not. This input
+is separate from product file/affected discovery, grants no qualification or CI
+delegation, and preserves the current local and main gates.
+
+`Test-Changes.ps1` records Validation, Format and Tooling separately immediately
+after each command succeeds and the original source/tool/environment identity is
+reverified. That identity includes full product source bytes, actual pinned engine
+inputs, selected formatter/Git/PowerShell host and automation-assembly bytes, runtime,
+OS, architecture and the declared discovery/CI environment. Formatter discovery and
+exact version validation use the same helper as `format.ps1`.
+
+A later native failure preserves the original successful attempt bytes. An identical
+retry may reuse those independent checks; it still executes all requested native,
+live ETW, cross-build, packaging and installation obligations. `-Force` reruns the
+independent checks. Before execution, the latest-state index is marked started;
+failure or interruption cannot fall back to an older green attempt. Failed or
+input-mutating checks stop before native work. Corrupt/missing/mismatched evidence
+is never a pass. Attempts are create-only records beneath `.build/validation-evidence/independent`,
+with a bounded digest-checked latest-state index. The independent operation lease
+does not cover later native execution. Final source drift refuses current-tree
+success. No independent receipt grants native or repository-wide qualification.
+
 Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush explicitly account for
 x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
 boundaries and required repository surfaces. format.ps1 -Check verifies native formatting.
@@ -13,6 +38,23 @@ Source bytes must remain unchanged across planning/independent validation before
 No-work reports NOTHING_SELECTED; prose reports PROSE_CHECKS_PASSED; neither qualifies the repository.
 Full/PrePush retain all local native profiles, live ETW, ARM64 cross-builds and contained installation controls.
 They never claim native ARM64 execution or separate manual/viewer/performance gates.
+
+`test.ps1` also accepts an explicit local SDK Release record and independently retained SHA-256 through
+`-LocalSdkBuildReceipt` and `-LocalSdkBuildSha256`, with `-SkipBuild`. The shared live runtime reader must
+accept the original complete output catalog, source/engine/dependency/API/ABI and native architecture;
+the actual viewer must carry its ENABLE_TESTS resource marker. The same declared Release console scenarios,
+including optional explicitly required live ETW and the installed-viewer metadata check, run against those
+held binaries. No ordinary build is invoked or ordinary build receipt created. Output operations remain
+exclusive through the shared candidate lease; unrelated ordinary profiles need no lock for this route.
+
+Local SDK runtime results have role `LocalUnpinnedApplicationRuntimeResult`, bind the original build digest,
+dependency and complete runtime-byte digest, and live only under `.build/local-sdk-test-runs`, outside hosted
+`.build/test-runs` discovery. The reader rechecks all payload and SDK/source/engine inputs after child drain,
+before a result can pass. Runtime, source or close failure retains a failed record and releases ownership.
+Hosted/compiler-free requests, incomplete digest/profile requests and old partial build records refuse before
+runtime launch. Local SDK results never satisfy pinned Full/PrePush, main, packaging or production gates;
+their repository/production qualification flags stay false. Viewer/foreground/performance coverage keeps
+its separately declared scope; these console results do not imply it.
 
 Tests/Tooling.Tests.ScopedTesting.ps1 exercises the actual public wrapper in owned Git/child-process fixtures,
 using recording native entrypoints. It covers cumulative code followed by docs, staged reversals, Unicode,

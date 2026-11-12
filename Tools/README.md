@@ -5,6 +5,7 @@ Generated outputs remain below `.build`; independently launched applications are
 
 | Tool | Purpose and side effects |
 | --- | --- |
+| `Build-LocalSdkCandidate.ps1` | Explicit local Release SDK viewer, satellites and normal console-test aggregate; isolated outputs/dependencies, live leases, full byte catalog and actual link proof; no test, package or publication acceptance |
 | `Fold-Changelog.ps1` | Folds Changes fragments into CHANGELOG.md on the default branch, normally through `Submit-ChangelogFold.ps1`; Check and WhatIf are read-only |
 | `Submit-ChangelogFold.ps1` | Folds the fetched default branch in a temporary worktree, pushes `changelog/fold-<commit>` and opens its pull request with `gh`; uses the network and never changes this checkout |
 | `Test-Changelog.ps1` | Read-only fragment validation; `-Base <ref>` also refuses any CHANGELOG.md change that is not an exact fold of fragments already on that base |
@@ -15,5 +16,11 @@ Generated outputs remain below `.build`; independently launched applications are
 
 Tests/Tooling.Tests.ps1 exercises output boundaries and shared changelog behavior. Source/dependency
 locks, script syntax, documentation links and native project boundaries are checked by validate.ps1.
+
+Use `test.ps1 -Configuration Release -SkipBuild -LocalSdkBuildReceipt <original record>
+-LocalSdkBuildSha256 <independently retained digest> -IncludeLiveEtw` to run the normal
+Release scenarios against that held local SDK candidate. Its distinct results stay
+under `.build/local-sdk-test-runs`, outside pinned/hosted result discovery. It creates
+no ordinary build receipt and grants no PrePush, main, package or production acceptance.
 
 ClientSdk/Update-RedMonitorClient.ps1 explicitly fetches only the pinned public header and MIT notice. ClientSdk/Verify-RedMonitorClient.ps1 checks consumer-local bytes without network or a helper build. Install-RedMonitor.ps1 installs a validated production package separately into a standard folder; its harness override is confined to source .build. Tests/Tooling.Tests.Installation.ps1 covers installation/replacement, retained backups, hashes, missing closure, foreign profiles and path/reparse failures without touching a real installation.

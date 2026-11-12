@@ -113,3 +113,30 @@ The native host's MSBuild is selected explicitly (`Bin/amd64` on x64 and
 The pinned shared engine restores vcpkg's ABI-indexed package cache for normal and manual native qualification. Exact engine/input keys are preferred; fallback lookup stays within the same runner OS, host architecture and target platform, and the pinned vcpkg restore still selects each package by its computed ABI. A miss rebuilds the package. This supplies dependency inputs only: product objects, DxUi SDK outputs and build/test receipts are not restored by this cache. Dependency pins, native execution, failure detectors and production/publication gates remain required. The owning behavior is the shared engine's Specs/CI.md.
 
 Markdown exclusions name owned prose locations and known guides. A global Markdown-extension exclusion is forbidden: new implementation/test data and notice files remain native inputs unless explicitly reviewed as prose. Runtime include exceptions take precedence.
+
+The deployed engine admits only the three reviewed QualifiedAbiV2 producer attempts with
+successful x64 and ARM64 qualification. Eligible Release roles authenticate the original
+run/attempt, caller/controller, archive digest and independent ABI reference before reuse.
+An SDK hit supplies dependency inputs; all product regression, detector, production and
+extraction gates still run. Record actual recipe selection on each architecture: Source
+fallback does not establish live SDK-hit acceptance. Local Debug/ASan remain Source.
+
+## Optional isolated native shadow execution
+
+The generated manual `integration-execution.yml` caller runs one frozen candidate
+under a unique branch pointing at trusted current main. Trusted operator admission
+checks exact candidate/controller/caller identity before requesting read-only native
+x64/ARM64 test execution. It retains original attempt-bound inputs, receipts, profile
+bytes and diagnostics. Shadow execution supplies no required merge check, local
+coverage delegation, production/package authorization or main-result adoption.
+Those gates remain with the current contracts until their separate implementation
+and hosted enforcement are qualified. Use the exact pinned shared engine's
+`Specs/Integration_Candidates.md` and `Tools/Start-CandidateShadow.ps1`; no caller
+may run candidate code in a main cache/writer context or cancel another execution.
+
+Native main, manual qualification, SDK and optional candidate shadow jobs share one
+repository/platform lane. Queued candidate jobs repeat the complete canonical
+source/base/engine/ref and exact-head readiness checks before native setup/cache
+restore. Direct manual shadow dispatch also requires readiness before frozen inputs
+are emitted. This engine rollout supplies no required native merge check, local
+coverage delegation or cross-run main adoption. Those gates remain separately open.

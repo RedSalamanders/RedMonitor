@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "86376bd7b0e9d89e348a03e27ce943e2a0d78a5a",
+  "engineCommit": "0573d4f3b294e3c3655349eb618ec7105b3d89b2",
+  "role": "ActualIndependentCommandsFreshThenExactReuse",
+  "nativeQualified": false,
+  "hostedQualified": false,
+  "controlledStudy": false,
+  "pairCount": 1,
+  "concurrentWork": "RedSalamander Source Release build in another worktree",
+  "commandLogSha256": "c3eab39347e0007d97ba5d285166232ee8fcc15cac7b36fdccf94439e8965394"
+}

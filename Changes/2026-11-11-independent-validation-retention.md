@@ -1,0 +1,1 @@
+- Preserve each completed independent validation, formatting and tooling result across later native failures, reusing only exact local inputs while keeping every native, ETW, packaging and installation gate.
