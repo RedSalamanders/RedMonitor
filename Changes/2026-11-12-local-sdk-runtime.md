@@ -1,0 +1,1 @@
+- Build the existing viewer, satellite and console-test union for explicit local SDK candidates and run the normal Release scenarios through a complete held-payload reader, retaining separate runtime evidence without replacing pinned local or main gates.

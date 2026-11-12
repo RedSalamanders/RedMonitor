@@ -22,7 +22,7 @@ $Descriptor='C:/synthetic-not-read/local snapshot.json';$DescriptorSha256='a'*64
 . ([scriptblock]::Create((Find-Assignment '$prepareDependencies')))
 . ([scriptblock]::Create((Find-Assignment '$result')))
 if($received.ProjectRoot -cne $root -or $received.Descriptor -cne $Descriptor -or $received.ExpectedDescriptorSha256 -cne $DescriptorSha256 -or $received.Platform -cne $Platform -or $received.BuildNumber -ne 123 -or $result.Sentinel -cne 'original local broker result'){throw 'Actual local SDK invocation redirected its source, descriptor, profile, version or result.'}
-if($received.BuildContract.Count -ne 9 -or $received.BuildContract.buildFile -cne 'src/RedMonitor.vcxproj' -or $received.BuildContract.metadataProject -cne 'src/RedMonitor.vcxproj' -or $received.BuildContract.target -cne 'Build' -or $received.BuildContract.outputProperty -cne 'RedMonitorOutputRoot' -or $received.BuildContract.testsProperty -cne 'RedMonitorViewerTestsEnabled' -or $received.PrepareDependencies -isnot [scriptblock]){throw 'Viewer/support build, test surface, output or preparation binding changed.'}
+if($received.BuildContract.Count -ne 9 -or $received.BuildContract.buildFile -cne 'RedMonitor.proj' -or $received.BuildContract.metadataProject -cne 'src/RedMonitor.vcxproj' -or $received.BuildContract.target -cne 'Build' -or $received.BuildContract.outputProperty -cne 'RedMonitorOutputRoot' -or $received.BuildContract.testsProperty -cne 'RedMonitorViewerTestsEnabled' -or $received.PrepareDependencies -isnot [scriptblock]){throw 'Viewer/test aggregate, test surface, output or preparation binding changed.'}
 $saved=$env:CI_NATIVE_BUILDS_DISABLED
 try{
     $env:CI_NATIVE_BUILDS_DISABLED='true';$refused=$false
