@@ -1,0 +1,1 @@
+- Restored Find Bar window-procedure slots through the existing Win32 callback-data wrapper, preserving teardown behavior and the zero-warning build policy in SDK builds.

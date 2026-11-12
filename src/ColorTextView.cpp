@@ -2,6 +2,7 @@
 #include "ColorTextScrollBars.h"
 #include "MonitorFileReader.h"
 #include "UnicodeClipboard.h"
+#include "Win32CallbackHelpers.h"
 #include "resource.h"
 
 #include "WindowMessages.h"
@@ -5406,7 +5407,7 @@ void ColorTextView::DestroyFindBar() noexcept
     {
         if (_prevEditProc)
         {
-            SetWindowLongPtr(_hFindEdit.get(), GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_prevEditProc));
+            static_cast<void>(RedSalamander::Win32Callback::SetWindowLongPtrNoThrow(_hFindEdit.get(), GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_prevEditProc)));
             _prevEditProc = nullptr;
         }
         SetWindowLongPtr(_hFindEdit.get(), GWLP_USERDATA, 0);
@@ -5421,7 +5422,8 @@ void ColorTextView::DestroyFindBar() noexcept
     {
         if (_prevFindPanelProc)
         {
-            SetWindowLongPtr(_hFindPanel.get(), GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_prevFindPanelProc));
+            static_cast<void>(
+                RedSalamander::Win32Callback::SetWindowLongPtrNoThrow(_hFindPanel.get(), GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_prevFindPanelProc)));
             _prevFindPanelProc = nullptr;
         }
         SetWindowLongPtr(_hFindPanel.get(), GWLP_USERDATA, 0);
