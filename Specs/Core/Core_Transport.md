@@ -18,9 +18,14 @@ existing dedicated performance providers and fallback log policy.
 
 Sessions are owned explicitly. Starting must never stop or attach to a pre-existing session by name.
 Callback routing belongs to each session's Context/UserContext, never a global listener pointer.
-Stop first rejects callbacks, closes its consumer, then waits at most five seconds. Only shared owned
-callback state may outlive that bounded wait. GUI result payloads use the registered token mechanism
-and are drained at WM_NCDESTROY. Permission denial is visible and recoverable without file-view loss.
+Stop first rejects callbacks, stops the kernel trace session (`EVENT_TRACE_CONTROL_STOP`) and closes its
+consumer handle so `ProcessTrace` unblocks immediately without waiting for the real-time flush timer,
+then waits at most five seconds. Only shared owned callback state may outlive that bounded wait.
+ETW batch delivery coalesces `kColorTextViewEtwBatch` window messages so at most one batch notification
+is queued at a time, and paces immediate `UpdateWindow` repaints during sustained batch arrival to at
+most 60 Hz (16 ms) so Win32 input and menu messages are never starved. GUI result payloads use the
+registered token mechanism and are drained at WM_NCDESTROY. Permission denial is visible and recoverable
+without file-view loss.
 
 Self Info/Perf diagnostics are runtime opt-in with --etw; default operation must not feed its own log
 back into the viewer. Real event roundtrip and permission-denial cases are separate validation gates.

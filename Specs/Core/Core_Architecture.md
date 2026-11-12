@@ -20,9 +20,18 @@ bare Debug asynchronous startup follow the consumption contract. No second live 
 in RedSalamander. The later independent-settings migration must preserve old files and rollback.
 
 The document owns bounded immutable text blocks, copies metadata under lock, and shifts/clamps all
-selection/search/scroll mappings together on oldest-first eviction. Save captures shared block ownership;
-eviction cannot invalidate an in-flight snapshot. Queue defaults: 4096 events; retention: 100000 lines
-and 64 MiB UTF-16 text; search: 100000 matches. Preserve validated setting ranges during extraction.
+selection/search/scroll mappings together on oldest-first eviction. Retention eviction updates the
+line-offset deque, total character length, filtered visible-line indices, dirty-line range, and UI
+width/layout caches incrementally without invalidating all retained lines or remeasuring the entire
+document. Severity filter changes update the visible-line index table without marking retained source
+lines dirty for width remeasurement; background width measurement samples at most 32 dirty candidate
+lines per pass and never falls back to synchronous UI-thread DirectWrite layout when threadpool
+admission fails. In auto-scroll mode, `ColorTextView` renders and hit-tests through the bounded tail
+layout (supporting both unfiltered and filtered views with per-line severity and user color spans)
+without triggering full-document or virtual-slice fallback layouts during `WM_PAINT`. Save captures
+shared block ownership; eviction cannot invalidate an in-flight snapshot. Queue defaults: 4096 events;
+retention: 100000 lines and 64 MiB UTF-16 text; search: 100000 matches. Preserve validated setting
+ranges during extraction.
 
 Open streams strict UTF-8/UTF-16LE in bounded chunks on an owned cancellable worker. Failed or cancelled
 open never replaces the document. Export writes strict UTF-8+BOM through a sibling temporary and atomic

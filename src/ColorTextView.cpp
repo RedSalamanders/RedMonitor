@@ -291,10 +291,20 @@ void ColorTextView::SetTheme(const Theme& t)
 void ColorTextView::EnableLineNumbers(bool enable)
 {
     _displayLineNumbers = enable;
+    UpdateGutterWidth();
+    ClampHorizontalScroll();
+    UpdateScrollBars();
     // Layout width and transform change; cached slices are not reusable.
     _layoutCache.clear();
     InvalidateSliceBitmap();
-    EnsureLayoutAsync();
+    if (_renderMode == RenderMode::AUTO_SCROLL)
+    {
+        RebuildTailLayout();
+    }
+    else
+    {
+        EnsureLayoutAsync();
+    }
     Invalidate();
 }
 
@@ -313,8 +323,13 @@ void ColorTextView::EnableShowIds(bool enable)
     _layoutCache.clear();
     _sliceFilteredRuns.clear();
     _fallbackFilteredRuns.clear();
+    _tailFilteredLines.clear();
+    _tailFilteredRuns.clear();
     _lineMetrics.clear();
     _tailLayoutValid      = false;
+    _tailIsFiltered       = false;
+    _tailStartPos         = 0;
+    _tailEndPos           = 0;
     _fallbackValid        = false;
     _sliceFirstLine       = 0;
     _sliceLastLine        = 0;
@@ -326,13 +341,19 @@ void ColorTextView::EnableShowIds(bool enable)
     InvalidateSliceBitmap();
     RequestFullRedraw();
 
+    const size_t maxLen = _document.LongestLineChars();
+    _approxContentWidth = GetAverageCharWidth() * static_cast<float>(maxLen);
     EnsureWidthAsync();
     if (_renderMode == RenderMode::AUTO_SCROLL)
     {
         RebuildTailLayout();
+        ScrollToBottom();
     }
     else
     {
+        ClampScroll();
+        ClampHorizontalScroll();
+        UpdateScrollBars();
         EnsureLayoutAsync();
     }
 
@@ -341,10 +362,10 @@ void ColorTextView::EnableShowIds(bool enable)
 
 void ColorTextView::SetFilterMask(uint32_t mask)
 {
-    // Try to preserve viewport context: find currently visible line before filter changes
+    // Try to preserve viewport context in scroll-back mode: find currently visible line before filter changes
     std::optional<size_t> anchorLine;
     const float lineHeight = GetLineHeight();
-    if (lineHeight > 0.f)
+    if (_renderMode != RenderMode::AUTO_SCROLL && lineHeight > 0.f)
     {
         const float viewTop        = std::max(0.f, _scrollY - _padding);
         const UINT32 topDisplayRow = static_cast<UINT32>(std::floor(viewTop / lineHeight));
@@ -398,14 +419,27 @@ void ColorTextView::SetFilterMask(uint32_t mask)
     _sliceIsFiltered = false;
     _sliceFilteredRuns.clear();
     _fallbackFilteredRuns.clear();
+    _tailFilteredLines.clear();
+    _tailFilteredRuns.clear();
 
     // Invalidate cached state
     InvalidateSliceBitmap();
     _tailLayoutValid = false;
+    _tailIsFiltered  = false;
+    _tailStartPos    = 0;
+    _tailEndPos      = 0;
     _fallbackValid   = false;
 
     // Force immediate re-layout and redraw
-    EnsureLayoutAsync();
+    if (_renderMode == RenderMode::AUTO_SCROLL)
+    {
+        RebuildTailLayout();
+        ScrollToBottom();
+    }
+    else
+    {
+        EnsureLayoutAsync();
+    }
     RequestFullRedraw();
     Invalidate();
 }
@@ -443,8 +477,13 @@ void ColorTextView::SetFont(const wchar_t* family, float sizeDips)
     _layoutCache.clear();
     _sliceFilteredRuns.clear();
     _fallbackFilteredRuns.clear();
+    _tailFilteredLines.clear();
+    _tailFilteredRuns.clear();
     _lineMetrics.clear();
     _tailLayoutValid      = false;
+    _tailIsFiltered       = false;
+    _tailStartPos         = 0;
+    _tailEndPos           = 0;
     _fallbackValid        = false;
     _sliceFirstLine       = 0;
     _sliceLastLine        = 0;
@@ -457,19 +496,26 @@ void ColorTextView::SetFont(const wchar_t* family, float sizeDips)
     _lineWidthCache.assign(_document.TotalLineCount(), 0.f);
     _maxMeasuredWidth = 0.f;
     _maxMeasuredIndex = 0;
-    // Recompute approximate content width and schedule precise measurement
-    const size_t maxLen = _document.LongestLineChars();
-    _approxContentWidth = GetAverageCharWidth() * static_cast<float>(maxLen);
+    // Recompute approximate content width and content height, then schedule precise measurement
+    const size_t maxLen      = _document.LongestLineChars();
+    _approxContentWidth      = GetAverageCharWidth() * static_cast<float>(maxLen);
+    const UINT32 displayRows = _document.TotalDisplayRows();
+    _contentHeight           = static_cast<float>(displayRows) * GetLineHeight() + _padding * 2.f;
+    UpdateGutterWidth();
+    InvalidateSliceBitmap();
     EnsureWidthAsync();
     if (_renderMode == RenderMode::AUTO_SCROLL)
     {
         RebuildTailLayout();
+        ScrollToBottom();
     }
     else
     {
+        ClampScroll();
+        ClampHorizontalScroll();
+        UpdateScrollBars();
         EnsureLayoutAsync();
     }
-    InvalidateSliceBitmap();
     Invalidate();
 }
 
@@ -497,6 +543,7 @@ void ColorTextView::ResetAfterDocumentReplacement()
     _selStart         = 0;
     _selEnd           = 0;
     _caretPos         = 0;
+    _scrollX          = 0.0f;
     _scrollY          = 0.0f;
     _matches.clear();
     _matchIndex            = -1;
@@ -509,8 +556,13 @@ void ColorTextView::ResetAfterDocumentReplacement()
     _layoutCache.clear();
     _sliceFilteredRuns.clear();
     _fallbackFilteredRuns.clear();
+    _tailFilteredLines.clear();
+    _tailFilteredRuns.clear();
     _lineMetrics.clear();
     _tailLayoutValid      = false;
+    _tailIsFiltered       = false;
+    _tailStartPos         = 0;
+    _tailEndPos           = 0;
     _fallbackValid        = false;
     _sliceFirstLine       = 0;
     _sliceLastLine        = 0;
@@ -526,10 +578,21 @@ void ColorTextView::ResetAfterDocumentReplacement()
     _contentHeight           = (float)displayRows * GetLineHeight() + _padding * 2.f;
 
     UpdateGutterWidth();
-    EnsureLayoutAsync();
-    EnsureWidthAsync();
     RebuildMatches();
     InvalidateSliceBitmap();
+    if (_renderMode == RenderMode::AUTO_SCROLL)
+    {
+        RebuildTailLayout();
+        ScrollToBottom();
+    }
+    else
+    {
+        ClampScroll();
+        ClampHorizontalScroll();
+        UpdateScrollBars();
+        EnsureLayoutAsync();
+    }
+    EnsureWidthAsync();
     Invalidate();
 }
 void ColorTextView::AppendText(const std::wstring& more)
@@ -547,16 +610,20 @@ void ColorTextView::AppendText(const std::wstring& more)
     _contentHeight           = (float)displayRows * GetLineHeight() + _padding * 2.f;
 
     UpdateGutterWidth();
-    // Use adaptive timing based on how many lines were added
     const size_t linesAdded = _document.TotalLineCount() - prevLineCount;
-    EnsureLayoutAdaptive(linesAdded);
-    EnsureWidthAsync();
-    InvalidateSliceBitmap();
-    Invalidate();
-
-    // Scroll to bottom if in auto-scroll mode
-    if (_renderMode == RenderMode::AUTO_SCROLL)
+    if (ShouldUseAutoScrollMode())
+    {
+        RebuildTailLayout();
         RequestScrollToBottom();
+    }
+    else
+    {
+        EnsureLayoutAdaptive(linesAdded);
+        InvalidateSliceBitmap();
+        UpdateScrollBars();
+    }
+    EnsureWidthAsync();
+    Invalidate();
 }
 
 void ColorTextView::SetRetentionLimits(const RetentionLimits& limits) noexcept
@@ -600,7 +667,6 @@ void ColorTextView::QueueEtwEvent(const Debug::InfoParam& info, std::wstring mes
     bool shouldPost = false;
     {
         auto lock                    = _etwQueueCS.lock();
-        const bool wasEmpty          = _etwEventQueue.empty();
         const size_t maxQueuedEvents = _maxQueuedEvents.load(std::memory_order_acquire);
         while (_etwEventQueue.size() >= maxQueuedEvents)
         {
@@ -614,14 +680,22 @@ void ColorTextView::QueueEtwEvent(const Debug::InfoParam& info, std::wstring mes
                ! _queueHighWaterMark.compare_exchange_weak(previousHighWater, queueDepth, std::memory_order_relaxed, std::memory_order_relaxed))
         {
         }
-        // Only post message if queue was empty (prevents flooding)
-        shouldPost = wasEmpty;
+        // Only post message if no batch notification is already in flight (prevents flooding)
+        if (! _etwBatchPostPending)
+        {
+            _etwBatchPostPending = true;
+            shouldPost           = true;
+        }
     }
 
     // Post message outside critical section to avoid potential deadlock
     if (shouldPost)
     {
-        PostMessage(hwnd, WndMsg::kColorTextViewEtwBatch, 0, 0);
+        if (! PostMessage(hwnd, WndMsg::kColorTextViewEtwBatch, 0, 0))
+        {
+            auto lock            = _etwQueueCS.lock();
+            _etwBatchPostPending = false;
+        }
     }
 }
 
@@ -662,6 +736,7 @@ void ColorTextView::AppendInfoLine(const Debug::InfoParam& info, const std::wstr
             SwitchToAutoScrollMode();
         }
         RebuildTailLayout();
+        ScrollToBottom();
         // No slice invalidation, no async workers, no bitmap caching
     }
     else
@@ -674,6 +749,7 @@ void ColorTextView::AppendInfoLine(const Debug::InfoParam& info, const std::wstr
         }
         EnsureLayoutAdaptive(1);
         InvalidateSliceBitmap();
+        UpdateScrollBars();
     }
 
     EnsureWidthAsync();
@@ -695,6 +771,7 @@ void ColorTextView::EndBatchAppend()
         if (_renderMode != RenderMode::AUTO_SCROLL)
             SwitchToAutoScrollMode();
         RebuildTailLayout();
+        ScrollToBottom();
     }
     else
     {
@@ -702,6 +779,7 @@ void ColorTextView::EndBatchAppend()
             SwitchToScrollBackMode();
         EnsureLayoutAdaptive(1);
         InvalidateSliceBitmap();
+        UpdateScrollBars();
     }
 
     EnsureWidthAsync();
@@ -730,9 +808,15 @@ void ColorTextView::ClearText()
     _layoutCache.clear();
     _sliceFilteredRuns.clear();
     _fallbackFilteredRuns.clear();
+    _tailFilteredLines.clear();
+    _tailFilteredRuns.clear();
     _lineMetrics.clear();
     _tailLayoutValid       = false;
+    _tailIsFiltered        = false;
+    _tailStartPos          = 0;
+    _tailEndPos            = 0;
     _fallbackValid         = false;
+    _scrollX               = 0.0f;
     _scrollY               = 0.0f;
     _contentHeight         = 0;
     _approxContentWidth    = 0;
@@ -746,6 +830,7 @@ void ColorTextView::ClearText()
     _pendingAppendToVisibleStartedAt.reset();
     RequestFullRedraw();
     UpdateGutterWidth();
+    UpdateScrollBars();
     InvalidateSliceBitmap();
     Invalidate();
 }
@@ -790,25 +875,100 @@ void ColorTextView::HandleDocumentEviction(const Document::RetentionResult& evic
         _searchScanLine   = 0u;
         _searchScanOffset = 0u;
     }
-    _lineWidthCache.assign(_document.TotalLineCount(), 0.0f);
-    _maxMeasuredWidth = 0.0f;
-    _maxMeasuredIndex = 0u;
-    _textLayout.reset();
+
+    const size_t totalLines = _document.TotalLineCount();
+    if (eviction.linesEvicted >= _lineWidthCache.size())
+    {
+        _lineWidthCache.assign(totalLines, 0.0f);
+        _maxMeasuredWidth = 0.0f;
+        _maxMeasuredIndex = 0u;
+    }
+    else
+    {
+        _lineWidthCache.erase(_lineWidthCache.begin(), _lineWidthCache.begin() + static_cast<std::ptrdiff_t>(eviction.linesEvicted));
+        _lineWidthCache.resize(totalLines, 0.0f);
+        if (_maxMeasuredIndex >= eviction.linesEvicted && (_maxMeasuredIndex - eviction.linesEvicted) < _lineWidthCache.size())
+        {
+            _maxMeasuredIndex -= eviction.linesEvicted;
+        }
+        else
+        {
+            _maxMeasuredWidth = 0.0f;
+            _maxMeasuredIndex = 0u;
+            for (size_t i = 0; i < _lineWidthCache.size(); ++i)
+            {
+                if (_lineWidthCache[i] > _maxMeasuredWidth)
+                {
+                    _maxMeasuredWidth = _lineWidthCache[i];
+                    _maxMeasuredIndex = i;
+                }
+            }
+        }
+    }
+
+    // Shift cached slices that remain completely after the evicted prefix; drop slices overlapping evicted lines.
+    const UINT32 evictedDisplayRows = static_cast<UINT32>(std::min<size_t>(eviction.displayRowsEvicted, static_cast<size_t>(UINT32_MAX)));
+    _layoutCache.erase(std::remove_if(_layoutCache.begin(),
+                                      _layoutCache.end(),
+                                      [&](CachedSlice& cs) noexcept
+    {
+        if (cs.firstLine < eviction.linesEvicted || cs.lastLine < eviction.linesEvicted)
+        {
+            return true;
+        }
+        cs.firstLine -= eviction.linesEvicted;
+        cs.lastLine -= eviction.linesEvicted;
+        cs.firstDisplayRow = (cs.firstDisplayRow >= evictedDisplayRows) ? (cs.firstDisplayRow - evictedDisplayRows) : 0u;
+        cs.sliceStartPos   = shiftPosition(cs.sliceStartPos);
+        cs.sliceEndPos     = shiftPosition(cs.sliceEndPos);
+        for (auto& run : cs.filteredRuns)
+        {
+            run.sourceLine  = (run.sourceLine >= eviction.linesEvicted) ? (run.sourceLine - eviction.linesEvicted) : 0u;
+            run.sourceStart = shiftPosition(run.sourceStart);
+        }
+        return false;
+    }),
+                       _layoutCache.end());
+
+    // Preserve active scroll-back slice if it lies entirely past the evicted prefix.
+    if (_textLayout && _sliceFirstLine >= eviction.linesEvicted && _sliceLastLine >= eviction.linesEvicted)
+    {
+        _sliceFirstLine -= eviction.linesEvicted;
+        _sliceLastLine -= eviction.linesEvicted;
+        _sliceFirstDisplayRow = (_sliceFirstDisplayRow >= evictedDisplayRows) ? (_sliceFirstDisplayRow - evictedDisplayRows) : 0u;
+        _sliceStartPos        = shiftPosition(_sliceStartPos);
+        _sliceEndPos          = shiftPosition(_sliceEndPos);
+        _sliceBitmapYBase     = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
+        for (auto& run : _sliceFilteredRuns)
+        {
+            run.sourceLine  = (run.sourceLine >= eviction.linesEvicted) ? (run.sourceLine - eviction.linesEvicted) : 0u;
+            run.sourceStart = shiftPosition(run.sourceStart);
+        }
+    }
+    else
+    {
+        _textLayout.reset();
+        _sliceFilteredRuns.clear();
+        _lineMetrics.clear();
+        _sliceFirstLine       = 0u;
+        _sliceLastLine        = 0u;
+        _sliceFirstDisplayRow = 0u;
+        _sliceIsFiltered      = false;
+        _sliceStartPos        = 0u;
+        _sliceEndPos          = 0u;
+        InvalidateSliceBitmap();
+    }
+
     _tailLayout.reset();
     _fallbackLayout.reset();
-    _layoutCache.clear();
-    _sliceFilteredRuns.clear();
     _fallbackFilteredRuns.clear();
-    _lineMetrics.clear();
-    _tailLayoutValid      = false;
-    _fallbackValid        = false;
-    _sliceFirstLine       = 0u;
-    _sliceLastLine        = 0u;
-    _sliceFirstDisplayRow = 0u;
-    _sliceIsFiltered      = false;
-    _sliceStartPos        = 0u;
-    _sliceEndPos          = 0u;
-    InvalidateSliceBitmap();
+    _tailFilteredLines.clear();
+    _tailFilteredRuns.clear();
+    _tailLayoutValid = false;
+    _tailIsFiltered  = false;
+    _tailStartPos    = 0u;
+    _tailEndPos      = 0u;
+    _fallbackValid   = false;
 }
 
 void ColorTextView::AddColorRange(UINT32 start, UINT32 length, const D2D1_COLOR_F& color)
@@ -817,7 +977,16 @@ void ColorTextView::AddColorRange(UINT32 start, UINT32 length, const D2D1_COLOR_
         return;
     length = std::min<UINT32>(length, (UINT32)_document.TotalLength() - start);
     _document.AddColorRange(start, length, color);
+    _layoutCache.clear();
     ApplyColoringToLayout();
+    if (_renderMode == RenderMode::AUTO_SCROLL)
+    {
+        RebuildTailLayout();
+    }
+    else
+    {
+        ApplyColoringToTailLayout();
+    }
     InvalidateSliceBitmap();
     Invalidate();
 }
@@ -827,29 +996,17 @@ void ColorTextView::ColorizeWord(const std::wstring& word, const D2D1_COLOR_F& c
     if (word.empty() || _document.TotalLineCount() == 0)
         return;
 
-    // per-line search
-    UINT32 offset = 0;
-    std::vector<Line::ColorSpan> ranges;
-    ranges.reserve(64);
-    for (size_t i = 0; i < _document.TotalLineCount(); ++i)
-    {
-        const auto& line = _document.GetSourceLine(i);
-        size_t pos       = 0;
-        while (true)
-        {
-            pos = caseSensitive ? line.text.find(word, pos) : FindCaseIncensitive(line.text, word, pos);
-            if (pos == std::wstring::npos)
-                break;
-            // account for metadata prefix length
-            const UINT32 plen = _document.PrefixLength(line);
-            ranges.push_back(Line::ColorSpan{offset + plen + static_cast<UINT32>(pos), static_cast<UINT32>(word.size()), color});
-            pos += word.size();
-        }
-        offset += _document.PrefixLength(line) + (UINT32)line.text.size() + 1;
-    }
-    for (const auto& r : ranges)
-        _document.AddColorRange(r.start, r.length, r.color);
+    _document.ColorizeWord(word, color, caseSensitive);
+    _layoutCache.clear();
     ApplyColoringToLayout();
+    if (_renderMode == RenderMode::AUTO_SCROLL)
+    {
+        RebuildTailLayout();
+    }
+    else
+    {
+        ApplyColoringToTailLayout();
+    }
     InvalidateSliceBitmap();
     Invalidate();
 }
@@ -857,7 +1014,16 @@ void ColorTextView::ColorizeWord(const std::wstring& word, const D2D1_COLOR_F& c
 void ColorTextView::ClearColoring()
 {
     _document.ClearColoring();
+    _layoutCache.clear();
     ApplyColoringToLayout();
+    if (_renderMode == RenderMode::AUTO_SCROLL)
+    {
+        RebuildTailLayout();
+    }
+    else
+    {
+        ApplyColoringToTailLayout();
+    }
     InvalidateSliceBitmap();
     Invalidate();
 }
@@ -1266,30 +1432,59 @@ void ColorTextView::EnsureCaretVisible()
     float viewBottom             = _scrollY + _clientDipH - _padding * 2;
 
     if (caretTop < viewTop)
+    {
+        if (_renderMode == RenderMode::AUTO_SCROLL)
+        {
+            SwitchToScrollBackMode();
+        }
         ScrollTo(caretTop - _padding);
+    }
     else if (caretBottom > viewBottom)
+    {
         ScrollTo(caretBottom - _clientDipH + _padding * 2);
+    }
 
     // Horizontal scrolling
-    float caretLeft  = 0.f;
-    float caretRight = 2.f; // caret width
-    if (_textLayout)
+    float caretLeft                                = 0.f;
+    float caretRight                               = 2.f; // caret width
+    IDWriteTextLayout* activeLayout                = nullptr;
+    bool activeFiltered                            = false;
+    UINT32 activeStartPos                          = 0;
+    UINT32 activeEndPos                            = 0;
+    const std::vector<FilteredTextRun>* activeRuns = nullptr;
+    if (_renderMode == RenderMode::AUTO_SCROLL && _tailLayoutValid && _tailLayout)
+    {
+        activeLayout   = _tailLayout.get();
+        activeFiltered = _tailIsFiltered;
+        activeStartPos = _tailStartPos;
+        activeEndPos   = _tailEndPos;
+        activeRuns     = &_tailFilteredRuns;
+    }
+    else if (_textLayout)
+    {
+        activeLayout   = _textLayout.get();
+        activeFiltered = _sliceIsFiltered;
+        activeStartPos = _sliceStartPos;
+        activeEndPos   = _sliceEndPos;
+        activeRuns     = &_sliceFilteredRuns;
+    }
+
+    if (activeLayout)
     {
         DWRITE_HIT_TEST_METRICS metrics{};
-        FLOAT x;
-        FLOAT y;
+        FLOAT x = 0.f;
+        FLOAT y = 0.f;
         std::optional<UINT32> localPos;
-        if (! _sliceIsFiltered)
+        if (! activeFiltered)
         {
-            if (_caretPos >= _sliceStartPos && _caretPos <= _sliceEndPos)
-                localPos = _caretPos - _sliceStartPos;
+            if (_caretPos >= activeStartPos && _caretPos <= activeEndPos)
+                localPos = _caretPos - activeStartPos;
         }
-        else if (! _sliceFilteredRuns.empty())
+        else if (activeRuns && ! activeRuns->empty())
         {
-            auto it = std::upper_bound(_sliceFilteredRuns.begin(), _sliceFilteredRuns.end(), _caretPos, [](UINT32 value, const FilteredTextRun& run) {
-                return value < run.sourceStart;
-            });
-            if (it != _sliceFilteredRuns.begin())
+            auto it = std::upper_bound(
+                activeRuns->begin(), activeRuns->end(), _caretPos, [](UINT32 value, const FilteredTextRun& run) { return value < run.sourceStart; });
+            if (it != activeRuns->begin())
                 --it;
 
             const UINT32 runStart = it->sourceStart;
@@ -1300,7 +1495,7 @@ void ColorTextView::EnsureCaretVisible()
 
         if (localPos)
         {
-            _textLayout->HitTestTextPosition(localPos.value(), FALSE, &x, &y, &metrics);
+            activeLayout->HitTestTextPosition(localPos.value(), FALSE, &x, &y, &metrics);
             caretLeft  = x;
             caretRight = x + 2.f;
         }
@@ -1560,8 +1755,8 @@ void ColorTextView::CreateDeviceResources()
     _brushCache.clear();
     _brushAccessCounter = 0;
     ClearTextLayoutEffects();
-    EnsureFindBar();
     ApplyColoringToLayout();
+    ApplyColoringToTailLayout();
 }
 
 void ColorTextView::DiscardDeviceResources()
@@ -1828,9 +2023,6 @@ void ColorTextView::InvalidateSliceBitmap()
     _fallbackEndLine     = 0;
     _fallbackLayoutWidth = 0.f;
     _fallbackFilteredRuns.clear();
-
-    // Also invalidate tail layout for mode transitions
-    _tailLayoutValid = false;
 }
 
 void ColorTextView::RebuildSliceBitmap()
@@ -1899,7 +2091,7 @@ void ColorTextView::RebuildSliceBitmap()
         _sliceBitmap.reset();
         _sliceDipW                   = clampedWidth;
         _sliceDipH                   = hDip;
-        const UINT32 firstDisplayRow = _document.DisplayRowForSource(_sliceFirstLine);
+        const UINT32 firstDisplayRow = _sliceFirstDisplayRow;
         _sliceBitmapYBase            = static_cast<float>(firstDisplayRow) * GetLineHeight();
         return;
     }
@@ -1928,7 +2120,7 @@ void ColorTextView::RebuildSliceBitmap()
         _sliceDipW = clampedWidth;
         _sliceDipH = hDip;
         // Use display row offset for Y positioning (accounts for multi-line content)
-        const UINT32 firstDisplayRow = _document.DisplayRowForSource(_sliceFirstLine);
+        const UINT32 firstDisplayRow = _sliceFirstDisplayRow;
         _sliceBitmapYBase            = static_cast<float>(firstDisplayRow) * GetLineHeight();
         return;
     }
@@ -2007,7 +2199,7 @@ void ColorTextView::RebuildSliceBitmap()
 
     _sliceBitmap = std::move(newBmp);
     // Use display row offset for Y positioning (accounts for multi-line content)
-    const UINT32 firstDisplayRow = _document.DisplayRowForSource(_sliceFirstLine);
+    const UINT32 firstDisplayRow = _sliceFirstDisplayRow;
     _sliceBitmapYBase            = static_cast<float>(firstDisplayRow) * GetLineHeight();
     _sliceDipW                   = clampedWidth; // Store clamped width, not original
     _sliceDipH                   = hDip;
@@ -2267,26 +2459,25 @@ void ColorTextView::CreateFallbackLayoutIfNeeded(size_t visStartLine, size_t vis
     // when the async slice worker hasn't caught up with scroll position changes.
     // The 32-line margin is in *visible-line space* to stay robust under heavy filtering.
     const size_t fallbackMarginVis = 32;
-    const auto& visibleLines       = _document.VisibleLines();
-    if (visibleLines.empty())
+    const size_t visCount          = _document.VisibleLineCount();
+    if (visCount == 0)
         return;
 
-    const auto visBeginIt =
-        std::lower_bound(visibleLines.begin(), visibleLines.end(), visStartLine, [](const VisibleLine& vl, size_t src) { return vl.sourceIndex < src; });
-    const auto visEndIt =
-        std::lower_bound(visibleLines.begin(), visibleLines.end(), visEndLine, [](const VisibleLine& vl, size_t src) { return vl.sourceIndex < src; });
-    if (visBeginIt == visibleLines.end())
+    const auto startVisOpt = _document.LowerBoundVisibleIndexForSource(visStartLine);
+    if (! startVisOpt.has_value())
         return;
-
-    const size_t startVisIdx = static_cast<size_t>(std::distance(visibleLines.begin(), visBeginIt));
-    size_t endVisIdx         = static_cast<size_t>(std::distance(visibleLines.begin(), visEndIt));
-    if (endVisIdx >= visibleLines.size())
-        endVisIdx = visibleLines.size() - 1;
+    const size_t startVisIdx = startVisOpt.value();
+    const auto endVisOpt     = _document.LowerBoundVisibleIndexForSource(visEndLine);
+    const size_t endVisIdx   = endVisOpt.has_value() ? std::min(endVisOpt.value(), visCount - 1u) : (visCount - 1u);
 
     const size_t startWithMarginVis = (startVisIdx > fallbackMarginVis) ? (startVisIdx - fallbackMarginVis) : 0;
-    const size_t endWithMarginVis   = std::min(visibleLines.size() - 1, endVisIdx + fallbackMarginVis);
-    const size_t clampedStart       = visibleLines[startWithMarginVis].sourceIndex;
-    const size_t clampedEnd         = visibleLines[endWithMarginVis].sourceIndex;
+    const size_t endWithMarginVis   = std::min(visCount - 1, endVisIdx + fallbackMarginVis);
+    const auto clampedStartOpt      = _document.SourceIndexForVisible(startWithMarginVis);
+    const auto clampedEndOpt        = _document.SourceIndexForVisible(endWithMarginVis);
+    if (! clampedStartOpt.has_value() || ! clampedEndOpt.has_value())
+        return;
+    const size_t clampedStart = clampedStartOpt.value();
+    const size_t clampedEnd   = clampedEndOpt.value();
 
     const float desiredWidth = ComputeLayoutWidthDip();
 
@@ -2302,60 +2493,33 @@ void ColorTextView::CreateFallbackLayoutIfNeeded(size_t visStartLine, size_t vis
     _fallbackValid = false;
     _fallbackFilteredRuns.clear();
 
-    // Build text - handle filtering
-    std::wstring text;
+    // Build text in a single locked scope
+    auto tailResult = _document.BuildFilteredTailText(clampedStart, clampedEnd);
     std::vector<FilteredTextRun> filteredRuns;
     if (_document.GetFilterMask() != Debug::InfoParam::Type::All)
     {
-        // Build text from visible lines only
-        const auto visBegin =
-            std::lower_bound(visibleLines.begin(), visibleLines.end(), clampedStart, [](const VisibleLine& vl, size_t src) { return vl.sourceIndex < src; });
-        const auto visEnd =
-            std::upper_bound(visibleLines.begin(), visibleLines.end(), clampedEnd, [](size_t src, const VisibleLine& vl) { return src < vl.sourceIndex; });
-
-        filteredRuns.reserve(static_cast<size_t>(std::distance(visBegin, visEnd)));
-        for (auto it = visBegin; it != visEnd; ++it)
+        filteredRuns.reserve(tailResult.lines.size());
+        UINT32 layoutCursor = 0;
+        for (size_t idx = 0; idx < tailResult.lines.size(); ++idx)
         {
-            const size_t allIdx      = it->sourceIndex;
-            const auto& displayText  = _document.GetDisplayTextAll(allIdx);
-            const UINT32 layoutStart = static_cast<UINT32>(text.size());
-            const UINT32 runLen      = static_cast<UINT32>(displayText.size()) + 1u; // +1 for '\n' (trimmed for last run below)
-            const UINT32 sourceStart = _document.GetLineStartOffset(allIdx);
+            const auto& info      = tailResult.lines[idx];
+            const bool isLastLine = (idx + 1u == tailResult.lines.size());
+            const UINT32 runLen   = info.prefixLen + info.textLen + (isLastLine ? 0u : 1u);
             filteredRuns.push_back(FilteredTextRun{
-                .sourceLine  = allIdx,
-                .layoutStart = layoutStart,
+                .sourceLine  = info.sourceIndex,
+                .layoutStart = layoutCursor,
                 .length      = runLen,
-                .sourceStart = sourceStart,
+                .sourceStart = info.sourceStart,
             });
-            text.append(displayText);
-            text.append(L"\n");
-        }
-
-        // Remove trailing newline (layout uses separators between visible lines only)
-        if (! text.empty())
-        {
-            text.pop_back();
-            if (! filteredRuns.empty() && filteredRuns.back().length > 0)
-                --filteredRuns.back().length;
+            layoutCursor += runLen;
         }
     }
-    else
-    {
-        // No filtering - use position-based range
-        const UINT32 startPos = _document.GetLineStartOffset(clampedStart);
-        const auto& last      = _document.GetSourceLine(clampedEnd);
-        const UINT32 endPos   = _document.GetLineStartOffset(clampedEnd) + _document.PrefixLength(last) + static_cast<UINT32>(last.text.size());
-        const UINT32 length   = (endPos > startPos) ? (endPos - startPos) : 0;
 
-        if (length > 0)
-            text = _document.GetTextRange(startPos, length);
-    }
-
-    if (! text.empty())
+    if (! tailResult.text.empty())
     {
         wil::com_ptr<IDWriteTextLayout> temp;
-        if (SUCCEEDED(
-                _dwriteFactory->CreateTextLayout(text.c_str(), static_cast<UINT32>(text.size()), _textFormat.get(), desiredWidth, 1000000.f, temp.addressof())))
+        if (SUCCEEDED(_dwriteFactory->CreateTextLayout(
+                tailResult.text.c_str(), static_cast<UINT32>(tailResult.text.size()), _textFormat.get(), desiredWidth, 1000000.f, temp.addressof())))
         {
             _fallbackLayout       = temp;
             _fallbackStartLine    = clampedStart;
@@ -2722,13 +2886,25 @@ void ColorTextView::OnPaint()
         }
     }
 
-    if (! _textLayout && _document.TotalLineCount() > 0)
-        EnsureLayoutAsync();
+    if (_renderMode == RenderMode::AUTO_SCROLL)
+    {
+        if ((! _tailLayoutValid || ! _tailLayout) && _document.TotalLineCount() > 0)
+        {
+            RebuildTailLayout();
+        }
+    }
+    else
+    {
+        if (! _textLayout && _document.TotalLineCount() > 0)
+        {
+            EnsureLayoutAsync();
+        }
+    }
 
     _d2dCtx->SetTarget(_d2dTargetBitmap.get());
 
-    // Rebuild slice bitmap if missing and we have a layout
-    if (! _sliceBitmap && _textLayout)
+    // Rebuild slice bitmap if missing and we have a scroll-back layout
+    if (_renderMode == RenderMode::SCROLL_BACK && ! _sliceBitmap && _textLayout)
     {
         RebuildSliceBitmap();
     }
@@ -3210,47 +3386,65 @@ void ColorTextView::RebuildTailLayout()
     }
 #endif
 
-    // Build text for tail - handle filtering
-    std::wstring tailText;
-    Document::FilteredTailResult filteredTail; // Holds metadata for coloring pass
-    if (_document.GetFilterMask() != Debug::InfoParam::Type::All)
-    {
-        // Build filtered text in a single locked scope (avoids per-line visibility and display-text lock overhead)
-        filteredTail       = _document.BuildFilteredTailText(_tailFirstLine, tailLastLine);
-        tailText           = std::move(filteredTail.text);
-        _tailFilteredLines = std::move(filteredTail.lines);
+    // Build text for tail in a single locked scope (both filtered and unfiltered)
+    Document::FilteredTailResult filteredTail = _document.BuildFilteredTailText(_tailFirstLine, tailLastLine);
+    std::wstring tailText                     = std::move(filteredTail.text);
+    _tailIsFiltered                           = (_document.GetFilterMask() != Debug::InfoParam::Type::All);
+    _tailFilteredLines                        = std::move(filteredTail.lines);
+    _tailFilteredRuns.clear();
 
-#ifdef _DEBUG
-        if (shouldLog)
+    if (! _tailFilteredLines.empty())
+    {
+        _tailStartPos           = _tailFilteredLines.front().sourceStart;
+        const auto& lastTailRow = _tailFilteredLines.back();
+        _tailEndPos             = lastTailRow.sourceStart + lastTailRow.prefixLen + lastTailRow.textLen;
+        if (_tailIsFiltered)
         {
-            const UINT32 firstDisplayRow  = _document.DisplayRowForSource(_tailFirstLine);
-            const UINT32 totalDisplayRows = _document.TotalDisplayRows();
-            auto msg                      = std::format("  FILTERED: visibleInTail={}, firstDisplayRow={}, totalDisplayRows={}, textLength={}\n",
-                                                        filteredTail.visibleCount,
-                                                        firstDisplayRow,
-                                                        totalDisplayRows,
-                                                        tailText.length());
-            OutputDebugStringA(msg.c_str());
+            _tailFilteredRuns.reserve(_tailFilteredLines.size());
+            UINT32 layoutCursor = 0;
+            for (size_t idx = 0; idx < _tailFilteredLines.size(); ++idx)
+            {
+                const auto& info      = _tailFilteredLines[idx];
+                const bool isLastLine = (idx + 1u == _tailFilteredLines.size());
+                const UINT32 runLen   = info.prefixLen + info.textLen + (isLastLine ? 0u : 1u);
+                _tailFilteredRuns.push_back(FilteredTextRun{
+                    .sourceLine  = info.sourceIndex,
+                    .layoutStart = layoutCursor,
+                    .length      = runLen,
+                    .sourceStart = info.sourceStart,
+                });
+                layoutCursor += runLen;
+            }
         }
-#endif
     }
     else
     {
-        // No filtering - use position-based range
-        _tailFilteredLines.clear();
-        const UINT32 startPos = _document.GetLineStartOffset(_tailFirstLine);
-        const auto& lastLine  = _document.GetSourceLine(tailLastLine);
-        const UINT32 endPos   = _document.GetLineStartOffset(tailLastLine) + _document.PrefixLength(lastLine) + static_cast<UINT32>(lastLine.text.size());
-        const UINT32 length   = (endPos > startPos) ? (endPos - startPos) : 0;
-
-        if (length > 0)
-            tailText = _document.GetTextRange(startPos, length);
+        _tailStartPos = filteredTail.firstSourceStart;
+        _tailEndPos   = filteredTail.lastSourceEnd;
     }
+
+#ifdef _DEBUG
+    if (shouldLog && _tailIsFiltered)
+    {
+        const UINT32 firstDisplayRow  = _document.DisplayRowForSource(_tailFirstLine);
+        const UINT32 totalDisplayRows = _document.TotalDisplayRows();
+        auto msg                      = std::format("  FILTERED: visibleInTail={}, firstDisplayRow={}, totalDisplayRows={}, textLength={}\n",
+                                                    filteredTail.visibleCount,
+                                                    firstDisplayRow,
+                                                    totalDisplayRows,
+                                                    tailText.length());
+        OutputDebugStringA(msg.c_str());
+    }
+#endif
 
     if (tailText.empty())
     {
         _tailLayout.reset();
         _tailLayoutValid = false;
+        _tailStartPos    = 0;
+        _tailEndPos      = 0;
+        _tailFilteredLines.clear();
+        _tailFilteredRuns.clear();
         return;
     }
 
@@ -3286,70 +3480,23 @@ void ColorTextView::RebuildTailLayout()
 
 void ColorTextView::ApplyColoringToTailLayout()
 {
-    if (! _tailLayout || ! _tailLayoutValid)
+    if (! _tailLayout || ! _tailLayoutValid || ! _d2dCtx)
         return;
 
-    // Apply color ranges to tail layout
-    // Similar to ApplyColoringToLayout but for tail window
-    const size_t lineCount = _document.TotalLineCount();
-    if (lineCount == 0)
+    if (_tailFilteredLines.empty())
         return;
 
-    const size_t tailLastLine = lineCount - 1;
-    const bool isFiltered     = (_document.GetFilterMask() != Debug::InfoParam::Type::All);
-
-    if (isFiltered)
+    UINT32 layoutOffset = 0;
+    for (const auto& info : _tailFilteredLines)
     {
-        // FILTERED MODE: Use cached _tailFilteredLines from RebuildTailLayout
-        // This avoids per-line IsLineVisible() + GetSourceLine() lock overhead
-        UINT32 layoutOffset = 0;
+        const UINT32 lineContentLen = info.prefixLen + info.textLen;
+        const UINT32 layoutLineEnd  = layoutOffset + lineContentLen;
+        const UINT32 lineLen        = lineContentLen + 1; // +1 for newline separator
 
-        for (const auto& info : _tailFilteredLines)
+        if (info.hasMeta && info.prefixLen > 0)
         {
-            const UINT32 lineLen = info.prefixLen + info.textLen + 1; // +1 for newline separator
-
-            if (info.hasMeta && info.prefixLen > 0)
-            {
-                D2D1_COLOR_F color = _theme.metaText;
-                switch (info.type)
-                {
-                    case Debug::InfoParam::Error: color = _theme.metaError; break;
-                    case Debug::InfoParam::Warning: color = _theme.metaWarning; break;
-                    case Debug::InfoParam::Info: color = _theme.metaInfo; break;
-                    case Debug::InfoParam::Perf: color = _theme.metaPerf; break;
-                    case Debug::InfoParam::Debug: color = _theme.metaDebug; break;
-                    case Debug::InfoParam::Text:
-                    case Debug::InfoParam::All:
-                    default: break;
-                }
-
-                DWRITE_TEXT_RANGE range{layoutOffset, info.prefixLen};
-                auto* brush = GetBrush(color);
-                if (brush)
-                    _tailLayout->SetDrawingEffect(brush, range);
-            }
-
-            layoutOffset += lineLen;
-        }
-    }
-    else
-    {
-        // NON-FILTERED MODE: Use document-absolute positions (original logic)
-        const UINT32 tailStartPos = _document.GetLineStartOffset(_tailFirstLine);
-
-        for (size_t i = _tailFirstLine; i <= tailLastLine; ++i)
-        {
-            const auto& line = _document.GetSourceLine(i);
-            if (! line.hasMeta)
-                continue;
-
-            const UINT32 lineStartPos = _document.GetLineStartOffset(i);
-            const UINT32 prefixLen    = _document.PrefixLength(line);
-            const UINT32 localStart   = lineStartPos - tailStartPos;
-
-            // Color the prefix based on severity
             D2D1_COLOR_F color = _theme.metaText;
-            switch (line.meta.type)
+            switch (info.type)
             {
                 case Debug::InfoParam::Error: color = _theme.metaError; break;
                 case Debug::InfoParam::Warning: color = _theme.metaWarning; break;
@@ -3357,18 +3504,32 @@ void ColorTextView::ApplyColoringToTailLayout()
                 case Debug::InfoParam::Perf: color = _theme.metaPerf; break;
                 case Debug::InfoParam::Debug: color = _theme.metaDebug; break;
                 case Debug::InfoParam::Text:
-                case Debug::InfoParam::All: // Not a message type, use default
+                case Debug::InfoParam::All:
                 default: break;
             }
 
-            if (prefixLen > 0)
+            DWRITE_TEXT_RANGE range{layoutOffset, info.prefixLen};
+            auto* brush = GetBrush(color);
+            if (brush)
+                _tailLayout->SetDrawingEffect(brush, range);
+        }
+
+        for (const auto& span : info.spans)
+        {
+            auto* brush = GetBrush(span.color);
+            if (! brush)
+                continue;
+
+            const UINT32 spanStart = layoutOffset + info.prefixLen + span.start;
+            const UINT32 spanEnd   = std::min(spanStart + span.length, layoutLineEnd);
+            if (spanEnd > spanStart && spanStart < layoutLineEnd)
             {
-                DWRITE_TEXT_RANGE range{localStart, prefixLen};
-                auto* brush = GetBrush(color);
-                if (brush)
-                    _tailLayout->SetDrawingEffect(brush, range);
+                DWRITE_TEXT_RANGE range{spanStart, spanEnd - spanStart};
+                _tailLayout->SetDrawingEffect(brush, range);
             }
         }
+
+        layoutOffset += lineLen;
     }
 }
 
@@ -3429,7 +3590,8 @@ void ColorTextView::MaybeRefreshVirtualSliceOnScroll()
     if (_renderMode != RenderMode::SCROLL_BACK || ! _textLayout)
         return;
 
-    if (_document.TotalLineCount() == 0 || _document.VisibleLines().empty())
+    const size_t visCount = _document.VisibleLineCount();
+    if (_document.TotalLineCount() == 0 || visCount == 0)
         return;
 
     // Compute visible index range for current viewport (display-row based).
@@ -3447,20 +3609,17 @@ void ColorTextView::MaybeRefreshVirtualSliceOnScroll()
     const size_t visStartIdx = _document.VisibleIndexFromDisplayRow(clampedTopRow);
     const size_t visEndIdx   = _document.VisibleIndexFromDisplayRow(clampedBottomRow);
 
-    const auto& visibleLines = _document.VisibleLines();
-    const auto sliceBeginIt =
-        std::lower_bound(visibleLines.begin(), visibleLines.end(), _sliceFirstLine, [](const VisibleLine& vl, size_t src) { return vl.sourceIndex < src; });
-    const auto sliceEndIt =
-        std::lower_bound(visibleLines.begin(), visibleLines.end(), _sliceLastLine, [](const VisibleLine& vl, size_t src) { return vl.sourceIndex < src; });
+    const auto sliceFirstVisOpt = _document.LowerBoundVisibleIndexForSource(_sliceFirstLine);
+    const auto sliceLastVisOpt  = _document.LowerBoundVisibleIndexForSource(_sliceLastLine);
 
-    if (sliceBeginIt == visibleLines.end() || sliceEndIt == visibleLines.end())
+    if (! sliceFirstVisOpt.has_value() || ! sliceLastVisOpt.has_value())
     {
         EnsureLayoutAsync();
         return;
     }
 
-    const size_t sliceFirstVisIdx = static_cast<size_t>(std::distance(visibleLines.begin(), sliceBeginIt));
-    const size_t sliceLastVisIdx  = static_cast<size_t>(std::distance(visibleLines.begin(), sliceEndIt));
+    const size_t sliceFirstVisIdx = sliceFirstVisOpt.value();
+    const size_t sliceLastVisIdx  = sliceLastVisOpt.value();
 
     // Keep a margin so we don't thrash near the edges (in visible-line space).
     const size_t margin          = 8; // visible lines
@@ -3518,18 +3677,21 @@ void ColorTextView::StartLayoutWorker(float layoutWidth, UINT32 seq)
         const size_t endVisIdx   = _document.VisibleIndexFromDisplayRow(clampedBottomRow);
 
         // Safety check: ensure visible lines exist
-        const auto& visibleLines = _document.VisibleLines();
-        if (visibleLines.empty() || startVisIdx >= visibleLines.size() || endVisIdx >= visibleLines.size())
+        const size_t visCount = _document.VisibleLineCount();
+        if (visCount == 0 || startVisIdx >= visCount || endVisIdx >= visCount)
             return; // No visible lines to render
 
-        const size_t visCount     = visibleLines.size();
         const size_t wantFirstVis = startVisIdx > kSlicePrefetchMargin ? (startVisIdx - kSlicePrefetchMargin) : 0;
         const size_t wantLastVis  = std::min(visCount - 1, endVisIdx + kSlicePrefetchMargin);
         // Align to block boundaries (in visible-line space) for better cache reuse under heavy filtering.
         const size_t alignedFirstVis = (wantFirstVis / kSliceBlockLines) * kSliceBlockLines;
         const size_t alignedLastVis  = std::min(visCount - 1, ((wantLastVis / kSliceBlockLines) * kSliceBlockLines) + kSliceBlockLines - 1);
-        firstLine                    = visibleLines[alignedFirstVis].sourceIndex;
-        lastLine                     = visibleLines[alignedLastVis].sourceIndex;
+        const auto firstLineOpt      = _document.SourceIndexForVisible(alignedFirstVis);
+        const auto lastLineOpt       = _document.SourceIndexForVisible(alignedLastVis);
+        if (! firstLineOpt.has_value() || ! lastLineOpt.has_value())
+            return;
+        firstLine = firstLineOpt.value();
+        lastLine  = lastLineOpt.value();
     }
 
     // Try cache first for virtual slices
@@ -3558,81 +3720,48 @@ void ColorTextView::StartLayoutWorker(float layoutWidth, UINT32 seq)
         }
     }
 
-    // CRITICAL FIX: Capture text data on UI thread BEFORE spawning worker
+    // Capture text data on UI thread in a single locked scope BEFORE spawning worker
     std::wstring textCopy;
     UINT32 sliceStartPos        = 0;
     UINT32 sliceEndPos          = 0;
     UINT32 sliceFirstDisplayRow = 0;
-    bool sliceIsFiltered        = false;
+    bool sliceIsFiltered        = (_document.GetFilterMask() != Debug::InfoParam::Type::All);
     std::vector<FilteredTextRun> filteredRuns;
     {
-        // All document access happens here on UI thread with proper locking
-        // CRITICAL: When filtering is active, build text from VISIBLE lines only
-        // and track the display row offset for correct Y positioning.
-        // ApplyColoringToLayout will compute layout-relative positions for filtered mode.
-
-        if (_document.GetFilterMask() != Debug::InfoParam::Type::All)
+        auto tailResult      = _document.BuildFilteredTailText(firstLine, lastLine);
+        textCopy             = std::move(tailResult.text);
+        sliceFirstDisplayRow = _document.DisplayRowForSource(firstLine);
+        if (! tailResult.lines.empty())
         {
-            // FILTERING MODE: Build text from visible lines only
-            sliceIsFiltered          = true;
-            const auto& visibleLines = _document.VisibleLines();
-            const auto visBegin =
-                std::lower_bound(visibleLines.begin(), visibleLines.end(), firstLine, [](const VisibleLine& vl, size_t src) { return vl.sourceIndex < src; });
-            const auto visEnd =
-                std::upper_bound(visibleLines.begin(), visibleLines.end(), lastLine, [](size_t src, const VisibleLine& vl) { return src < vl.sourceIndex; });
+            sliceFirstDisplayRow = _document.DisplayRowForSource(tailResult.lines.front().sourceIndex);
+            sliceStartPos        = tailResult.lines.front().sourceStart;
+            const auto& lastInfo = tailResult.lines.back();
+            sliceEndPos          = lastInfo.sourceStart + lastInfo.prefixLen + lastInfo.textLen;
+        }
+        else if (! sliceIsFiltered)
+        {
+            sliceStartPos = tailResult.firstSourceStart;
+            sliceEndPos   = tailResult.lastSourceEnd;
+        }
 
-            if (visBegin == visEnd)
+        if (sliceIsFiltered && ! tailResult.lines.empty())
+        {
+            filteredRuns.reserve(tailResult.lines.size());
+            UINT32 layoutCursor = 0;
+            for (size_t idx = 0; idx < tailResult.lines.size(); ++idx)
             {
-                sliceFirstDisplayRow = _document.DisplayRowForSource(firstLine);
-                sliceStartPos        = 0;
-                sliceEndPos          = 0;
-            }
-            else
-            {
-                sliceFirstDisplayRow = visBegin->displayRowStart;
-                sliceStartPos        = _document.GetLineStartOffset(visBegin->sourceIndex);
-                const auto& lastVis  = *std::prev(visEnd);
-                const auto& last     = _document.GetSourceLine(lastVis.sourceIndex);
-                sliceEndPos          = _document.GetLineStartOffset(lastVis.sourceIndex) + _document.PrefixLength(last) + static_cast<UINT32>(last.text.size());
-
-                filteredRuns.reserve(static_cast<size_t>(std::distance(visBegin, visEnd)));
-                for (auto it = visBegin; it != visEnd; ++it)
-                {
-                    const size_t allIdx      = it->sourceIndex;
-                    const auto& displayText  = _document.GetDisplayTextAll(allIdx);
-                    const UINT32 layoutStart = static_cast<UINT32>(textCopy.size());
-                    const UINT32 runLen      = static_cast<UINT32>(displayText.size()) + 1u; // +1 for '\n' (trimmed for last run below)
-                    const UINT32 sourceStart = _document.GetLineStartOffset(allIdx);
-                    filteredRuns.push_back(FilteredTextRun{
-                        .sourceLine  = allIdx,
-                        .layoutStart = layoutStart,
-                        .length      = runLen,
-                        .sourceStart = sourceStart,
-                    });
-                    textCopy.append(displayText);
-                    textCopy.append(L"\n");
-                }
-            }
-
-            // Remove trailing newline (layout uses separators between visible lines only)
-            if (! textCopy.empty())
-            {
-                textCopy.pop_back();
-                if (! filteredRuns.empty() && filteredRuns.back().length > 0)
-                    --filteredRuns.back().length;
+                const auto& info      = tailResult.lines[idx];
+                const bool isLastLine = (idx + 1u == tailResult.lines.size());
+                const UINT32 runLen   = info.prefixLen + info.textLen + (isLastLine ? 0u : 1u);
+                filteredRuns.push_back(FilteredTextRun{
+                    .sourceLine  = info.sourceIndex,
+                    .layoutStart = layoutCursor,
+                    .length      = runLen,
+                    .sourceStart = info.sourceStart,
+                });
+                layoutCursor += runLen;
             }
         }
-        else
-        {
-            // NO FILTERING: Use position-based range (original logic)
-            sliceIsFiltered      = false;
-            sliceFirstDisplayRow = _document.DisplayRowForSource(firstLine);
-            sliceStartPos        = _document.GetLineStartOffset(firstLine);
-            const auto& last     = _document.GetSourceLine(lastLine);
-            sliceEndPos          = _document.GetLineStartOffset(lastLine) + _document.PrefixLength(last) + static_cast<UINT32>(last.text.size());
-            textCopy             = _document.GetTextRange(sliceStartPos, sliceEndPos - sliceStartPos);
-        }
-        textCopy.erase(std::remove(textCopy.begin(), textCopy.end(), L'\r'), textCopy.end());
     }
 
     // Worker context now includes captured text
@@ -3722,8 +3851,7 @@ void ColorTextView::StartLayoutWorker(float layoutWidth, UINT32 seq)
 
     if (! TrySubmitThreadpoolCallback(worker, rawCtx, nullptr))
     {
-        // Fallback: execute synchronously on calling thread
-        worker(nullptr, rawCtx);
+        delete rawCtx;
     }
 }
 namespace
@@ -3773,9 +3901,8 @@ void ColorTextView::ApplyColoringToLayout()
     ClearDebugSpans();
 #endif
 
-    // Clear previous drawing effects by resetting layout (cheap)
-    // Re-apply default first
-    // (DirectWrite has no "clear effects" call; we just overwrite spans)
+    // Clear previous drawing effects before reapplying current metadata and user spans
+    ClearTextLayoutEffects();
 
     if (_sliceIsFiltered)
     {
@@ -3858,8 +3985,8 @@ void ColorTextView::ApplyColoringToLayout()
     else
     {
         // NON-FILTERED MODE: Original document position-based logic
-        size_t beginLine = _document.GetLineAndOffset(_sliceStartPos).first;
-        size_t endLine   = _document.GetLineAndOffset(_sliceEndPos ? _sliceEndPos - 1 : 0).first;
+        size_t beginLine = _sliceFirstLine;
+        size_t endLine   = _sliceLastLine;
 
 #ifdef _DEBUG
         size_t spanIndex = 0;
@@ -3869,26 +3996,23 @@ void ColorTextView::ApplyColoringToLayout()
         {
             const auto& line  = _document.GetSourceLine(lineIdx);
             UINT32 lineOffset = _document.GetLineStartOffset(lineIdx);
+            const UINT32 plen = _document.PrefixLength(line);
 
             // 1) Color metadata prefix, if any
-            if (line.hasMeta)
+            if (line.hasMeta && plen > 0)
             {
-                const UINT32 plen = _document.PrefixLength(line);
-                if (plen)
+                const auto color               = MetaColorForType(_theme, line.meta.type);
+                ID2D1SolidColorBrush* rawBrush = GetBrush(color);
+                UINT32 absStart                = lineOffset;
+                UINT32 absEnd                  = absStart + plen;
+                if (! (absEnd <= _sliceStartPos || absStart >= _sliceEndPos))
                 {
-                    const auto color               = MetaColorForType(_theme, line.meta.type);
-                    ID2D1SolidColorBrush* rawBrush = GetBrush(color);
-                    UINT32 absStart                = lineOffset;
-                    UINT32 absEnd                  = absStart + plen;
-                    if (! (absEnd <= _sliceStartPos || absStart >= _sliceEndPos))
+                    absStart = std::max(absStart, _sliceStartPos);
+                    absEnd   = std::min(absEnd, _sliceEndPos);
+                    if (absEnd > absStart)
                     {
-                        absStart = std::max(absStart, _sliceStartPos);
-                        absEnd   = std::min(absEnd, _sliceEndPos);
-                        if (absEnd > absStart)
-                        {
-                            DWRITE_TEXT_RANGE r{absStart - _sliceStartPos, absEnd - absStart};
-                            _textLayout->SetDrawingEffect(rawBrush, r);
-                        }
+                        DWRITE_TEXT_RANGE r{absStart - _sliceStartPos, absEnd - absStart};
+                        _textLayout->SetDrawingEffect(rawBrush, r);
                     }
                 }
             }
@@ -3899,8 +4023,8 @@ void ColorTextView::ApplyColoringToLayout()
                 if (_d2dCtx)
                 {
                     ID2D1SolidColorBrush* rawBrush = GetBrush(span.color);
-                    // If using a virtualized slice, adjust range to local positions and clamp to slice
-                    UINT32 absStart = lineOffset + span.start;
+                    // Span positions are relative to line text (after prefix); adjust to document-absolute and clamp to slice
+                    UINT32 absStart = lineOffset + plen + span.start;
                     UINT32 absEnd   = absStart + span.length;
                     if (absEnd <= _sliceStartPos || absStart >= _sliceEndPos)
                         continue; // outside slice
@@ -3947,33 +4071,26 @@ void ColorTextView::DrawHighlights()
     UINT32 sourceEnd                         = 0;
     const std::vector<FilteredTextRun>* runs = nullptr;
 
-    auto [visStartLine, visEndLine] = GetVisibleLineRange();
-    const bool sliceCoversView      = _textLayout && (_sliceFirstLine <= visStartLine) && (_sliceLastLine >= visEndLine);
-
-    if (sliceCoversView)
+    if (_renderMode == RenderMode::AUTO_SCROLL && _tailLayoutValid && _tailLayout)
     {
-        layout      = _textLayout.get();
-        yBase       = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
-        isFiltered  = _sliceIsFiltered;
-        sourceStart = _sliceStartPos;
-        sourceEnd   = _sliceEndPos;
-        runs        = &_sliceFilteredRuns;
+        layout = _tailLayout.get();
+        DWRITE_TEXT_METRICS metrics{};
+        layout->GetMetrics(&metrics);
+        const float lineHeight        = GetLineHeight();
+        const UINT32 totalDisplayRows = _document.TotalDisplayRows();
+        const float documentBottom    = static_cast<float>(totalDisplayRows) * lineHeight;
+        yBase                         = documentBottom - metrics.height;
+        isFiltered                    = _tailIsFiltered;
+        sourceStart                   = _tailStartPos;
+        sourceEnd                     = _tailEndPos;
+        runs                          = &_tailFilteredRuns;
     }
     else
     {
-        CreateFallbackLayoutIfNeeded(visStartLine, visEndLine);
-        if (_fallbackValid && _fallbackLayout)
-        {
-            layout                  = _fallbackLayout.get();
-            const UINT32 displayRow = _document.DisplayRowForSource(_fallbackStartLine);
-            yBase                   = static_cast<float>(displayRow) * GetLineHeight();
-            isFiltered              = (_document.GetFilterMask() != Debug::InfoParam::Type::All);
-            sourceStart             = _document.GetLineStartOffset(_fallbackStartLine);
-            const auto& last        = _document.GetSourceLine(_fallbackEndLine);
-            sourceEnd               = _document.GetLineStartOffset(_fallbackEndLine) + _document.PrefixLength(last) + static_cast<UINT32>(last.text.size());
-            runs                    = &_fallbackFilteredRuns;
-        }
-        else
+        auto [visStartLine, visEndLine] = GetVisibleLineRange();
+        const bool sliceCoversView      = _textLayout && (_sliceFirstLine <= visStartLine) && (_sliceLastLine >= visEndLine);
+
+        if (sliceCoversView)
         {
             layout      = _textLayout.get();
             yBase       = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
@@ -3981,6 +4098,30 @@ void ColorTextView::DrawHighlights()
             sourceStart = _sliceStartPos;
             sourceEnd   = _sliceEndPos;
             runs        = &_sliceFilteredRuns;
+        }
+        else
+        {
+            CreateFallbackLayoutIfNeeded(visStartLine, visEndLine);
+            if (_fallbackValid && _fallbackLayout)
+            {
+                layout                  = _fallbackLayout.get();
+                const UINT32 displayRow = _document.DisplayRowForSource(_fallbackStartLine);
+                yBase                   = static_cast<float>(displayRow) * GetLineHeight();
+                isFiltered              = (_document.GetFilterMask() != Debug::InfoParam::Type::All);
+                sourceStart             = _document.GetLineStartOffset(_fallbackStartLine);
+                const auto& last        = _document.GetSourceLine(_fallbackEndLine);
+                sourceEnd               = _document.GetLineStartOffset(_fallbackEndLine) + _document.PrefixLength(last) + static_cast<UINT32>(last.text.size());
+                runs                    = &_fallbackFilteredRuns;
+            }
+            else
+            {
+                layout      = _textLayout.get();
+                yBase       = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
+                isFiltered  = _sliceIsFiltered;
+                sourceStart = _sliceStartPos;
+                sourceEnd   = _sliceEndPos;
+                runs        = &_sliceFilteredRuns;
+            }
         }
     }
 
@@ -4115,33 +4256,26 @@ void ColorTextView::DrawSelection()
     UINT32 sourceEnd                         = 0;
     const std::vector<FilteredTextRun>* runs = nullptr;
 
-    auto [visStartLine, visEndLine] = GetVisibleLineRange();
-    const bool sliceCoversView      = _textLayout && (_sliceFirstLine <= visStartLine) && (_sliceLastLine >= visEndLine);
-
-    if (sliceCoversView)
+    if (_renderMode == RenderMode::AUTO_SCROLL && _tailLayoutValid && _tailLayout)
     {
-        layout      = _textLayout.get();
-        yBase       = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
-        isFiltered  = _sliceIsFiltered;
-        sourceStart = _sliceStartPos;
-        sourceEnd   = _sliceEndPos;
-        runs        = &_sliceFilteredRuns;
+        layout = _tailLayout.get();
+        DWRITE_TEXT_METRICS metrics{};
+        layout->GetMetrics(&metrics);
+        const float lineHeight        = GetLineHeight();
+        const UINT32 totalDisplayRows = _document.TotalDisplayRows();
+        const float documentBottom    = static_cast<float>(totalDisplayRows) * lineHeight;
+        yBase                         = documentBottom - metrics.height;
+        isFiltered                    = _tailIsFiltered;
+        sourceStart                   = _tailStartPos;
+        sourceEnd                     = _tailEndPos;
+        runs                          = &_tailFilteredRuns;
     }
     else
     {
-        CreateFallbackLayoutIfNeeded(visStartLine, visEndLine);
-        if (_fallbackValid && _fallbackLayout)
-        {
-            layout                  = _fallbackLayout.get();
-            const UINT32 displayRow = _document.DisplayRowForSource(_fallbackStartLine);
-            yBase                   = static_cast<float>(displayRow) * GetLineHeight();
-            isFiltered              = (_document.GetFilterMask() != Debug::InfoParam::Type::All);
-            sourceStart             = _document.GetLineStartOffset(_fallbackStartLine);
-            const auto& last        = _document.GetSourceLine(_fallbackEndLine);
-            sourceEnd               = _document.GetLineStartOffset(_fallbackEndLine) + _document.PrefixLength(last) + static_cast<UINT32>(last.text.size());
-            runs                    = &_fallbackFilteredRuns;
-        }
-        else
+        auto [visStartLine, visEndLine] = GetVisibleLineRange();
+        const bool sliceCoversView      = _textLayout && (_sliceFirstLine <= visStartLine) && (_sliceLastLine >= visEndLine);
+
+        if (sliceCoversView)
         {
             layout      = _textLayout.get();
             yBase       = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
@@ -4149,6 +4283,30 @@ void ColorTextView::DrawSelection()
             sourceStart = _sliceStartPos;
             sourceEnd   = _sliceEndPos;
             runs        = &_sliceFilteredRuns;
+        }
+        else
+        {
+            CreateFallbackLayoutIfNeeded(visStartLine, visEndLine);
+            if (_fallbackValid && _fallbackLayout)
+            {
+                layout                  = _fallbackLayout.get();
+                const UINT32 displayRow = _document.DisplayRowForSource(_fallbackStartLine);
+                yBase                   = static_cast<float>(displayRow) * GetLineHeight();
+                isFiltered              = (_document.GetFilterMask() != Debug::InfoParam::Type::All);
+                sourceStart             = _document.GetLineStartOffset(_fallbackStartLine);
+                const auto& last        = _document.GetSourceLine(_fallbackEndLine);
+                sourceEnd               = _document.GetLineStartOffset(_fallbackEndLine) + _document.PrefixLength(last) + static_cast<UINT32>(last.text.size());
+                runs                    = &_fallbackFilteredRuns;
+            }
+            else
+            {
+                layout      = _textLayout.get();
+                yBase       = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
+                isFiltered  = _sliceIsFiltered;
+                sourceStart = _sliceStartPos;
+                sourceEnd   = _sliceEndPos;
+                runs        = &_sliceFilteredRuns;
+            }
         }
     }
 
@@ -4268,16 +4426,14 @@ std::pair<size_t, size_t> ColorTextView::GetVisibleLineRange() const
     const UINT32 clampedTopRow    = std::min(topRow, maxDisplayRow > 0 ? maxDisplayRow - 1 : 0);
     const UINT32 clampedBottomRow = std::min(bottomRow, maxDisplayRow > 0 ? maxDisplayRow - 1 : 0);
 
-    // Map display rows to logical line indices (source indices)
-    const size_t topVisIdx    = _document.VisibleIndexFromDisplayRow(clampedTopRow);
-    const size_t bottomVisIdx = _document.VisibleIndexFromDisplayRow(clampedBottomRow);
-
-    // Safety check: ensure visible lines exist
-    if (_document.VisibleLines().empty() || topVisIdx >= _document.VisibleLines().size() || bottomVisIdx >= _document.VisibleLines().size())
+    // Map display rows to logical line indices (source indices) without copying _visibleLines
+    const auto topSourceOpt    = _document.SourceLineForDisplayRow(clampedTopRow);
+    const auto bottomSourceOpt = _document.SourceLineForDisplayRow(clampedBottomRow);
+    if (! topSourceOpt.has_value() || ! bottomSourceOpt.has_value())
         return {0, 0}; // Return empty range if no visible lines
 
-    const size_t visStart = _document.VisibleLines()[topVisIdx].sourceIndex;
-    const size_t visEnd   = _document.VisibleLines()[bottomVisIdx].sourceIndex;
+    const size_t visStart = topSourceOpt.value();
+    const size_t visEnd   = bottomSourceOpt.value();
 
 #ifdef _DEBUG
     {
@@ -4414,27 +4570,57 @@ void ColorTextView::UpdateGutterWidth()
 RECT ColorTextView::GetCaretRectPx() const
 {
     RECT rc{};
-    if (! _textLayout)
+    IDWriteTextLayout* layout                = nullptr;
+    float yBase                              = 0.f;
+    bool isFiltered                          = false;
+    UINT32 sourceStart                       = 0;
+    UINT32 sourceEnd                         = 0;
+    const std::vector<FilteredTextRun>* runs = nullptr;
+
+    if (_renderMode == RenderMode::AUTO_SCROLL && _tailLayoutValid && _tailLayout)
+    {
+        layout = _tailLayout.get();
+        DWRITE_TEXT_METRICS metrics{};
+        layout->GetMetrics(&metrics);
+        const float lineHeight        = GetLineHeight();
+        const UINT32 totalDisplayRows = _document.TotalDisplayRows();
+        yBase                         = static_cast<float>(totalDisplayRows) * lineHeight - metrics.height;
+        isFiltered                    = _tailIsFiltered;
+        sourceStart                   = _tailStartPos;
+        sourceEnd                     = _tailEndPos;
+        runs                          = &_tailFilteredRuns;
+    }
+    else if (_textLayout)
+    {
+        layout      = _textLayout.get();
+        yBase       = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
+        isFiltered  = _sliceIsFiltered;
+        sourceStart = _sliceStartPos;
+        sourceEnd   = _sliceEndPos;
+        runs        = &_sliceFilteredRuns;
+    }
+    else
+    {
         return rc;
+    }
 
     const float dpiScale = _dpi / 96.f;
     const float tx       = _padding + (_displayLineNumbers ? _gutterDipW : 0.f) - _scrollX;
-    const float ty       = _padding - _scrollY + static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
+    const float ty       = _padding - _scrollY + yBase;
     DWRITE_HIT_TEST_METRICS m{};
     FLOAT cx = 0;
     FLOAT cy = 0;
 
     std::optional<UINT32> localPos;
-    if (! _sliceIsFiltered)
+    if (! isFiltered)
     {
-        if (_caretPos >= _sliceStartPos && _caretPos <= _sliceEndPos)
-            localPos = _caretPos - _sliceStartPos;
+        if (_caretPos >= sourceStart && _caretPos <= sourceEnd)
+            localPos = _caretPos - sourceStart;
     }
-    else if (! _sliceFilteredRuns.empty())
+    else if (runs && ! runs->empty())
     {
-        auto it = std::upper_bound(
-            _sliceFilteredRuns.begin(), _sliceFilteredRuns.end(), _caretPos, [](UINT32 value, const FilteredTextRun& run) { return value < run.sourceStart; });
-        if (it != _sliceFilteredRuns.begin())
+        auto it = std::upper_bound(runs->begin(), runs->end(), _caretPos, [](UINT32 value, const FilteredTextRun& run) { return value < run.sourceStart; });
+        if (it != runs->begin())
             --it;
 
         const UINT32 runStart = it->sourceStart;
@@ -4446,7 +4632,7 @@ RECT ColorTextView::GetCaretRectPx() const
     if (! localPos)
         return rc;
 
-    _textLayout->HitTestTextPosition(localPos.value(), FALSE, &cx, &cy, &m);
+    layout->HitTestTextPosition(localPos.value(), FALSE, &cx, &cy, &m);
     const float left   = (tx + cx) * dpiScale;
     const float top    = (ty + cy) * dpiScale;
     const float right  = (tx + cx + 2.f) * dpiScale;
@@ -4510,17 +4696,32 @@ void ColorTextView::EnsureWidthAsync()
         _maxMeasuredIndex = 0;
     }
 
+    static constexpr size_t kMaxWidthMeasurementCandidates = 32u;
+    auto candidates                                        = _document.CollectWidthCandidates(first, last, kMaxWidthMeasurementCandidates);
+    if (candidates.empty())
+    {
+        const float fallback = GetAverageCharWidth() * static_cast<float>(_document.LongestLineChars());
+        const float widthDip = std::max(_maxMeasuredWidth, fallback);
+        if (std::fabs(widthDip - _approxContentWidth) > 0.1f)
+        {
+            _approxContentWidth = widthDip;
+            ClampHorizontalScroll();
+            UpdateScrollBars();
+        }
+        return;
+    }
+
     std::vector<size_t> indices;
     std::vector<std::wstring> texts;
-    const size_t count = last - first + 1;
-    indices.reserve(count);
-    texts.reserve(count);
+    indices.reserve(candidates.size());
+    texts.reserve(candidates.size());
 
-    for (size_t idx = first; idx <= last; ++idx)
+    for (auto& candidate : candidates)
     {
-        indices.push_back(idx);
-        texts.emplace_back(_document.GetDisplayTextAll(idx));
-        _lineWidthCache[idx] = 0.f;
+        indices.push_back(candidate.sourceIndex);
+        if (candidate.sourceIndex < _lineWidthCache.size())
+            _lineWidthCache[candidate.sourceIndex] = 0.f;
+        texts.emplace_back(std::move(candidate.displayText));
     }
 
     const UINT32 seq = ++_widthSeq;
@@ -4587,7 +4788,7 @@ void ColorTextView::EnsureWidthAsync()
 
     if (! TrySubmitThreadpoolCallback(worker, rawCtx, nullptr))
     {
-        worker(nullptr, rawCtx);
+        delete rawCtx;
     }
 }
 void ColorTextView::DrawLineNumbers()
@@ -4610,13 +4811,9 @@ void ColorTextView::DrawLineNumbers()
     const size_t startVisIdx = _document.VisibleIndexFromDisplayRow(clampedTopRow);
     const size_t endVisIdx   = _document.VisibleIndexFromDisplayRow(clampedBottomRow);
 
-    // Safety check: ensure visible lines exist
-    if (_document.VisibleLines().empty() || startVisIdx >= _document.VisibleLines().size() || endVisIdx >= _document.VisibleLines().size())
+    const auto visibleSlice = _document.CopyVisibleLinesRange(startVisIdx, endVisIdx);
+    if (visibleSlice.empty())
         return; // No visible lines to draw
-
-    const auto& visibleLines  = _document.VisibleLines();
-    const size_t clampedStart = std::min(startVisIdx, visibleLines.size() - 1);
-    const size_t clampedEnd   = std::min(endVisIdx, visibleLines.size() - 1);
 
 #ifdef _DEBUG
     static int debugCounter = 0;
@@ -4628,8 +4825,8 @@ void ColorTextView::DrawLineNumbers()
         auto msg                  = std::format("DrawLineNumbers: topRow={}, bottomRow={}, startLine={}, endLine={}, visible={}/{}, mask=0x{:02X}\n",
                                                 clampedTopRow,
                                                 clampedBottomRow,
-                                                visibleLines[clampedStart].sourceIndex,
-                                                visibleLines[clampedEnd].sourceIndex,
+                                                visibleSlice.front().sourceIndex,
+                                                visibleSlice.back().sourceIndex,
                                                 visibleCount,
                                                 totalCount,
                                                 filterMask);
@@ -4637,9 +4834,9 @@ void ColorTextView::DrawLineNumbers()
     }
 #endif
 
-    for (size_t visIdx = clampedStart; visIdx <= clampedEnd && visIdx < visibleLines.size(); ++visIdx)
+    for (size_t i = 0; i < visibleSlice.size(); ++i)
     {
-        const auto& vl          = visibleLines[visIdx];
+        const auto& vl          = visibleSlice[i];
         const UINT32 displayRow = vl.displayRowStart;
 
         // Only draw line number if the line's first display row is within visible viewport
@@ -4648,7 +4845,7 @@ void ColorTextView::DrawLineNumbers()
         if (displayRow < clampedTopRow || displayRow > clampedBottomRow)
         {
 #ifdef _DEBUG
-            if (debugCounter % 60 == 0 && visIdx <= clampedStart + 2)
+            if (debugCounter % 60 == 0 && i <= 2)
             {
                 auto msg =
                     std::format("  Line {} start row {} is outside viewport [{}, {}]\n", vl.sourceIndex + 1, displayRow, clampedTopRow, clampedBottomRow);
@@ -4663,7 +4860,7 @@ void ColorTextView::DrawLineNumbers()
         auto rc                = D2D1::RectF(2.f, y, _gutterDipW - 2.f, y + lineHeight + 2.f);
 
 #ifdef _DEBUG
-        if (debugCounter % 60 == 0 && visIdx <= clampedStart + 2)
+        if (debugCounter % 60 == 0 && i <= 2)
         {
             auto msg = std::format("  Drawing line {} at y={:.1f} (displayRow={})\n", vl.sourceIndex + 1, y, displayRow);
             OutputDebugStringA(msg.c_str());
@@ -4677,23 +4874,57 @@ void ColorTextView::DrawLineNumbers()
 
 void ColorTextView::DrawCaret()
 {
-    if (! _textLayout || ! _d2dCtx || ! _hasFocus || _selStart != _selEnd || ! _caretBlinkOn)
+    if (! _d2dCtx || ! _hasFocus || _selStart != _selEnd || ! _caretBlinkOn)
         return;
+
+    IDWriteTextLayout* layout                = nullptr;
+    float yBase                              = 0.f;
+    bool isFiltered                          = false;
+    UINT32 sourceStart                       = 0;
+    UINT32 sourceEnd                         = 0;
+    const std::vector<FilteredTextRun>* runs = nullptr;
+
+    if (_renderMode == RenderMode::AUTO_SCROLL && _tailLayoutValid && _tailLayout)
+    {
+        layout = _tailLayout.get();
+        DWRITE_TEXT_METRICS metrics{};
+        layout->GetMetrics(&metrics);
+        const float lineHeight        = GetLineHeight();
+        const UINT32 totalDisplayRows = _document.TotalDisplayRows();
+        yBase                         = static_cast<float>(totalDisplayRows) * lineHeight - metrics.height;
+        isFiltered                    = _tailIsFiltered;
+        sourceStart                   = _tailStartPos;
+        sourceEnd                     = _tailEndPos;
+        runs                          = &_tailFilteredRuns;
+    }
+    else if (_textLayout)
+    {
+        layout      = _textLayout.get();
+        yBase       = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
+        isFiltered  = _sliceIsFiltered;
+        sourceStart = _sliceStartPos;
+        sourceEnd   = _sliceEndPos;
+        runs        = &_sliceFilteredRuns;
+    }
+    else
+    {
+        return;
+    }
+
     // Draw caret using transform-based coordinates
     DWRITE_HIT_TEST_METRICS m{};
     FLOAT cx = 0, cy = 0;
 
     std::optional<UINT32> localPos;
-    if (! _sliceIsFiltered)
+    if (! isFiltered)
     {
-        if (_caretPos >= _sliceStartPos && _caretPos <= _sliceEndPos)
-            localPos = _caretPos - _sliceStartPos;
+        if (_caretPos >= sourceStart && _caretPos <= sourceEnd)
+            localPos = _caretPos - sourceStart;
     }
-    else if (! _sliceFilteredRuns.empty())
+    else if (runs && ! runs->empty())
     {
-        auto it = std::upper_bound(
-            _sliceFilteredRuns.begin(), _sliceFilteredRuns.end(), _caretPos, [](UINT32 value, const FilteredTextRun& run) { return value < run.sourceStart; });
-        if (it != _sliceFilteredRuns.begin())
+        auto it = std::upper_bound(runs->begin(), runs->end(), _caretPos, [](UINT32 value, const FilteredTextRun& run) { return value < run.sourceStart; });
+        if (it != runs->begin())
             --it;
 
         const UINT32 runStart = it->sourceStart;
@@ -4705,10 +4936,9 @@ void ColorTextView::DrawCaret()
     if (! localPos)
         return;
 
-    _textLayout->HitTestTextPosition(localPos.value(), FALSE, &cx, &cy, &m);
-    const float yBase = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
-    const float tx    = _padding + (_displayLineNumbers ? _gutterDipW : 0.f) - _scrollX;
-    const float ty    = _padding - _scrollY;
+    layout->HitTestTextPosition(localPos.value(), FALSE, &cx, &cy, &m);
+    const float tx = _padding + (_displayLineNumbers ? _gutterDipW : 0.f) - _scrollX;
+    const float ty = _padding - _scrollY;
     D2D1_MATRIX_3X2_F prev{};
     _d2dCtx->GetTransform(&prev);
     _d2dCtx->SetTransform(D2D1::Matrix3x2F::Translation(tx, ty));
@@ -4742,39 +4972,7 @@ void ColorTextView::CopySelectionToClipboard()
     }
     else
     {
-        // Selection is stored in source-document coordinates (unfiltered space).
-        // When filtering is active, that range may include hidden lines, so build the clipboard text
-        // by intersecting the selection with the visible line set.
-        const auto& visible = _document.VisibleLines();
-        bool firstChunk     = true;
-        for (const auto& vl : visible)
-        {
-            const size_t srcIndex = vl.sourceIndex;
-            const UINT32 lineBase = _document.GetLineStartOffset(srcIndex);
-            const auto& line      = _document.GetSourceLine(srcIndex);
-            const UINT32 lineLen  = _document.PrefixLength(line) + static_cast<UINT32>(line.text.size());
-            const UINT32 lineEnd  = lineBase + lineLen; // exclusive (no separator)
-
-            const UINT32 segStart = std::max(s, lineBase);
-            const UINT32 segEnd   = std::min(e, lineEnd);
-            if (segEnd <= segStart)
-                continue;
-
-            const auto& display   = _document.GetDisplayTextAll(srcIndex); // prefix + text
-            const UINT32 localOff = segStart - lineBase;
-            const UINT32 localLen = segEnd - segStart;
-            if (localOff >= display.size() || localLen == 0)
-                continue;
-
-            const UINT32 clampedLen = std::min(localLen, static_cast<UINT32>(display.size() - localOff));
-            if (clampedLen == 0)
-                continue;
-
-            if (! firstChunk)
-                sel.push_back(L'\n');
-            firstChunk = false;
-            sel.append(display, localOff, clampedLen);
-        }
+        sel = _document.GetFilteredTextRange(s, e);
     }
 
     if (sel.empty())
@@ -4789,6 +4987,12 @@ void ColorTextView::RebuildMatches()
     _matchIndex       = -1;
     _searchScanLine   = 0u;
     _searchScanOffset = 0u;
+
+    _searchLower = _search;
+    if (! _searchCaseSensitive)
+    {
+        std::transform(_searchLower.begin(), _searchLower.end(), _searchLower.begin(), ::towlower);
+    }
 
     if (_search.empty() || _document.TotalLineCount() == 0)
         return;
@@ -4809,33 +5013,14 @@ void ColorTextView::AppendMatchesForRange(size_t /*firstSourceLine*/)
         return;
     }
 
-    const bool filterActive     = _document.GetFilterMask() != Debug::InfoParam::Type::All;
-    const size_t totalLineCount = _document.TotalLineCount();
-    _searchScanLine             = std::min(_searchScanLine, totalLineCount);
-
-    while (_searchScanLine < totalLineCount && _matches.size() < _maxSearchMatches)
+    if (! _searchCaseSensitive && _searchLower.size() != _search.size())
     {
-        if (filterActive && ! _document.IsLineVisible(_searchScanLine))
-        {
-            ++_searchScanLine;
-            _searchScanOffset = 0u;
-            continue;
-        }
-
-        const Line line       = _document.GetSourceLine(_searchScanLine);
-        const size_t position = _searchCaseSensitive ? line.text.find(_search, _searchScanOffset) : FindCaseIncensitive(line.text, _search, _searchScanOffset);
-        if (position == std::wstring::npos)
-        {
-            ++_searchScanLine;
-            _searchScanOffset = 0u;
-            continue;
-        }
-
-        const UINT32 lineStart = _document.GetLineStartOffset(_searchScanLine);
-        const UINT32 prefixLen = _document.PrefixLength(line);
-        _matches.push_back(Line::ColorSpan{lineStart + prefixLen + static_cast<UINT32>(position), static_cast<UINT32>(_search.size()), _theme.searchHighlight});
-        _searchScanOffset = position + _search.size();
+        _searchLower = _search;
+        std::transform(_searchLower.begin(), _searchLower.end(), _searchLower.begin(), ::towlower);
     }
+
+    std::tie(_searchScanLine, _searchScanOffset) = _document.FindMatchesInRange(
+        _searchScanLine, _searchScanOffset, _search, _searchLower, _searchCaseSensitive, _theme.searchHighlight, _maxSearchMatches, _matches);
 }
 
 // ---- Message dispatch ----
@@ -4894,37 +5079,52 @@ UINT32 ColorTextView::PosFromPoint(float x, float y)
     UINT32 sourceBase                        = 0;
     const std::vector<FilteredTextRun>* runs = nullptr;
 
-    auto [visStartLine, visEndLine] = GetVisibleLineRange();
-    const bool sliceCoversView      = _textLayout && (_sliceFirstLine <= visStartLine) && (_sliceLastLine >= visEndLine);
-
-    if (sliceCoversView)
+    if (_renderMode == RenderMode::AUTO_SCROLL && _tailLayoutValid && _tailLayout)
     {
-        layout     = _textLayout.get();
-        yBase      = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
-        isFiltered = _sliceIsFiltered;
-        sourceBase = _sliceStartPos;
-        runs       = &_sliceFilteredRuns;
+        layout = _tailLayout.get();
+        DWRITE_TEXT_METRICS metrics{};
+        layout->GetMetrics(&metrics);
+        const float lineHeight        = GetLineHeight();
+        const UINT32 totalDisplayRows = _document.TotalDisplayRows();
+        yBase                         = static_cast<float>(totalDisplayRows) * lineHeight - metrics.height;
+        isFiltered                    = _tailIsFiltered;
+        sourceBase                    = _tailStartPos;
+        runs                          = &_tailFilteredRuns;
     }
     else
     {
-        CreateFallbackLayoutIfNeeded(visStartLine, visEndLine);
-        if (_fallbackValid && _fallbackLayout)
+        auto [visStartLine, visEndLine] = GetVisibleLineRange();
+        const bool sliceCoversView      = _textLayout && (_sliceFirstLine <= visStartLine) && (_sliceLastLine >= visEndLine);
+
+        if (sliceCoversView)
         {
-            layout                  = _fallbackLayout.get();
-            const UINT32 displayRow = _document.DisplayRowForSource(_fallbackStartLine);
-            yBase                   = static_cast<float>(displayRow) * GetLineHeight();
-            isFiltered              = (_document.GetFilterMask() != Debug::InfoParam::Type::All);
-            sourceBase              = _document.GetLineStartOffset(_fallbackStartLine);
-            runs                    = &_fallbackFilteredRuns;
-        }
-        else if (_textLayout)
-        {
-            // Best-effort hit test against the last known slice.
             layout     = _textLayout.get();
             yBase      = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
             isFiltered = _sliceIsFiltered;
             sourceBase = _sliceStartPos;
             runs       = &_sliceFilteredRuns;
+        }
+        else
+        {
+            CreateFallbackLayoutIfNeeded(visStartLine, visEndLine);
+            if (_fallbackValid && _fallbackLayout)
+            {
+                layout                  = _fallbackLayout.get();
+                const UINT32 displayRow = _document.DisplayRowForSource(_fallbackStartLine);
+                yBase                   = static_cast<float>(displayRow) * GetLineHeight();
+                isFiltered              = (_document.GetFilterMask() != Debug::InfoParam::Type::All);
+                sourceBase              = _document.GetLineStartOffset(_fallbackStartLine);
+                runs                    = &_fallbackFilteredRuns;
+            }
+            else if (_textLayout)
+            {
+                // Best-effort hit test against the last known slice.
+                layout     = _textLayout.get();
+                yBase      = static_cast<float>(_sliceFirstDisplayRow) * GetLineHeight();
+                isFiltered = _sliceIsFiltered;
+                sourceBase = _sliceStartPos;
+                runs       = &_sliceFilteredRuns;
+            }
         }
     }
 
@@ -5194,6 +5394,45 @@ void ColorTextView::EnsureFindBar()
     UpdateFindBarTheme();
     HideFindBar();
 }
+void ColorTextView::DestroyFindBar() noexcept
+{
+    if (_findLiveTimerArmed && _hWnd)
+    {
+        KillTimer(_hWnd, kFindLiveTimerId);
+        _findLiveTimerArmed = false;
+    }
+
+    if (_hFindEdit)
+    {
+        if (_prevEditProc)
+        {
+            SetWindowLongPtr(_hFindEdit.get(), GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_prevEditProc));
+            _prevEditProc = nullptr;
+        }
+        SetWindowLongPtr(_hFindEdit.get(), GWLP_USERDATA, 0);
+        _hFindEdit.reset();
+    }
+
+    _hFindCase.reset();
+    _hFindFrom.reset();
+    _hFindLabel.reset();
+
+    if (_hFindPanel)
+    {
+        if (_prevFindPanelProc)
+        {
+            SetWindowLongPtr(_hFindPanel.get(), GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_prevFindPanelProc));
+            _prevFindPanelProc = nullptr;
+        }
+        SetWindowLongPtr(_hFindPanel.get(), GWLP_USERDATA, 0);
+        _hFindPanel.reset();
+    }
+
+    _findFont.reset();
+    _findPanelBgBrush.reset();
+    _findEditBgBrush.reset();
+    _findBorderBrush.reset();
+}
 void ColorTextView::ShowFindBar()
 {
     EnsureFindBar();
@@ -5273,6 +5512,7 @@ LRESULT ColorTextView::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
     switch (msg)
     {
         case WM_CREATE: OnCreate(reinterpret_cast<CREATESTRUCT*>(lParam)); return 0;
+        case WM_DESTROY: DestroyFindBar(); return 0;
         case WM_ENTERSIZEMOVE: OnEnterSizeMove(); return 0;
         case WM_EXITSIZEMOVE: OnExitSizeMove(); return 0;
         case WM_ERASEBKGND:
@@ -5304,7 +5544,12 @@ LRESULT ColorTextView::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
             return OnAppWidthReady(pkt.release());
         }
         case WM_NCDESTROY:
+            DestroyFindBar();
             _hWndAtomic.store(nullptr, std::memory_order_release);
+            {
+                auto lock            = _etwQueueCS.lock();
+                _etwBatchPostPending = false;
+            }
             static_cast<void>(DrainPostedPayloadsForWindow(hwnd));
             SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
             _hWnd = nullptr;
@@ -5456,7 +5701,6 @@ LRESULT ColorTextView::OnAppEtwBatch()
     std::vector<Document::InfoLineInput> batch;
     size_t queueDepthAtDrain     = 0;
     size_t drainedCountForMetric = 0;
-    size_t remainingAfterDrain   = 0;
     {
         auto lock               = _etwQueueCS.lock();
         const size_t drainCount = std::min(kMaxBatchSize, _etwEventQueue.size());
@@ -5470,14 +5714,6 @@ LRESULT ColorTextView::OnAppEtwBatch()
             batch.push_back(Document::InfoLineInput{.info = entry.info, .text = std::move(entry.message)});
             _etwEventQueue.pop_front();
         }
-
-        remainingAfterDrain = _etwEventQueue.size();
-    }
-
-    const bool repostRequested = remainingAfterDrain > 0 && _hWnd;
-    if (repostRequested)
-    {
-        PostMessage(_hWnd, WndMsg::kColorTextViewEtwBatch, 0, 0);
     }
 
     if (! batch.empty())
@@ -5499,11 +5735,6 @@ LRESULT ColorTextView::OnAppEtwBatch()
                                     Debug::Perf::ElapsedUs(matchUpdateStarted),
                                     static_cast<uint64_t>(_document.TotalLineCount() - firstAppendedLine),
                                     static_cast<uint64_t>(_matches.size()),
-                                    S_OK);
-        Debug::Perf::EmitDurationUs(L"monitor.etw.document_append_batch_us",
-                                    Debug::Perf::ElapsedUs(appendStarted),
-                                    static_cast<uint64_t>(drainedCount),
-                                    static_cast<uint64_t>(remainingAfterDrain),
                                     S_OK);
 
         // Query document state once after the entire batch (instead of per-event).
@@ -5538,12 +5769,71 @@ LRESULT ColorTextView::OnAppEtwBatch()
             {
                 SwitchToScrollBackMode();
             }
-            EnsureLayoutAdaptive(1);
-            InvalidateSliceBitmap();
+            else
+            {
+                auto [visStartLine, visEndLine] = GetVisibleLineRange();
+                const bool sliceCoversView      = _textLayout && (_sliceFirstLine <= visStartLine) && (_sliceLastLine >= visEndLine);
+                const bool sliceTouchedByAppend = _textLayout && (_sliceLastLine >= firstAppendedLine);
+                if (! sliceCoversView || sliceTouchedByAppend)
+                {
+                    EnsureLayoutAsync();
+                }
+                if (sliceTouchedByAppend)
+                {
+                    InvalidateSliceBitmap();
+                }
+            }
+            UpdateScrollBars();
         }
 
         EnsureWidthAsync();
         Invalidate();
+
+        // Throttle synchronous paints during continuous posted-batch storms so WM_PAINT is never starved.
+        static constexpr ULONGLONG kMinBatchPaintIntervalMs = 16ull;
+        const ULONGLONG nowTick                             = GetTickCount64();
+        if (_hWnd && (nowTick - _lastBatchPaintTick >= kMinBatchPaintIntervalMs))
+        {
+            _lastBatchPaintTick = nowTick;
+            UpdateWindow(_hWnd);
+        }
+
+        size_t remainingAtAppendEnd = 0;
+        {
+            auto lock            = _etwQueueCS.lock();
+            remainingAtAppendEnd = _etwEventQueue.size();
+        }
+        Debug::Perf::EmitDurationUs(L"monitor.etw.document_append_batch_us",
+                                    Debug::Perf::ElapsedUs(appendStarted),
+                                    static_cast<uint64_t>(drainedCount),
+                                    static_cast<uint64_t>(remainingAtAppendEnd),
+                                    S_OK);
+    }
+
+    size_t remainingAfterDrain = 0;
+    bool repostRequested       = false;
+    {
+        auto lock           = _etwQueueCS.lock();
+        remainingAfterDrain = _etwEventQueue.size();
+        if (remainingAfterDrain > 0 && _hWnd)
+        {
+            _etwBatchPostPending = true;
+            repostRequested      = true;
+        }
+        else
+        {
+            _etwBatchPostPending = false;
+        }
+    }
+
+    if (repostRequested)
+    {
+        if (! PostMessage(_hWnd, WndMsg::kColorTextViewEtwBatch, 0, 0))
+        {
+            auto lock            = _etwQueueCS.lock();
+            _etwBatchPostPending = false;
+            repostRequested      = false;
+        }
     }
 
     if (drainedCountForMetric != 0u)
@@ -5768,6 +6058,8 @@ void ColorTextView::OnKeyDown(WPARAM vk)
             break;
         case VK_F3: FindNext(shift); break;
         case VK_PRIOR: // Page Up
+            if (_renderMode == RenderMode::AUTO_SCROLL)
+                SwitchToScrollBackMode();
             if (ctrl)
                 ScrollTo(0.f); // Ctrl+PageUp = top
             else
@@ -5775,9 +6067,16 @@ void ColorTextView::OnKeyDown(WPARAM vk)
             break;
         case VK_NEXT: // Page Down
             if (ctrl)
-                ScrollTo(_contentHeight); // Ctrl+PageDown = bottom
+            {
+                if (_renderMode != RenderMode::AUTO_SCROLL)
+                    SwitchToAutoScrollMode();
+                else
+                    ScrollTo(_contentHeight); // Ctrl+PageDown = bottom
+            }
             else
+            {
                 ScrollBy(+_clientDipH * 0.9f);
+            }
             break;
         case VK_HOME:
             if (ctrl)
@@ -6008,7 +6307,14 @@ void ColorTextView::MoveCaretToLine(UINT32 targetLine, bool extendSelection)
     auto [visStartLine, visEndLine] = GetVisibleLineRange();
     const bool sliceCoversView      = _textLayout && (_sliceFirstLine <= visStartLine) && (_sliceLastLine >= visEndLine);
 
-    if (sliceCoversView)
+    if (_renderMode == RenderMode::AUTO_SCROLL && _tailLayoutValid && _tailLayout)
+    {
+        layout     = _tailLayout.get();
+        isFiltered = _tailIsFiltered;
+        sourceBase = _tailStartPos;
+        runs       = &_tailFilteredRuns;
+    }
+    else if (sliceCoversView)
     {
         layout     = _textLayout.get();
         isFiltered = _sliceIsFiltered;
@@ -6351,7 +6657,27 @@ void ColorTextView::SetLinePadding(float top, float bottom)
     {
         _textFormat->SetLineSpacing(DWRITE_LINE_SPACING_METHOD_UNIFORM, _fontSize + _linePaddingTop + _linePaddingBottom, _fontSize * 0.8f + _linePaddingTop);
     }
-    EnsureLayoutAsync();
+    _textLayout.reset();
+    _tailLayout.reset();
+    _fallbackLayout.reset();
+    _layoutCache.clear();
+    _lineMetrics.clear();
+    _tailLayoutValid = false;
+    _fallbackValid   = false;
+    InvalidateSliceBitmap();
+    const UINT32 displayRows = _document.TotalDisplayRows();
+    _contentHeight           = static_cast<float>(displayRows) * GetLineHeight() + _padding * 2.f;
+    if (_renderMode == RenderMode::AUTO_SCROLL)
+    {
+        RebuildTailLayout();
+        ScrollToBottom();
+    }
+    else
+    {
+        ClampScroll();
+        UpdateScrollBars();
+        EnsureLayoutAsync();
+    }
     Invalidate();
 }
 

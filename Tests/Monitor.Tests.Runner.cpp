@@ -159,9 +159,94 @@ namespace
     const auto backwardAnchor       = document.ClosestVisibleSourceLine(3u);
 
     constexpr size_t kNoSourceLine = std::numeric_limits<size_t>::max();
-    return batchAppended && document.VisibleLineCount() == 2u && document.TotalDisplayRows() == 3u && firstVisibleSource.value_or(kNoSourceLine) == 1u &&
+    if (! (batchAppended && document.VisibleLineCount() == 2u && document.TotalDisplayRows() == 3u && firstVisibleSource.value_or(kNoSourceLine) == 1u &&
            wrappedVisibleSource.value_or(kNoSourceLine) == 2u && forwardAnchor.value_or(kNoSourceLine) == 1u && exactAnchor.value_or(kNoSourceLine) == 2u &&
-           backwardAnchor.value_or(kNoSourceLine) == 2u && document.DisplayRowForSource(1u) == 0u && document.DisplayRowForSource(2u) == 1u;
+           backwardAnchor.value_or(kNoSourceLine) == 2u && document.DisplayRowForSource(1u) == 0u && document.DisplayRowForSource(2u) == 1u))
+    {
+        return false;
+    }
+
+    // Verify SetFilterMask does not mark retained lines dirty.
+    static_cast<void>(document.ExtractDirtyLineRange());
+    document.SetFilterMask(Debug::InfoParam::Type::All);
+    if (document.ExtractDirtyLineRange().has_value())
+    {
+        return false;
+    }
+    document.SetFilterMask(Debug::FilterBitForType(Debug::InfoParam::Type::Error) | Debug::FilterBitForType(Debug::InfoParam::Type::Warning));
+    if (document.ExtractDirtyLineRange().has_value())
+    {
+        return false;
+    }
+
+    // Verify CopyVisibleLinesRange, SourceIndexForVisible, and LowerBoundVisibleIndexForSource.
+    const std::vector<VisibleLine> visibleSlice = document.CopyVisibleLinesRange(0u, 1u);
+    if (visibleSlice.size() != 2u || visibleSlice[0].sourceIndex != 1u || visibleSlice[1].sourceIndex != 2u ||
+        document.SourceIndexForVisible(0u).value_or(kNoSourceLine) != 1u || document.SourceIndexForVisible(1u).value_or(kNoSourceLine) != 2u ||
+        document.SourceIndexForVisible(2u).has_value() || document.LowerBoundVisibleIndexForSource(0u).value_or(kNoSourceLine) != 0u ||
+        document.LowerBoundVisibleIndexForSource(1u).value_or(kNoSourceLine) != 0u ||
+        document.LowerBoundVisibleIndexForSource(2u).value_or(kNoSourceLine) != 1u || document.LowerBoundVisibleIndexForSource(3u).has_value())
+    {
+        return false;
+    }
+
+    // Verify BuildFilteredTailText in filtered mode.
+    const Document::FilteredTailResult tailResult = document.BuildFilteredTailText(0u, 3u);
+    if (tailResult.lines.size() != 2u || tailResult.lines[0].sourceIndex != 1u || tailResult.lines[1].sourceIndex != 2u ||
+        tailResult.firstSourceStart != document.GetLineStartOffset(0u) || tailResult.lines[0].sourceStart != document.GetLineStartOffset(1u) ||
+        tailResult.lastSourceEnd <= tailResult.firstSourceStart)
+    {
+        return false;
+    }
+
+    // Verify FindMatchesInRange and ColorizeWord without copying full document lines.
+    std::vector<Line::ColorSpan> matches;
+    const D2D1_COLOR_F testColor{1.0f, 0.5f, 0.25f, 1.0f};
+    const auto [nextLine, nextOffset] = document.FindMatchesInRange(0u, 0u, L"row", L"row", false, testColor, 10u, matches);
+    if (nextLine != 4u || nextOffset != 0u || matches.size() != 2u || matches[0].start < document.GetLineStartOffset(1u) ||
+        matches[1].start < document.GetLineStartOffset(2u))
+    {
+        return false;
+    }
+
+    document.ColorizeWord(L"row", testColor, true);
+    if (document.GetSourceLine(1u).spans.empty() || document.GetSourceLine(2u).spans.empty())
+    {
+        return false;
+    }
+
+    // Verify GetFilteredTextRange extracts only visible lines across a range that spans hidden lines.
+    const std::wstring expectedFilteredFull = document.GetDisplayTextAll(1u) + L"\n" + document.GetDisplayTextAll(2u);
+    if (document.GetFilteredTextRange(0u, static_cast<UINT32>(document.TotalLength())) != expectedFilteredFull)
+    {
+        return false;
+    }
+    const UINT32 line1Start         = document.GetLineStartOffset(1u);
+    const UINT32 line2Start         = document.GetLineStartOffset(2u);
+    const std::wstring line1Display = document.GetDisplayTextAll(1u);
+    const std::wstring line2Display = document.GetDisplayTextAll(2u);
+    if (line1Display.size() < 4u || line2Display.size() < 4u)
+    {
+        return false;
+    }
+    const std::wstring expectedPartialFiltered = line1Display.substr(2u) + L"\n" + line2Display.substr(0u, 4u);
+    if (document.GetFilteredTextRange(line1Start + 2u, line2Start + 4u) != expectedPartialFiltered)
+    {
+        return false;
+    }
+
+    // Verify SetTextSnapshot computes newlineCount and retainedTextBytes from moved blocks.
+    RedSalamanderMonitor::MonitorTextSnapshot snapshot;
+    snapshot.lines.push_back(RedSalamanderMonitor::MonitorTextBlock(L"first\nwrapped"));
+    snapshot.lines.push_back(RedSalamanderMonitor::MonitorTextBlock(L"second"));
+    Document snapshotDoc;
+    snapshotDoc.SetTextSnapshot(std::move(snapshot));
+    if (snapshotDoc.TotalLineCount() != 2u || snapshotDoc.TotalDisplayRows() != 3u || snapshotDoc.RetainedTextBytes() != (13u + 6u) * sizeof(wchar_t))
+    {
+        return false;
+    }
+
+    return true;
 }
 
 [[nodiscard]] bool RunMonitorDocumentRetentionSelfTest()
@@ -171,14 +256,57 @@ namespace
     for (uint32_t i = 0u; i < 10u; ++i)
     {
         lines.push_back(Document::InfoLineInput{
-            .info = MakeTestInfo(Debug::InfoParam::Type::Info, i),
+            .info = MakeTestInfo((i % 2u == 0u) ? Debug::InfoParam::Type::Info : Debug::InfoParam::Type::Warning, i),
             .text = std::format(L"retained row {}", i),
         });
     }
     lineBounded.AppendInfoLines(std::move(lines));
+    // Clear initial dirty range, then append one more line and evict so we verify incremental dirty range shift.
+    static_cast<void>(lineBounded.ExtractDirtyLineRange());
+    lineBounded.SetFilterMask(lineBounded.GetFilterMask() & ~Debug::FilterBitForType(Debug::InfoParam::Type::Warning));
+    lineBounded.AppendInfoLine(L"retained row 10 longest line here", MakeTestInfo(Debug::InfoParam::Type::Info, 10u));
     const Document::RetentionResult lineEviction = lineBounded.EnforceRetentionLimits(4u, 1u * 1024u * 1024u);
-    if (lineEviction.linesEvicted != 6u || lineEviction.displayRowsEvicted != 6u || lineEviction.characterPositionsEvicted == 0u ||
-        lineBounded.TotalLineCount() != 4u || lineBounded.GetSourceLine(0u).text != L"retained row 6")
+    if (lineEviction.linesEvicted != 7u || lineBounded.TotalLineCount() != 4u || lineBounded.GetSourceLine(0u).text != L"retained row 7")
+    {
+        return false;
+    }
+    // Only the newly appended line (now at index 3 after evicting 7 of 11 lines) should be dirty.
+    const auto dirtyAfterEviction = lineBounded.ExtractDirtyLineRange();
+    if (! dirtyAfterEviction.has_value() || dirtyAfterEviction->first != 3u || dirtyAfterEviction->second != 3u)
+    {
+        return false;
+    }
+    // Verify incremental offsets and total length match exact sum of remaining lines.
+    if (lineBounded.GetLineStartOffset(0u) != 0u)
+    {
+        return false;
+    }
+    size_t expectedOffset = 0u;
+    for (size_t i = 0u; i < lineBounded.TotalLineCount(); ++i)
+    {
+        if (lineBounded.GetLineStartOffset(i) != expectedOffset)
+        {
+            return false;
+        }
+        expectedOffset += lineBounded.GetDisplayTextAll(i).size();
+        if (i + 1u < lineBounded.TotalLineCount())
+        {
+            expectedOffset += 1u;
+        }
+    }
+    if (lineBounded.TotalLength() != expectedOffset || lineBounded.LongestLineChars() != lineBounded.GetDisplayTextAll(3u).size())
+    {
+        return false;
+    }
+    // Verify filtered visible indices were shifted in-place (rows 7, 8, 9, 10 -> indices 0, 1, 2, 3; even rows 8 and 10 -> indices 1 and 3 are Info).
+    const std::vector<VisibleLine> shiftedVisible = lineBounded.CopyVisibleLinesRange(0u, 10u);
+    if (shiftedVisible.size() != 2u || shiftedVisible[0].sourceIndex != 1u || shiftedVisible[1].sourceIndex != 3u)
+    {
+        return false;
+    }
+    // Verify CollectWidthCandidates caps and orders candidates.
+    const std::vector<Document::WidthCandidate> candidates = lineBounded.CollectWidthCandidates(0u, 3u, 2u);
+    if (candidates.size() != 2u || candidates[0].sourceIndex >= candidates[1].sourceIndex || candidates[1].sourceIndex != 3u)
     {
         return false;
     }
@@ -189,8 +317,17 @@ namespace
     byteBounded.AppendInfoLine(L"ABCDEFGHIJ", MakeTestInfo(Debug::InfoParam::Type::Info, 22u));
     const uint64_t oneLineBytes                  = 10u * sizeof(wchar_t);
     const Document::RetentionResult byteEviction = byteBounded.EnforceRetentionLimits(10u, oneLineBytes);
-    return byteEviction.linesEvicted == 2u && byteEviction.textBytesEvicted == 2u * oneLineBytes && byteBounded.TotalLineCount() == 1u &&
-           byteBounded.RetainedTextBytes() == oneLineBytes && byteBounded.GetSourceLine(0u).text == L"ABCDEFGHIJ";
+    if (byteEviction.linesEvicted != 2u || byteEviction.textBytesEvicted != 2u * oneLineBytes || byteBounded.TotalLineCount() != 1u ||
+        byteBounded.RetainedTextBytes() != oneLineBytes || byteBounded.GetSourceLine(0u).text != L"ABCDEFGHIJ")
+    {
+        return false;
+    }
+
+    // Verify evicting the sole remaining line does not add a phantom trailing newline separator to characterPositionsEvicted.
+    const size_t soleLineLength                  = byteBounded.TotalLength();
+    const Document::RetentionResult soleEviction = byteBounded.EnforceRetentionLimits(10u, sizeof(wchar_t));
+    return soleEviction.linesEvicted == 1u && soleEviction.characterPositionsEvicted == soleLineLength && byteBounded.TotalLineCount() == 0u &&
+           byteBounded.TotalLength() == 0u;
 }
 
 [[nodiscard]] bool RunMonitorFileReaderSelfTest()

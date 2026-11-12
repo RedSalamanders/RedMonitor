@@ -1,9 +1,10 @@
 # Using RedMonitor
 
 Launch RedMonitor.exe to receive compatible diagnostic events or open a UTF-8/UTF-16LE log. The viewer
-supports severity filters, find, colored metadata, selection/copy, line numbers, auto-scroll, themes,
-always-on-top and transactional Save As. Log retention and queued traffic are bounded; dropped events
-are shown. The initial extraction keeps the legacy monitor settings identity for RedSalamander integration.
+supports severity filters, find, colored metadata, selection/copy, line numbers, auto-scroll (including
+while severity filters are active), themes, always-on-top and transactional Save As. Log retention and
+queued traffic are bounded with incremental oldest-first eviction; dropped events are shown. The initial
+extraction keeps the legacy monitor settings identity for RedSalamander integration.
 
 Real-time ETW needs appropriate Windows session permissions. A failed session does not prevent file
 viewing. Self diagnostics are opt-in with `--etw`. Printing remains unsupported.
