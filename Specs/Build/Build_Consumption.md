@@ -2,7 +2,7 @@
 
 RedMonitor is an independent EXE. Only this repository builds, tests and packages it.
 Build with PowerShell 7 and discovered Visual Studio 2026 C++ tools, x64/ARM64 and
-Debug/Release/ASan Debug, Unicode stdcpplatest and /Wall with /WX disabled, /permissive- /sdl.
+Debug/Release/ASan Debug, Unicode stdcpplatest and /W4 /WX /permissive- /sdl.
 Pinned vcpkg and DxUi restores, outputs and exact source/profile receipts remain local under .build.
 No RedSalamander Common.dll or sibling build is required.
 
