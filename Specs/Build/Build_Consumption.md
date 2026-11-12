@@ -8,8 +8,10 @@ No RedSalamander Common.dll or sibling build is required.
 
 The selected app package include directory is an `ExternalIncludePath` MSBuild property,
 so the actual compiler classifies vcpkg headers as external in both viewer and support
-projects, including isolated local SDK dependencies. It is not a per-source item metadata
-field. First-party diagnostics and the zero-warning acceptance check remain enforced.
+projects, including isolated local SDK dependencies. Extend it in `Directory.Build.targets`
+after Microsoft.Cpp.props supplies its system SDK defaults; an early nonempty value can
+prevent those defaults from being initialized. It is not a per-source item metadata field.
+First-party diagnostics and the zero-warning acceptance check remain enforced.
 
 ## Command-line build output and source receipts
 

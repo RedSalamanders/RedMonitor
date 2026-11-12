@@ -63,11 +63,14 @@ $global:LASTEXITCODE=0
 Write-Host 'PASS actual local SDK routing, early refusal, isolated dependency preparation and failure cleanup; no native execution.'
 if($NativeMsBuildPath){
     if(-not $IsWindows -or $env:GITHUB_ACTIONS -ceq 'true' -or $env:CI_NATIVE_BUILDS_DISABLED -ceq 'true'){throw 'Actual MSBuild metadata controls require local Windows native execution.'}
-    $metadata=& $NativeMsBuildPath (Join-Path $appRoot 'support/RedMonitorSupport.vcxproj') '/nologo' '/v:quiet' '/p:Platform=x64' '/p:Configuration=Release' '/p:CiSdkContract=LocalUnpinnedAbiV1' '-getProperty:ExternalIncludePath,RedMonitorPackages'
+    $metadata=& $NativeMsBuildPath (Join-Path $appRoot 'support/RedMonitorSupport.vcxproj') '/nologo' '/v:quiet' '/p:Platform=x64' '/p:Configuration=Release' '/p:CiSdkContract=LocalUnpinnedAbiV1' '-getProperty:ExternalIncludePath,RedMonitorPackages,WindowsSDK_IncludePath'
     if($LASTEXITCODE){throw 'Support external-header metadata evaluation failed.'}
     $properties=($metadata -join "`n"|ConvertFrom-Json).Properties
     $expected=Join-Path $properties.RedMonitorPackages 'include'
     if($expected -notin $properties.ExternalIncludePath.Split(';')){throw 'Actual compiler property omits the selected local application dependencies from external headers.'}
+    $systemIncludes=@($properties.WindowsSDK_IncludePath.Split(';')|Where-Object {$_})
+    if(-not $systemIncludes.Count){throw 'Actual native metadata has no Windows SDK includes.'}
+    foreach($include in $systemIncludes){if($include -notin $properties.ExternalIncludePath.Split(';')){throw 'App dependency classification replaced the system SDK external include defaults.'}}
     Write-Host 'PASS actual support metadata classifies selected app dependency headers as external; no compilation.'
 }
 $global:LASTEXITCODE=0

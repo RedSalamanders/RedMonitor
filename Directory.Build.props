@@ -15,7 +15,6 @@
     <RedMonitorTriplet Condition="'$(Platform)'=='ARM64'">arm64-windows-static-md</RedMonitorTriplet>
     <RedMonitorPackages>$(RedMonitorRoot).build\vcpkg_installed\$(Platform)\$(RedMonitorTriplet)\</RedMonitorPackages>
     <RedMonitorPackages Condition="'$(CiSdkContract)'=='LocalUnpinnedAbiV1'">$(RedMonitorRoot).build\local-sdk-dependencies\vcpkg_installed\$(Platform)\$(RedMonitorTriplet)\</RedMonitorPackages>
-    <ExternalIncludePath>$(RedMonitorPackages)include;$(ExternalIncludePath)</ExternalIncludePath>
     <LinkIncremental>false</LinkIncremental>
     <!-- The pinned DxUi Debug library uses /ZI; its final link must support Edit and Continue. -->
     <LinkIncremental Condition="'$(Configuration)'=='Debug'">true</LinkIncremental>
