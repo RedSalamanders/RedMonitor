@@ -15,6 +15,7 @@
     <RedMonitorTriplet Condition="'$(Platform)'=='ARM64'">arm64-windows-static-md</RedMonitorTriplet>
     <RedMonitorPackages>$(RedMonitorRoot).build\vcpkg_installed\$(Platform)\$(RedMonitorTriplet)\</RedMonitorPackages>
     <RedMonitorPackages Condition="'$(CiSdkContract)'=='LocalUnpinnedAbiV1'">$(RedMonitorRoot).build\local-sdk-dependencies\vcpkg_installed\$(Platform)\$(RedMonitorTriplet)\</RedMonitorPackages>
+    <ExternalIncludePath>$(RedMonitorPackages)include;$(ExternalIncludePath)</ExternalIncludePath>
     <LinkIncremental>false</LinkIncremental>
     <!-- The pinned DxUi Debug library uses /ZI; its final link must support Edit and Continue. -->
     <LinkIncremental Condition="'$(Configuration)'=='Debug'">true</LinkIncremental>
@@ -34,7 +35,6 @@
       <AdditionalOptions>/utf-8 /FS %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>UNICODE;_UNICODE;COMMON_API=;WINVER=0x0A00;_WIN32_WINNT=0x0A00;NTDDI_VERSION=NTDDI_WIN11_GE;RS_DIAGNOSTICS_RUNTIME_OPT_IN;VERSINFO_BUILDNUMBER=$(RedMonitorBuildNumber);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(RedMonitorRoot)support;$(RedMonitorRoot)include;$(RedMonitorRoot)Tests;$(RedMonitorRoot)Tests\Support;$(RedMonitorPackages)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <ExternalIncludePath>$(RedMonitorPackages)include;$(ExternalIncludePath)</ExternalIncludePath>
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreadedDLL</RuntimeLibrary>

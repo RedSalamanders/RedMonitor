@@ -1,4 +1,4 @@
-[CmdletBinding()]param()
+[CmdletBinding()]param([string]$NativeMsBuildPath='')
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
@@ -61,3 +61,13 @@ try{
 }finally{$env:REDMONITOR_TEST_LOCAL_RESTORE_FAIL=$saved}
 $global:LASTEXITCODE=0
 Write-Host 'PASS actual local SDK routing, early refusal, isolated dependency preparation and failure cleanup; no native execution.'
+if($NativeMsBuildPath){
+    if(-not $IsWindows -or $env:GITHUB_ACTIONS -ceq 'true' -or $env:CI_NATIVE_BUILDS_DISABLED -ceq 'true'){throw 'Actual MSBuild metadata controls require local Windows native execution.'}
+    $metadata=& $NativeMsBuildPath (Join-Path $appRoot 'support/RedMonitorSupport.vcxproj') '/nologo' '/v:quiet' '/p:Platform=x64' '/p:Configuration=Release' '/p:CiSdkContract=LocalUnpinnedAbiV1' '-getProperty:ExternalIncludePath,RedMonitorPackages'
+    if($LASTEXITCODE){throw 'Support external-header metadata evaluation failed.'}
+    $properties=($metadata -join "`n"|ConvertFrom-Json).Properties
+    $expected=Join-Path $properties.RedMonitorPackages 'include'
+    if($expected -notin $properties.ExternalIncludePath.Split(';')){throw 'Actual compiler property omits the selected local application dependencies from external headers.'}
+    Write-Host 'PASS actual support metadata classifies selected app dependency headers as external; no compilation.'
+}
+$global:LASTEXITCODE=0
