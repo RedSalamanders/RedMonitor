@@ -1,6 +1,47 @@
 # Changelog
 
 ## Unreleased
+- Consolidated the shared `spec-workflow` agent skill into the organization `RedHome` repository, retaining the six
+  RedMonitor-specific skills under `.agents/skills/` and validating with `validate.ps1` and `Tools/Test-Changelog.ps1`
+  (documentation/tooling only; native qualification unchanged).
+  Shared-skill discovery names `../RedHome/AGENTS.md`, the package directory, and the clone URL while preserving
+  local product authority.
+  Guidance fixtures also recognize Windows error 1314 as unavailable symbolic-link privilege and report the
+  documented capability skip; other I/O errors still fail.
+- Build the existing viewer, satellite and console-test union for explicit local SDK candidates and run the normal Release scenarios through a complete held-payload reader, retaining separate runtime evidence without replacing pinned local or main gates.
+- Classify the selected app dependency include directory through the compiler's external-include property for both viewer and support builds. Preserve first-party warnings and zero-warning acceptance; a real metadata control covers the isolated local SDK package path.
+- Restored Find Bar window-procedure slots through the existing Win32 callback-data wrapper, preserving teardown behavior and the zero-warning build policy in SDK builds.
+- Isolate each native build's compiler metadata service through the pinned shared launcher while preserving live output, literal arguments, exit codes and build acceptance checks.
+- Limit overlapping native work to one job per architecture and recheck queued
+  candidate inputs before compilation. Preserve active jobs and existing local,
+  native, production and review obligations; candidate acceptance remains separate.
+- Add an explicit local SDK viewer/support build with isolated output and dependency roots, live ownership
+  and ABI guards, actual linker evidence and unchanged managed pins and normal acceptance gates.
+- Preserve each completed independent validation, formatting and tooling result across later native failures, reusing only exact local inputs while keeping every native, ETW, packaging and installation gate.
+- Bind local build and validation reuse to the actual clean pinned CI engine inputs while preserving the current local and main gates.
+- Share the canonical SDK application/ABI guards and retain precise hosted SDK recipe-miss evidence. Exact mismatches still use source without accepting SDK bytes; native regression and production/package gates remain required.
+- Support the separately authenticated qualified SDK reader with actual compiler/tool binding and exact package reopening, preserving legacy SDK/source paths and all native regression, ETW and package gates.
+  Select the native MSBuild host explicitly and refuse a missing native host rather than substituting the legacy executable.
+- Add the optional isolated native shadow caller and exact shared-engine admission tooling while retaining current required checks, local coverage and production qualification.
+- Enable authenticated qualified DxUi SDK reuse for eligible hosted Release builds, preserving the existing dependency pin and all native regression, detector and package checks.
+- Prepare authenticated exact-pin DxUi SDK bytes for admitted main Release build roles, with source fallback on a verified input miss and the same reader descriptor retained for production notices. Preserve every native regression and package gate; static, local and manual qualification retain their existing source recipe.
+- Record the `ExplicitStateMachines_2026-11-10.md` active WIP plan covering `ColorTextView` `PresentPlan` scroll accumulation, filter layout sequence invalidation, `WM_CAPTURECHANGED` cleanup, `IDM_FILE_NEW` async-open cancellation, `Document` lock-scoped color ranges, and `EtwListener` session phases while keeping `include/RedMonitor/Client.h` unchanged.
+  Validation: `validate.ps1` and `Tools/Test-Changelog.ps1 -Base origin/main` pass; plan only, no runtime source changed.
+- Fix viewer UI freezes, ETW shutdown stalls, and auto-scroll/filter rendering regressions: maintain `Document` line offsets as a `std::deque<uint64_t>` with an incremental base and update retention eviction, visible-line indices, dirty ranges, and UI width/layout caches incrementally without full-document invalidation; stop marking retained lines dirty on severity filter changes; bound background width measurement to at most 32 candidate lines per pass and remove synchronous UI-thread DirectWrite fallback on threadpool admission failure; coalesce `kColorTextViewEtwBatch` posts and pace `UpdateWindow` repaints to 60 Hz (16 ms) during sustained ETW arrival; unify `AUTO_SCROLL` tail rendering, viewport scroll alignment, keyboard/caret navigation, and hit-testing across filtered and unfiltered views with per-line severity and user color spans without `WM_PAINT` fallback layouts or stale slice invalidations; stop the kernel trace session (`EVENT_TRACE_CONTROL_STOP`) before waiting on the ETW worker thread; eliminate full-vector `Lines()`/`VisibleLines()` copies in search, colorize, filtered clipboard copy (`GetFilteredTextRange`), and paint paths; gate status-bar and menu updates on state changes; and defer FindBar creation until requested while destroying it cleanly at teardown. Validated with `Tools/Test-Changelog.ps1`, `validate.ps1`, `format.ps1 -Check`, `Tests/Tooling.Tests.ps1`, x64 Debug/Release/ASan Debug `test.ps1 -IncludeLiveEtw`, and ARM64 Debug/Release/ASan Debug builds; native ARM64 execution and paired Release performance remain separate gates.
+- Add explicit pinned Release DxUi SDK consumption with complete input/byte verification, live reader and per-translation-unit ABI guards, source fallback on exact misses, dependency-bound receipts and matching leased package notices. Guard Windows feature macros against SDK definitions and add actual MSBuild rejection controls; full runtime and overall acceleration acceptance remain separate.
+- Adopt the shared guard and explicit owned-prose exclusions so new runtime Markdown and notice inputs retain native qualification; preserve existing native gates and historical artifact identity.
+- Keep prose-only affected edits on changelog, validation, formatting and tooling checks, while cumulative code, test data and unknown inputs retain Debug execution. Preserve Full/PrePush profile, live transport and installation coverage, reject concurrent edits and nonzero child exits, and limit hosted Markdown exclusions to owned documentation.
+- Adopt the shared engine's ABI-indexed vcpkg fallback cache and manual native dependency caching; keep compiler-free PRs, exact dependency pins and every native qualification gate.
+- Restore winget availability during hosted Windows 11 ARM64 install validation by registering the image's inbox App Installer when winget is absent. The current shared CI engine includes this behavior; native installation checks and the explicit publication gates remain required.
+- Adopt shared CI engine `1a42715`, whose native winget proof accepts validate's succeeded-with-warnings
+  code (`0x8A150028`), records the hosted winget version and prints the log of any failing owned command.
+  The hosted runners' winget still reported that code for `v0.1.82` after schema headers were added, so no
+  submission occurred. Only the engine pin and generated callers change; publication still requires a fresh
+  main qualification under this engine.
+- Adopt shared CI engine `891b3bb`, whose generated winget manifests carry schema headers. winget 1.29
+  `validate` previously exited with a warning code and failed the first Winget publication before any
+  submission. Only the engine pin and generated callers change; publication still requires a fresh main
+  qualification under this engine.
 - Advance the exact DxUi API-4 pin from `f65e4a4b` to main `f2e328a0` (the 2 November delivery `6df17007` plus its
   upgrade guide and production review) and rebuild the full viewer/test closure. Release packages also carry DxUi's
   third-party notices and the toml++, rapidyaml and KaTeX notices now compiled into DxUi.lib. DxUi's open production

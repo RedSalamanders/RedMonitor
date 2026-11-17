@@ -1,1 +1,0 @@
-- Share the canonical SDK application/ABI guards and retain precise hosted SDK recipe-miss evidence. Exact mismatches still use source without accepting SDK bytes; native regression and production/package gates remain required.

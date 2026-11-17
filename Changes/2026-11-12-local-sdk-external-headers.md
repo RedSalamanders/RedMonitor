@@ -1,1 +1,0 @@
-- Classify the selected app dependency include directory through the compiler's external-include property for both viewer and support builds. Preserve first-party warnings and zero-warning acceptance; a real metadata control covers the isolated local SDK package path.
