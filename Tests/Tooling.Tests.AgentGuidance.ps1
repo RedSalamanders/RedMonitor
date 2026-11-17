@@ -246,6 +246,11 @@ $linkedTarget = Join-Path $run 'fixtures/not-readable-as-utf8.dat'
 $linkCreated = $false
 try { [void][IO.File]::CreateSymbolicLink($skillPath,$linkedTarget); $linkCreated = $true }
 catch [UnauthorizedAccessException] { $skippedLinks++; Write-Host 'SKIP file-reparse fixture: symbolic-link privilege unavailable.' }
+catch [IO.IOException] {
+    # .NET reports ERROR_PRIVILEGE_NOT_HELD as IOException on this host; preserve the declared capability skip.
+    if (($_.Exception.GetBaseException().HResult -band 0xffff) -ne 1314) { throw }
+    $skippedLinks++; Write-Host 'SKIP file-reparse fixture: symbolic-link privilege unavailable.'
+}
 try {
     if ($linkCreated) { Expect 'reparse SKILL rejected before strict UTF-8 decoding' $false 'reparse point' }
 } finally {

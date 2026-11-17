@@ -39,7 +39,9 @@ Use focused `ej/` branches after the initial import.
   exact fold of fragments already on main.
 
 Read the relevant focused skill in `.agents/skills/`: build-redmonitor, transport-client,
-viewer-lifetime, file-safety, consumer-adoption, test-harness or spec-workflow.
+viewer-lifetime, file-safety, consumer-adoption or test-harness (cross-repository C++/WIL and `spec-workflow` skills live in the sibling `RedHome` repository).
+
+Shared skill index: `../RedHome/AGENTS.md`; packages: `../RedHome/.agents/skills/`. If `../RedHome` is missing, clone https://github.com/RedSalamanders/RedHome.git to that path. This repository's guidance and domain specs own product behavior and validation.
 
 ## Unified CI policy
 
