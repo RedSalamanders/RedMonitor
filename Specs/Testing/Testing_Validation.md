@@ -67,6 +67,14 @@ and untracked edits/additions/deletions/renames, tracked ignored inputs and Unic
 the ASCII banner, color/plain modes, safe launch links and refusal to print success for warnings/errors.
 These controls do not invoke a compiler, launch an application or establish native runtime qualification.
 
+`Tests/Tooling.Tests.Vcpkg.ps1`, included by the tooling suite, runs `Build/VcpkgToolCheckout.psm1`
+against an owned offline `file://` registry fixture: fresh, repeated, completing a partial shallow
+checkout and refusing a foreign origin or a non-Git path. Each prepared checkout extracts an older tree
+the way vcpkg does, in an environment that holds only `GIT_INDEX_FILE`, with lazy fetch disabled; the
+unprepared partial checkout must fail that extraction. It also checks the complete clone of
+`vcpkg-install.ps1`, the prepare-before-install order in `restore-dxui.ps1`, and that the module is ASCII
+and parses in Windows PowerShell 5.1. It restores no package and runs no compiler.
+
 `Tests/Test-SdkInputs.Native.ps1 -Descriptor <absolute .build descriptor>` is an explicit MSBuild-dependent
 SDK policy control, excluded from compiler-free PR tooling. It holds the actual verified SDK reader while
 executing the actual imported admission targets. The accepted profile passes; incompatible CRT, language,

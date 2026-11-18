@@ -3,8 +3,9 @@
 Installs the RedMonitor vcpkg manifest dependencies for x64, ARM64, or both.
 
 .DESCRIPTION
-Uses the repository and commit pinned by vcpkg-tool.json. The managed vcpkg checkout, downloads, build trees,
-packages, and installed trees all live beneath .build. Each platform receives a private install root so one
+Uses the repository and commit pinned by vcpkg-tool.json, in a complete clone: vcpkg reads versioned ports with Git
+commands that cannot fetch a missing object, so a partial clone left by an earlier version is completed once.
+The managed vcpkg checkout, downloads, build trees, packages, and installed trees all live beneath .build. Each platform receives a private install root so one
 manifest install cannot purge the other platform's package metadata.
 
 vcpkg builds with the Visual Studio installation and MSVC toolset that build.ps1's MSBuild uses, not the newest
@@ -79,8 +80,11 @@ if (-not (Test-Path -LiteralPath (Join-Path $toolRoot '.git') -PathType Containe
     }
 
     Write-Host "Cloning pinned vcpkg tooling into $toolRoot" -ForegroundColor Cyan
+    # A complete clone: vcpkg extracts each versioned port with git read-tree and checkout-index in an environment
+    # that holds only GIT_INDEX_FILE. Without SystemRoot that git resolves no host, so it cannot fetch an object a
+    # partial clone left on the server ("Could not resolve host: github.com" for a promisor object).
     # Set only this managed checkout: relocated consumers may exceed traditional Win32 path limits.
-    & git.exe clone -c core.longpaths=true --filter=blob:none $repository $toolRoot
+    & git.exe clone -c core.longpaths=true $repository $toolRoot
     if ($LASTEXITCODE -ne 0) {
         throw "git clone failed with exit code $LASTEXITCODE."
     }
@@ -89,6 +93,24 @@ if (-not (Test-Path -LiteralPath (Join-Path $toolRoot '.git') -PathType Containe
 $origin = & git.exe -C $toolRoot remote get-url origin
 if ($LASTEXITCODE -ne 0 -or $origin.TrimEnd('/') -ne $repository.TrimEnd('/')) {
     throw "The managed vcpkg checkout does not use the pinned repository: $repository"
+}
+
+# Earlier versions of this script made a partial, shallow clone. Complete it in place, keeping its HEAD. The filter
+# setting goes only once every object is local, so an interrupted completion is detected and retried.
+if (& git.exe -C $toolRoot config --get remote.origin.partialclonefilter) {
+    Write-Host "Completing the partial vcpkg clone in $toolRoot" -ForegroundColor Cyan
+    if ((& git.exe -C $toolRoot rev-parse --is-shallow-repository) -eq 'true') {
+        & git.exe -C $toolRoot fetch --unshallow origin
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to unshallow the managed vcpkg checkout (exit code $LASTEXITCODE)."
+        }
+    }
+    & git.exe -C $toolRoot fetch --refetch --no-filter origin
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to complete the managed vcpkg checkout (exit code $LASTEXITCODE)."
+    }
+    & git.exe -C $toolRoot config --unset-all remote.origin.partialclonefilter
+    & git.exe -C $toolRoot config --unset-all remote.origin.promisor
 }
 
 $dirty = & git.exe -C $toolRoot status --porcelain
@@ -102,9 +124,13 @@ if ($dirty) {
 $head = & git.exe -C $toolRoot rev-parse HEAD 2>$null
 if ($LASTEXITCODE -ne 0 -or $head -ne $commit) {
     Write-Host "Selecting pinned vcpkg commit $commit" -ForegroundColor Cyan
-    & git.exe -C $toolRoot fetch --depth 1 origin $commit
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to fetch pinned vcpkg commit $commit."
+    # The default branch normally holds the pinned commit. Fetch it only when it is missing, with its history, so
+    # the checkout stays complete and never becomes shallow.
+    if (-not (& git.exe -C $toolRoot rev-parse --verify --quiet "$commit^{commit}")) {
+        & git.exe -C $toolRoot fetch origin $commit
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to fetch pinned vcpkg commit $commit."
+        }
     }
     & git.exe -C $toolRoot checkout --detach $commit
     if ($LASTEXITCODE -ne 0) {
