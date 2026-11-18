@@ -1,6 +1,6 @@
 ---
 name: test-harness
-description: Add or run standalone RedMonitor behavioral tests, captures or source-bound evidence.
+description: Add or run standalone RedMonitor behavioral tests, captures or source-bound evidence. Use when choosing between validate.ps1, the tooling tests, test.ps1 and its live-ETW gate, or Full and PrePush scope, when reusing a build with -SkipBuild, or when making non-activating GUI captures.
 ---
 
 # test-harness

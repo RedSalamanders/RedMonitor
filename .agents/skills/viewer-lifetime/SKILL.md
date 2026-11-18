@@ -1,6 +1,6 @@
 ---
 name: viewer-lifetime
-description: Change RedMonitor rendering, queueing, retained text, search or UI worker lifetime.
+description: Change RedMonitor rendering, queueing, retained text, search or UI worker lifetime. Use when changing the bounded event queue or its eviction, snapshots, selection, search or scroll offsets, posted-message teardown, COM references held by workers, or rendering under device loss.
 ---
 
 # viewer-lifetime

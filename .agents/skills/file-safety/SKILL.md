@@ -1,6 +1,6 @@
 ---
 name: file-safety
-description: Change RedMonitor Unicode file import, transactional export or cancellation.
+description: Change RedMonitor Unicode file import, transactional export or cancellation. Use when changing how log files are read and checked against encoding and size budgets or saved, how a file worker publishes its result, or what a cancelled or failed import or export leaves behind.
 ---
 
 # file-safety
