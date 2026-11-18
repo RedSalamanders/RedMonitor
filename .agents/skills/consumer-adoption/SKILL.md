@@ -1,6 +1,6 @@
 ---
 name: consumer-adoption
-description: Integrate the pinned single-header RedMonitor SDK and optional installed helper into an application.
+description: Integrate the pinned single-header RedMonitor SDK and optional installed helper into an application. Use when a consumer vendors or updates Client.h and its hash-pinned lock, changes how it discovers or launches the installed helper, or qualifies its real ETW logging against the SDK.
 ---
 
 # consumer-adoption

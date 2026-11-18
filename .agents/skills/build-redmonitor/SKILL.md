@@ -1,6 +1,6 @@
 ---
 name: build-redmonitor
-description: Build, restore or package standalone RedMonitor and diagnose toolchain failures.
+description: Build, restore or package standalone RedMonitor and diagnose toolchain failures. Use when running build.ps1 or package.ps1 for one of the six profiles, cross-building ARM64, checking the dependency closure or build receipts, or investigating a compiler or toolchain failure.
 ---
 
 # build-redmonitor
