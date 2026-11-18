@@ -1,6 +1,10 @@
 <#
 .SYNOPSIS
-Verifies formatter package rejection, version enforcement and read-only strict checks.
+Verifies that format.ps1 formats only with the pinned engine formatter, refuses a missing or mismatched
+engine, verifies without writing under -Check and formats its own selection.
+.NOTES
+The fixture is a fresh Git repository beneath .build with its own .ci-engine clone. It reuses this checkout's
+verified formatter wheel, so it never downloads; the first call installs that wheel through the engine.
 #>
 [CmdletBinding()]
 param()
@@ -8,41 +12,46 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
 Import-Module (Join-Path $repo 'Build/Toolchain.psm1') -Force
-$fixture=Assert-RedMonitorOutputPath (Join-Path $repo ('.build/tooling-tests/formatter-'+[guid]::NewGuid().ToString('N')))
-foreach($directory in 'Tools','Build','src','support','include','Tests','.build/format/clang_format/data/bin'){
-    [void][IO.Directory]::CreateDirectory((Join-Path $fixture $directory))
+Import-Module (Join-Path $repo 'Build/Formatting.psm1') -Force
+$formatter=Get-RedMonitorClangFormat -Root $repo
+if([IO.Path]::GetFullPath($formatter) -ine [IO.Path]::GetFullPath((Join-Path $repo '.build/shared-format/clang-format.exe'))){
+    throw "The selected formatter is not the pinned engine install: $formatter"
 }
-foreach($path in 'Tools/Install-ClangFormat.ps1','Build/Toolchain.psm1','Build/AgentGuidance.psm1','Build/Formatting.psm1','Build/clang-format.json','format.ps1','.clang-format'){
+$git=(Get-Command git -CommandType Application|Select-Object -First 1).Source
+$fixture=Assert-RedMonitorOutputPath (Join-Path $repo ('.build/tooling-tests/formatter-'+[guid]::NewGuid().ToString('N')))
+foreach($directory in '.ci','src','.build/shared-format'){[void][IO.Directory]::CreateDirectory((Join-Path $fixture $directory))}
+foreach($path in 'format.ps1','.clang-format','.ci/project.json','.gitignore'){
     Copy-Item -LiteralPath (Join-Path $repo $path) -Destination (Join-Path $fixture $path)
 }
-$pin=Get-Content -LiteralPath (Join-Path $repo 'Build/clang-format.json') -Raw|ConvertFrom-Json
-$cached=Join-Path $fixture ('.build/format/'+$pin.entryPath)
-$wheel=Join-Path $fixture 'corrupt.whl'
-[IO.File]::WriteAllText($wheel,'A corrupt package must never be extracted.')
-[IO.File]::WriteAllText($cached,'An existing formatter must survive rejected input.')
-$before=(Get-FileHash -LiteralPath $cached).Hash
-$output=@(& (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $fixture 'Tools/Install-ClangFormat.ps1') -WheelPath $wheel 2>&1)
-if($LASTEXITCODE -eq 0 -or ($output -join "`n") -notmatch 'SHA256 does not match'){throw 'Corrupt formatter wheel was not rejected by its checksum.'}
-if((Get-FileHash -LiteralPath $cached).Hash -cne $before){throw 'Rejected wheel replaced the existing formatter.'}
-if(@(Get-ChildItem -LiteralPath (Join-Path $fixture '.build/format') -Directory -Filter 'staging-*').Count){throw 'Rejected wheel reached extraction staging.'}
-$installed=Join-Path $repo ('.build/format/'+$pin.entryPath)
-if(-not(Test-Path -LiteralPath $installed -PathType Leaf)){throw 'Install the pinned formatter before running its behavior tests.'}
-Copy-Item -LiteralPath $installed -Destination $cached -Force
-$fixturePin=Join-Path $fixture 'Build/clang-format.json'
-$pin.version='0.0.0'
-$pin|ConvertTo-Json|Set-Content -LiteralPath $fixturePin -Encoding utf8
-$output=@(& (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $fixture 'format.ps1') -Check 2>&1)
-if($LASTEXITCODE -eq 0 -or ($output -join "`n") -notmatch 'Formatting requires clang-format 0\.0\.0'){throw 'Mismatched formatter version was not rejected before source inspection.'}
-Copy-Item -LiteralPath (Join-Path $repo 'Build/clang-format.json') -Destination $fixturePin -Force
+Copy-Item -LiteralPath (Join-Path $repo '.build/shared-format/clang-format.whl') -Destination (Join-Path $fixture '.build/shared-format/clang-format.whl')
+# A fixture without its own repository would let Git list the enclosing checkout instead.
+& $git -C $fixture init -q
+if($LASTEXITCODE){throw 'Fixture Git init failed.'}
+function Invoke-Format([string[]]$Arguments){
+    $output=@(& (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $fixture 'format.ps1') @Arguments 2>&1)
+    [pscustomobject]@{exit=$LASTEXITCODE;text=($output -join "`n")}
+}
 $source=Join-Path $fixture 'src/FormatterFixture.cpp'
 [IO.File]::WriteAllText($source,"int main(){return 0;}`n")
 $sourceBefore=(Get-FileHash -LiteralPath $source).Hash
-$output=@(& (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $fixture 'format.ps1') -Check 2>&1)
-if($LASTEXITCODE -eq 0 -or ($output -join "`n") -notmatch 'Native formatting check failed'){throw 'Strict formatting check accepted deliberately malformed style.'}
-if((Get-FileHash -LiteralPath $source).Hash -cne $sourceBefore){throw 'Read-only formatter check changed source bytes.'}
-$output=@(& (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $fixture 'format.ps1') 2>&1)
-if($LASTEXITCODE -ne 0){throw "Explicit formatting failed: $($output -join ' ')"}
-if((Get-FileHash -LiteralPath $source).Hash -ceq $sourceBefore){throw 'Explicit formatting did not repair the fixture.'}
-$output=@(& (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $fixture 'format.ps1') -Check 2>&1)
-if($LASTEXITCODE -ne 0){throw "Formatted fixture did not pass the unchanged strict check: $($output -join ' ')"}
-Write-Host 'PASS: corrupt wheel refusal, existing-install preservation, exact version and read-only strict formatting'
+
+$result=Invoke-Format @('-Check')
+if($result.exit -eq 0 -or $result.text -notmatch 'needs the shared CI engine'){throw "A missing engine was not refused: $($result.text)"}
+$engine=Join-Path $fixture '.ci-engine'
+$clone=& $git clone --quiet --no-hardlinks (Join-Path $repo '.ci-engine') $engine 2>&1
+if($LASTEXITCODE){throw "Fixture engine clone failed: $clone"}
+$pin=(Get-Content -LiteralPath (Join-Path $fixture '.ci/project.json') -Raw|ConvertFrom-Json).engine.ref
+& $git -C $engine -c advice.detachedHead=false checkout -q --detach "$pin~1"
+$result=Invoke-Format @('-Check')
+if($result.exit -eq 0 -or $result.text -notmatch 'pins'){throw "A mismatched engine was not refused: $($result.text)"}
+& $git -C $engine -c advice.detachedHead=false checkout -q --detach $pin
+
+$result=Invoke-Format @('-Check')
+if($result.exit -eq 0 -or $result.text -notmatch 'Needs formatting: src/FormatterFixture\.cpp'){throw "The strict check accepted unformatted source: $($result.text)"}
+if((Get-FileHash -LiteralPath $source).Hash -cne $sourceBefore){throw 'The read-only check changed source bytes.'}
+$result=Invoke-Format @()
+if($result.exit -ne 0){throw "Formatting failed: $($result.text)"}
+if((Get-FileHash -LiteralPath $source).Hash -ceq $sourceBefore){throw 'Formatting did not repair the fixture.'}
+$result=Invoke-Format @('-Check')
+if($result.exit -ne 0 -or $result.text -notmatch 'Checked 1 files\.'){throw "The formatted fixture did not pass the strict check: $($result.text)"}
+Write-Host 'PASS: pinned engine formatter, missing and mismatched engine refusal, read-only check and formatting'
