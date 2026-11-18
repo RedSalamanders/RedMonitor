@@ -38,8 +38,11 @@ Use focused `ej/` branches after the initial import.
   while editing; PrePush and CI run it with `-Base`, which refuses any `CHANGELOG.md` change that is not an
   exact fold of fragments already on main.
 
-Read the relevant focused skill in `.agents/skills/`: build-redmonitor, transport-client,
-viewer-lifetime, file-safety, consumer-adoption or test-harness (cross-repository C++/WIL and `spec-workflow` skills live in the sibling `RedHome` repository).
+Read the relevant focused skill in `.agents/skills/`: transport-client, viewer-lifetime or consumer-adoption
+(cross-repository C++/WIL and `spec-workflow` skills live in the sibling `RedHome` repository). Building, restoring
+and packaging, file import and export, and tests and evidence are the shared `native-build`, `file-io-safety` and
+`test-evidence` skills in `RedHome` (formerly build-redmonitor, file-safety and test-harness here), each with
+RedMonitor's commands and rules in its `references/repository-facts.md`.
 
 Shared skill index: `../RedHome/AGENTS.md`; packages: `../RedHome/.agents/skills/`. If `../RedHome` is missing, clone https://github.com/RedSalamanders/RedHome.git to that path. This repository's guidance and domain specs own product behavior and validation.
 
