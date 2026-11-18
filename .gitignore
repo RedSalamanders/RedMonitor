@@ -1,12 +1,13 @@
+# Common block: the same lines in every RedSalamanders repository (RedHome convergence D-03).
+# Generated output, Visual Studio state, the shared CI engine checkout and the changelog fold lease.
 .build/
 .vs/
 *.user
 *.suo
 *.VC.db
-
-# Changes workflow fold lease and staged changelog, removed when a fold finishes
+*.VC.opendb
+*.VC.VC.opendb
+/.ci-engine/
 /.changelog-fold.lock
 /.changelog-*.tmp
-
-# Shared CI engine checkout (exact pin lives in .ci/project.json)
-/.ci-engine/
+# End of the common block.
