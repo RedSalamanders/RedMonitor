@@ -4,7 +4,7 @@
   "repository": "RedSalamanders/RedMonitor",
   "engine": {
     "repository": "RedSalamanders/.github",
-    "ref": "d6a33c5b8aa009e04653704c648d7ad87be94fcc"
+    "ref": "1357f9c6179c7c0d2a54871e3cfb0eba722f2669"
   },
   "kind": "application",
   "adapter": "Tools/Invoke-ProjectCi.ps1",
@@ -31,7 +31,10 @@
     ".vscode/**",
     ".github/ISSUE_TEMPLATE/**",
     ".github/dependabot.yml",
-    ".github/CODEOWNERS"
+    ".github/CODEOWNERS",
+    ".codex/**",
+    ".github/agents/**",
+    ".github/copilot-instructions.md"
   ],
   "formatRoots": [
     "include",
