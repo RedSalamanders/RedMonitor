@@ -41,7 +41,7 @@ foreach($field in 'configuration','apiRevision','platform'){
     $manifest|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $manifestPath
     Invoke-Control $false ('foreign-'+$field)
 }
-foreach($missing in 'vcruntime140.dll','Lang/RedSalamanderMonitor-ja-JP.dll','LICENSE.txt'){
+foreach($missing in 'vcruntime140.dll','yyjson.dll','Lang/RedSalamanderMonitor-ja-JP.dll','LICENSE.txt'){
     $manifest=$baseline|ConvertFrom-Json
     $manifest.files=@($manifest.files|Where-Object {([string]$_.path).Replace('\','/') -cne $missing})
     $manifest|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $manifestPath

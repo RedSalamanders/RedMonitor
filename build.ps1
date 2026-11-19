@@ -104,7 +104,7 @@ if($identity -cne $sourceAfter.Identity){
 }
 if($null -ne $sdkInput){Close-CiPinnedSdkInput $sdkInput}
 $artifacts=@(Get-ChildItem -LiteralPath $output -Recurse -File | Where-Object {
-    ($_.DirectoryName -ieq $output -and $_.Extension -in '.exe','.dll','.pdb' -and $_.Name -ne 'yyjson.dll') -or
+    ($_.DirectoryName -ieq $output -and $_.Extension -in '.exe','.dll','.pdb') -or
     $_.Name -eq 'SettingsStore.schema.json' -or $_.FullName -match '[\\/](Lang|Themes)[\\/]'
 } | ForEach-Object {
     [ordered]@{path=[IO.Path]::GetRelativePath($output,$_.FullName);sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}

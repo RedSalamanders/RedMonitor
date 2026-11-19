@@ -29,7 +29,7 @@ foreach($artifact in $receipt.artifacts){
 $root=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ('.build/packages/'+[guid]::NewGuid().ToString('N')))
 $stage=Join-Path $root 'RedMonitor'
 New-Item -ItemType Directory -Path $stage -Force|Out-Null
-foreach($name in 'RedMonitor.exe','SettingsStore.schema.json','Themes'){
+foreach($name in 'RedMonitor.exe','yyjson.dll','SettingsStore.schema.json','Themes'){
     Copy-Item -LiteralPath (Join-Path $output $name) -Destination $stage -Recurse
 }
 New-Item -ItemType Directory -Path (Join-Path $stage 'Lang')|Out-Null
@@ -82,7 +82,7 @@ if($Configuration -eq 'Release'){
     if(-not $crt -or -not(Test-Path -LiteralPath (Join-Path $crt.FullName 'vcruntime140.dll'))){throw 'Matching distributable VC CRT is missing.'}
     Get-ChildItem -LiteralPath $crt.FullName -File -Filter '*.dll'|Copy-Item -Destination $stage
 }
-$triplet=if($Platform -eq 'x64'){'x64-windows-static-md'}else{'arm64-windows-static-md'}
+$triplet=if($Platform -eq 'x64'){'x64-windows'}else{'arm64-windows'}
 foreach($dependency in 'wil','yyjson'){
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot ".build/vcpkg_installed/$Platform/$triplet/share/$dependency/copyright") -Destination (Join-Path $stage "$dependency-LICENSE.txt")
 }
@@ -99,7 +99,7 @@ Expand-Archive -LiteralPath $zip -DestinationPath $extracted
 foreach($file in $packageFiles){
     if((Get-FileHash -LiteralPath (Join-Path $extracted $file.path)).Hash -cne $file.sha256){throw "Package extraction changed $($file.path)"}
 }
-if((Test-Path -LiteralPath (Join-Path $extracted 'Common.dll')) -or (Test-Path -LiteralPath (Join-Path $extracted 'yyjson.dll'))){
+if(Test-Path -LiteralPath (Join-Path $extracted 'Common.dll')){
     throw 'Standalone package contains a legacy shared DLL.'
 }
 if($Configuration -eq 'Release' -and ($Platform -eq 'x64' -or [Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64')){

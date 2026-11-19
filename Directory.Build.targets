@@ -10,6 +10,16 @@
     <!-- Extend after Microsoft.Cpp.props has supplied the system include defaults. -->
     <ExternalIncludePath>$(RedMonitorPackages)include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
+  <Target Name="CopyRedMonitorRuntimeDependencies" AfterTargets="Link"
+          Condition="'$(MSBuildProjectExtension)'=='.vcxproj' and '$(ConfigurationType)'=='Application'">
+    <!-- Dynamic vcpkg triplets: every executable loads yyjson.dll from its own folder. -->
+    <ItemGroup>
+      <RedMonitorRuntimeDependency Include="$(RedMonitorRuntimeDir)yyjson.dll" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(RedMonitorRuntimeDependency.Identity)')"
+           Text="Missing vcpkg runtime dependency: %(RedMonitorRuntimeDependency.Identity). Run restore.ps1 -Platform $(Platform)." />
+    <Copy SourceFiles="@(RedMonitorRuntimeDependency)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
   <Target Name="RedMonitorValidateProfile" BeforeTargets="PrepareForBuild">
     <Error Condition="'$(Platform)'!='x64' and '$(Platform)'!='ARM64'" Text="RedMonitor requires x64 or ARM64." />
     <Error Condition="'$(Configuration)'!='Debug' and '$(Configuration)'!='Release' and '$(Configuration)'!='ASan Debug'" Text="Invalid RedMonitor configuration." />
