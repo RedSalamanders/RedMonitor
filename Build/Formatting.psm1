@@ -1,49 +1,18 @@
 Set-StrictMode -Version Latest
 
-function Find-RedMonitorClangFormat {
-    <# Prefer the repository install, then the selected Visual Studio bundle, then PATH. Discovery only;
-       format.ps1 separately verifies the selected executable and unchanged repository style. #>
-    [CmdletBinding()]
-    param([string]$VisualStudioInstallation='', [string]$PathFormatter='', [string]$RepositoryFormatter='')
-    $candidates = @(
-        if ($RepositoryFormatter) { $RepositoryFormatter }
-        if ($VisualStudioInstallation) {
-            Join-Path $VisualStudioInstallation 'VC/Tools/Llvm/x64/bin/clang-format.exe'
-            Join-Path $VisualStudioInstallation 'VC/Tools/Llvm/bin/clang-format.exe'
-        }
-        if ($PathFormatter) { $PathFormatter }
-    )
-    foreach ($candidate in $candidates) {
-        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
-    }
-    throw 'Run ./Tools/Install-ClangFormat.ps1 or provide the pinned clang-format through Visual Studio C++ Clang tools or PATH.'
-}
-
 function Get-RedMonitorClangFormat {
-    <# Canonical selected formatter discovery/version check, shared with validation identity. #>
+    <# The formatter format.ps1 uses, shared with validation identity: Install-CiFormatter from this checkout's
+       pinned .ci-engine installs and verifies the clang-format that the engine's Policy/clang-format.json pins
+       under .build/shared-format. There is no repository pin and no Visual Studio or PATH lookup. #>
     [CmdletBinding()]
     param([string]$Root=(Join-Path $PSScriptRoot '..'))
-    Import-Module (Join-Path $PSScriptRoot 'AgentGuidance.psm1') -ErrorAction Stop
-    $pin=Get-Content -LiteralPath (Join-Path $Root 'Build/clang-format.json') -Raw|ConvertFrom-Json
-    $repositoryFormatter=Assert-RedMonitorOutputPath (Join-Path $Root ('.build/format/'+$pin.entryPath))
-    $installation='';$pathFormatter=''
-    if(-not(Test-Path -LiteralPath $repositoryFormatter -PathType Leaf)){
-        try{
-            $msbuild=Get-RedMonitorMSBuild
-            $installation=([IO.FileInfo]$msbuild).Directory.Parent.Parent.Parent.FullName
-        }catch [System.Management.Automation.RuntimeException]{
-            Write-Verbose "Visual Studio formatter discovery unavailable: $($_.Exception.Message)"
-        }
-        $command=Get-Command clang-format.exe -ErrorAction SilentlyContinue|Select-Object -First 1
-        if($command){$pathFormatter=$command.Source}
+    $checkout=[IO.Path]::GetFullPath($Root)
+    $module=Join-Path $checkout '.ci-engine/Tools/Modules/Ci.Format.psm1'
+    if(-not(Test-Path -LiteralPath $module -PathType Leaf)){
+        throw 'Formatting needs the shared CI engine in .ci-engine at the engine.ref that .ci/project.json pins.'
     }
-    $formatter=Find-RedMonitorClangFormat -VisualStudioInstallation $installation -PathFormatter $pathFormatter -RepositoryFormatter $repositoryFormatter
-    Assert-RedMonitorOrdinaryGuidancePath $formatter
-    $version=@(& $formatter --version)
-    if($LASTEXITCODE -ne 0 -or ($version -join '') -notmatch ('^clang-format version '+[regex]::Escape($pin.version)+'(?:\s|$)')){
-        throw "Formatting requires clang-format $($pin.version). Run ./Tools/Install-ClangFormat.ps1. Found: $($version -join ' ')"
-    }
-    return $formatter
+    Import-Module $module -ErrorAction Stop
+    return Install-CiFormatter $checkout
 }
 
-Export-ModuleMember -Function Find-RedMonitorClangFormat,Get-RedMonitorClangFormat
+Export-ModuleMember -Function Get-RedMonitorClangFormat
