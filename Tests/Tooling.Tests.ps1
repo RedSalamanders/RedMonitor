@@ -21,6 +21,7 @@ New-Item -ItemType Directory -Path $scratch -Force|Out-Null
 & (Join-Path $PSScriptRoot 'Tooling.Tests.Formatter.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.AgentGuidance.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.Build.ps1')
+& (Join-Path $PSScriptRoot 'Tooling.Tests.ResourceStrings.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.Vcpkg.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.HostedSdk.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.LocalSdkCandidate.ps1')

@@ -51,7 +51,7 @@ Planned-at commit: `0fbe8a7` (`RedSalamanders/RedMonitor` `main`).
   (`FileRenameInfoEx`, POSIX semantics), then `MoveFileExW`. Target: `ReplaceFileW` over an existing destination
   after its identity check, `MoveFileExW(MOVEFILE_WRITE_THROUGH)` for a new one, with one fault-injection hook per
   step (the hooks already exist for write, flush and publish).
-- [ ] **H-08 Resource-string gate.** `src/RedMonitor.rc` and the four satellites have a `STRINGTABLE` and no gate.
+- [x] **H-08 Resource-string gate.** `src/RedMonitor.rc` and the four satellites have a `STRINGTABLE` and no gate.
   Target: a gate that fails on bare `{}`, printf tokens and unresolved ids.
 - [x] **H-26 Settings contract name.** The settings contract was a paragraph of
   [architecture](../../Core/Core_Architecture.md); it is now [Core_Settings.md](../../Core/Core_Settings.md), which
