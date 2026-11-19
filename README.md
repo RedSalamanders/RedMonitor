@@ -54,4 +54,8 @@ Release builds can explicitly select verified immutable DxUi SDK inputs through
 [build contract](Specs/Build/Build_Consumption.md#explicit-pinned-release-sdk-inputs) describes the supported
 profile, live reader ownership, source fallback and the matching packaging option.
 
+## Recording changes
+
+Follow the [Changes workflow](Changes/README.md): each change adds one fragment under `Changes/` and never edits `CHANGELOG.md`; after merges, `Tools/Submit-ChangelogFold.ps1` folds the fragments on `main` through a pull request of its own.
+
 CI behavior and manual actions: [Unified CI contract](Specs/Build/Build_UnifiedCI.md).

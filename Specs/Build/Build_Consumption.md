@@ -142,6 +142,43 @@ queue the same best-effort launch; Release, help, tests and synthetic probes nev
 Missing helpers and ETW privilege denial cannot block normal application work. Applications never
 own the independent helper's teardown and never package or rebuild its executable.
 
+## Consumer contract
+
+This section is the one statement of what every application that adopts the client does: RedSalamander,
+RedXe, RedPrism and RedTilde today. Each keeps a `Specs/Core/Core_RedMonitorIntegration.md` that links here
+and holds only its adapter facts: its label, where its provider owner and severity mapping live, its
+command-line catalog and its tests.
+
+- **Pinned files.** The application uses only the immutable client header and MIT notice that its
+  `Dependencies/RedMonitor.lock.json` records, vendored under `ThirdParty/RedMonitor`. Normal builds verify
+  their SHA-256 values through `Verify-RedMonitorClient.ps1` and perform no RedMonitor clone, download,
+  compilation or executable staging. Direct MSBuild uses the same verifier. Only an explicit
+  `Update-RedMonitorClient.ps1 -Commit FULL_SHA` updates the two files and the lock together.
+- **Provider.** The executable owns one provider before workers start and through their teardown, or an
+  existing module provider calls `WriteNormalizedEvent` without changing its registration or ABI. Messages
+  carry the application label, mapped severity, counted Unicode text, and copied PID/TID and FILETIME through
+  `Client.h`. The wire GUID, event name and original field types remain compatible; `Application` is an
+  additive field. Disabled writes return before conversion, formatting or heap allocation. The 16000
+  UTF-16-unit bound includes the label. The application's existing local, debug, crash and dedicated
+  performance-provider policy remains intact. No SDK owner crosses a plugin ABI; host-forwarded plugin text
+  is copied before publication.
+- **Viewer.** The viewer is a separately packaged production Release application, installed from its
+  standalone ZIP with `Install-RedMonitor.ps1`. Discovery checks only the per-user
+  `LocalAppData/Programs/RedMonitor/RedMonitor.exe`, then `ProgramFiles/RedMonitor/RedMonitor.exe`, and
+  rejects debug, test-special-build or foreign metadata. There is no `PATH`, sibling, generated-output or
+  adjacent executable fallback.
+- **Launch.** A bare Debug startup may queue an asynchronous optional launch. Release startup and every
+  nonempty command line, including help, tests and probes, never auto-launch the helper. Explicit
+  `--redmonitor` launches an installed helper and returns failure when it is absent, without creating
+  application state. The viewer's lifetime and single-instance ownership stay independent: no consumer kills,
+  waits for or upgrades it.
+- **Probe.** The hidden `--redmonitor-probe` command emits synthetic Unicode diagnostics through a bounded
+  test-only readiness barrier, without document, settings or window state. This repository's real
+  cross-process transport test runs it against the actual application executable.
+- **Validation.** Offline verification controls exercise exact, missing, tampered, unsafe and reparse inputs
+  with Git and the network unavailable. Application packages carry the client MIT notice and no viewer
+  payload. Native platform, physical input and accessibility, and paired performance gates remain separate.
+
 ## Installation and packaging
 
 Release packages include the full CRT/data/language/license closure plus Install-RedMonitor.ps1.
