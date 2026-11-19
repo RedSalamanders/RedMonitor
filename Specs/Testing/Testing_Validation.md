@@ -14,16 +14,8 @@ inputs, selected formatter/Git/PowerShell host and automation-assembly bytes, ru
 OS, architecture and the declared discovery/CI environment. The formatter in that
 identity is the one `format.ps1` uses, from the same helper (`Get-RedMonitorClangFormat`).
 
-A later native failure preserves the original successful attempt bytes. An identical
-retry may reuse those independent checks; it still executes all requested native,
-live ETW, cross-build, packaging and installation obligations. `-Force` reruns the
-independent checks. Before execution, the latest-state index is marked started;
-failure or interruption cannot fall back to an older green attempt. Failed or
-input-mutating checks stop before native work. Corrupt/missing/mismatched evidence
-is never a pass. Attempts are create-only records beneath `.build/validation-evidence/independent`,
-with a bounded digest-checked latest-state index. The independent operation lease
-does not cover later native execution. Final source drift refuses current-tree
-success. No independent receipt grants native or repository-wide qualification.
+Receipts, independent attempt records and their retention are owned by the
+[run-evidence contract](Testing_RunEvidence.md).
 
 Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush explicitly account for
 x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
@@ -46,15 +38,6 @@ the actual viewer must carry its ENABLE_TESTS resource marker. The same declared
 including optional explicitly required live ETW and the installed-viewer metadata check, run against those
 held binaries. No ordinary build is invoked or ordinary build receipt created. Output operations remain
 exclusive through the shared candidate lease; unrelated ordinary profiles need no lock for this route.
-
-Local SDK runtime results have role `LocalUnpinnedApplicationRuntimeResult`, bind the original build digest,
-dependency and complete runtime-byte digest, and live only under `.build/local-sdk-test-runs`, outside hosted
-`.build/test-runs` discovery. The reader rechecks all payload and SDK/source/engine inputs after child drain,
-before a result can pass. Runtime, source or close failure retains a failed record and releases ownership.
-Hosted/compiler-free requests, incomplete digest/profile requests and old partial build records refuse before
-runtime launch. Local SDK results never satisfy pinned Full/PrePush, main, packaging or production gates;
-their repository/production qualification flags stay false. Viewer/foreground/performance coverage keeps
-its separately declared scope; these console results do not imply it.
 
 Tests/Tooling.Tests.ScopedTesting.ps1 exercises the actual public wrapper in owned Git/child-process fixtures,
 using recording native entrypoints. It covers cumulative code followed by docs, staged reversals, Unicode,
@@ -178,10 +161,6 @@ and the still-open viewer qualification gates.
 Headless console cases do not take desktop focus. UI keyboard/clipboard/IME/AT fixtures require agreement
 to the time and a desktop lease with verified restoration. Screenshots are deterministic application
 harness captures with invented data and source/build/scenario provenance; never desktop screenshots.
-
-Keep build and runtime results separate; cross-builds cannot close native ARM64 runtime. A successful
-artifact identity is necessary for evidence reuse. Source/pin/binary/toolchain/environment/scenario must
-all match; pending CI, private repair receipts and focused runs cannot be promoted to Full acceptance.
 
 Release performance uses paired/alternating baseline and candidate on the same fixture and machine.
 Record append/filter/retention/export snapshot latency, frame p95/p99, private bytes, working set,
