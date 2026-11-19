@@ -33,10 +33,13 @@ function Invoke-Runner([string]$Mode='Affected',[switch]$Explain,[switch]$Force)
         return [pscustomobject]@{exit=$child.ExitCode;text=$text}
     }finally{$child.Dispose()}
 }
-foreach($path in @('Test-Changes.ps1','Build/Toolchain.psm1','Build/AgentGuidance.psm1','Build/IndependentValidation.psm1','Build/Formatting.psm1','Build/clang-format.json','Tools/Test-Changelog.ps1','Tools/Modules/Documentation/Changelog.psm1')){
+foreach($path in @('Test-Changes.ps1','Build/Toolchain.psm1','Build/AgentGuidance.psm1','Build/IndependentValidation.psm1','Build/Formatting.psm1','Build/clang-format.json','Tools/Test-Changelog.ps1','.ci/project.json')){
     Put $path ([IO.File]::ReadAllText((Join-Path $root $path)))
 }
-Put '.gitignore' ".build/`n"
+# The Tools/Test-Changelog.ps1 engine shim runs the pinned engine from the fixture's own .ci-engine.
+$fixtureEngine=& (Get-Command git -CommandType Application | Select-Object -First 1).Source clone --quiet --no-hardlinks (Join-Path $root '.ci-engine') (Join-Path $fixture '.ci-engine') 2>&1
+if($LASTEXITCODE){throw "Owned engine fixture clone failed: $fixtureEngine"}
+Put '.gitignore' ".build/`n.ci-engine/`n"
 Put 'README.md' '# Fixture guide'
 Put 'src/runtime.cpp' 'initial runtime source'
 Put 'CHANGELOG.md' "# Changelog`n`n## Unreleased`n"
