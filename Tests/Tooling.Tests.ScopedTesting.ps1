@@ -33,19 +33,23 @@ function Invoke-Runner([string]$Mode='Affected',[switch]$Explain,[switch]$Force)
         return [pscustomobject]@{exit=$child.ExitCode;text=$text}
     }finally{$child.Dispose()}
 }
-foreach($path in @('Test-Changes.ps1','Build/Toolchain.psm1','Build/AgentGuidance.psm1','Build/IndependentValidation.psm1','Build/Formatting.psm1','Build/clang-format.json','Tools/Test-Changelog.ps1','Tools/Modules/Documentation/Changelog.psm1')){
+foreach($path in @('Test-Changes.ps1','Build/Toolchain.psm1','Build/AgentGuidance.psm1','Build/IndependentValidation.psm1','Build/Formatting.psm1','Tools/Test-Changelog.ps1','.ci/project.json')){
     Put $path ([IO.File]::ReadAllText((Join-Path $root $path)))
 }
-Put '.gitignore' ".build/`n"
+# The Tools/Test-Changelog.ps1 engine shim and the formatter both run the pinned engine from the fixture's own .ci-engine.
+$fixtureEngine=& (Get-Command git -CommandType Application | Select-Object -First 1).Source clone --quiet --no-hardlinks (Join-Path $root '.ci-engine') (Join-Path $fixture '.ci-engine') 2>&1
+if($LASTEXITCODE){throw "Owned engine fixture clone failed: $fixtureEngine"}
+Put '.gitignore' ".build/`n.ci-engine/`n"
 Put 'README.md' '# Fixture guide'
 Put 'src/runtime.cpp' 'initial runtime source'
 Put 'CHANGELOG.md' "# Changelog`n`n## Unreleased`n"
 Put 'Changes/README.md' '# Fragment guide'
 [void][IO.Directory]::CreateDirectory((Join-Path $fixture '.build'))
-$formatterPin=Get-Content (Join-Path $root 'Build/clang-format.json') -Raw|ConvertFrom-Json
-$formatter=Join-Path $fixture ('.build/format/'+$formatterPin.entryPath)
-[void][IO.Directory]::CreateDirectory((Split-Path $formatter))
-[IO.File]::Copy((Join-Path $root ('.build/format/'+$formatterPin.entryPath)),$formatter)
+# The fixture formats with its engine clone, as format.ps1 does; the verified wheel avoids a download.
+Import-Module (Join-Path $root 'Build/Formatting.psm1') -Force
+$null=Get-RedMonitorClangFormat -Root $root
+[void][IO.Directory]::CreateDirectory((Join-Path $fixture '.build/shared-format'))
+[IO.File]::Copy((Join-Path $root '.build/shared-format/clang-format.whl'),(Join-Path $fixture '.build/shared-format/clang-format.whl'))
 $stub=@'
 param([switch]$Check,[string]$Configuration,[string]$Platform,[switch]$IncludeLiveEtw,[switch]$PassThru,[string]$PackageDirectory)
 $root=$PSScriptRoot

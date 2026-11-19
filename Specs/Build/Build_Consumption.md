@@ -6,6 +6,15 @@ Debug/Release/ASan Debug, Unicode stdcpplatest and /W4 /WX /permissive- /sdl.
 Pinned vcpkg and DxUi restores, outputs and exact source/profile receipts remain local under .build.
 No RedSalamander Common.dll or sibling build is required.
 
+Both vcpkg restores use a complete clone of the pinned vcpkg repository. vcpkg extracts versioned ports
+with `git read-tree` and `git checkout-index` in an environment that holds only `GIT_INDEX_FILE`, so it
+cannot fetch an object a partial clone left on the server ("Could not resolve host: github.com").
+`vcpkg-install.ps1` clones completely, fetches the pinned commit without `--depth` only when it is
+missing, and completes an earlier partial checkout in place. The pinned DxUi installer still makes a
+partial clone, so `restore-dxui.ps1` first prepares its `<output>/vcpkg-tool` as a complete checkout at
+the commit that DxUi's `vcpkg-tool.json` names (`Build/VcpkgToolCheckout.psm1`), which that installer
+then reuses.
+
 The selected app package include directory is an `ExternalIncludePath` MSBuild property,
 so the actual compiler classifies vcpkg headers as external in both viewer and support
 projects, including isolated local SDK dependencies. Extend it in `Directory.Build.targets`

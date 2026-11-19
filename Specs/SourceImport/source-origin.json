@@ -456,32 +456,39 @@
       "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
     },
     {
-      "repository": "https://github.com/RedSalamanders/RedTilde",
-      "commit": "cfa1a18bc273877cf050e9baa21835624326391c",
+      "repository": "https://github.com/RedSalamanders/.github",
+      "commit": "f965c7945aff98dbab352623a0cfbe333e7f282f",
       "path": "Tools/Fold-Changelog.ps1",
-      "sha256": "8b84956ab9920d54f5081edf46e021fda7fc27dc287d9c72e29faa916dee47ba",
-      "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
+      "sha256": "9627aad9bd68a778f9e9f60073ac840d881cd0351af9ed7ab844308f045675c7",
+      "disposition": "engine shim copied from Templates/Project/Tools/Fold-Changelog.ps1; the implementation is the pinned engine's Tools/Fold-Changelog.ps1 (Specs/ProjectCommands.md)"
     },
     {
-      "repository": "https://github.com/RedSalamanders/RedTilde",
-      "commit": "cfa1a18bc273877cf050e9baa21835624326391c",
+      "repository": "https://github.com/RedSalamanders/.github",
+      "commit": "f965c7945aff98dbab352623a0cfbe333e7f282f",
       "path": "Tools/Test-Changelog.ps1",
-      "sha256": "6e457ddf10c2386f7b02f43e703472eaf9801b3684d091a0ab7c726b8026ae18",
-      "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
+      "sha256": "312fef83a9241f624e2af18841411671a58ed91d2861fedb1e064e28bcac8116",
+      "disposition": "engine shim copied from Templates/Project/Tools/Test-Changelog.ps1; the implementation is the pinned engine's Tools/Test-Changelog.ps1 (Specs/ProjectCommands.md)"
     },
     {
-      "repository": "https://github.com/RedSalamanders/RedTilde",
-      "commit": "cfa1a18bc273877cf050e9baa21835624326391c",
+      "repository": "https://github.com/RedSalamanders/.github",
+      "commit": "f965c7945aff98dbab352623a0cfbe333e7f282f",
+      "path": "Tools/Submit-ChangelogFold.ps1",
+      "sha256": "e06745a05792c8dc840e2be2b0a307e4e71c3256feb5c97b7debbcd01300afee",
+      "disposition": "engine shim copied from Templates/Project/Tools/Submit-ChangelogFold.ps1; the implementation is the pinned engine's Tools/Submit-ChangelogFold.ps1 (Specs/ProjectCommands.md)"
+    },
+    {
+      "repository": "https://github.com/RedSalamanders/.github",
+      "commit": "f965c7945aff98dbab352623a0cfbe333e7f282f",
+      "path": "Tools/Release-Changelog.ps1",
+      "sha256": "b6e77b4ddd8cda9360cb4d1a34e398412e650884299cdebd694019bd6c6e71b2",
+      "disposition": "engine shim copied from Templates/Project/Tools/Release-Changelog.ps1; the implementation is the pinned engine's Tools/Release-Changelog.ps1 (Specs/ProjectCommands.md)"
+    },
+    {
+      "repository": "https://github.com/RedSalamanders/.github",
+      "commit": "f965c7945aff98dbab352623a0cfbe333e7f282f",
       "path": "Tools/Test-ChangelogWorkflow.ps1",
-      "sha256": "e351c7e3d6f11373e6284b523c5561306814598556f30f8b7af4fdf2cd879e94",
-      "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
-    },
-    {
-      "repository": "https://github.com/RedSalamanders/RedTilde",
-      "commit": "cfa1a18bc273877cf050e9baa21835624326391c",
-      "path": "Tools/Modules/Documentation/Changelog.psm1",
-      "sha256": "3e90fec9835c8df3669da0395a76065cc933f4dbd1910c5bfb05b9700390df1d",
-      "disposition": "adapted restore or shared changelog helper; source worktree clean for this file"
+      "sha256": "4885d07e56b3aca449a79526c2ad61ac3151f476bba3e8a374d3751b2c3c9f19",
+      "disposition": "engine shim copied from Templates/Project/Tools/Test-ChangelogWorkflow.ps1; the implementation is the pinned engine's Tools/Test-ChangelogWorkflow.ps1 (Specs/ProjectCommands.md)"
     },
     {
       "repository": "https://github.com/DualTail/RedSalamander",

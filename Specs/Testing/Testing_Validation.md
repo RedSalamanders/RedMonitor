@@ -11,8 +11,8 @@ delegation, and preserves the current local and main gates.
 after each command succeeds and the original source/tool/environment identity is
 reverified. That identity includes full product source bytes, actual pinned engine
 inputs, selected formatter/Git/PowerShell host and automation-assembly bytes, runtime,
-OS, architecture and the declared discovery/CI environment. Formatter discovery and
-exact version validation use the same helper as `format.ps1`.
+OS, architecture and the declared discovery/CI environment. The formatter in that
+identity is the one `format.ps1` uses, from the same helper (`Get-RedMonitorClangFormat`).
 
 A later native failure preserves the original successful attempt bytes. An identical
 retry may reuse those independent checks; it still executes all requested native,
@@ -66,6 +66,14 @@ to check receipt identity against ignored CI cache/Git metadata churn, timestamp
 and untracked edits/additions/deletions/renames, tracked ignored inputs and Unicode paths. It also checks
 the ASCII banner, color/plain modes, safe launch links and refusal to print success for warnings/errors.
 These controls do not invoke a compiler, launch an application or establish native runtime qualification.
+
+`Tests/Tooling.Tests.Vcpkg.ps1`, included by the tooling suite, runs `Build/VcpkgToolCheckout.psm1`
+against an owned offline `file://` registry fixture: fresh, repeated, completing a partial shallow
+checkout and refusing a foreign origin or a non-Git path. Each prepared checkout extracts an older tree
+the way vcpkg does, in an environment that holds only `GIT_INDEX_FILE`, with lazy fetch disabled; the
+unprepared partial checkout must fail that extraction. It also checks the complete clone of
+`vcpkg-install.ps1`, the prepare-before-install order in `restore-dxui.ps1`, and that the module is ASCII
+and parses in Windows PowerShell 5.1. It restores no package and runs no compiler.
 
 `Tests/Test-SdkInputs.Native.ps1 -Descriptor <absolute .build descriptor>` is an explicit MSBuild-dependent
 SDK policy control, excluded from compiler-free PR tooling. It holds the actual verified SDK reader while
@@ -134,13 +142,17 @@ hosts without symbolic-link privilege report those controls as skipped, not pass
 
 ## Native and performance evidence
 
-`Build/clang-format.json` owns the exact native formatter version and wheel SHA256.
-Run `Tools/Install-ClangFormat.ps1` before the first formatting check; it extracts only the
-verified native executable beneath guarded `.build/format` paths without installing Python
-or changing machine-wide tools. `-WheelPath` supports offline setup with the same checksum.
-The formatter requires the pinned version, and `format.ps1 -Check` performs no installation
-or source writes. CI installs that exact package before retaining `--dry-run --Werror`
-verification across the complete native source set.
+Formatting: the root `.clang-format` is the one style. `format.ps1` formats, and `format.ps1 -Check`
+verifies without writing and lists every file that needs formatting. Both take clang-format from
+`Install-CiFormatter` in the pinned `.ci-engine`, which installs the build that the engine's
+`Policy/clang-format.json` pins (22.1.3 today) under `.build/shared-format` and verifies its SHA-256 and
+version; no Visual Studio, `PATH` or repository-pinned formatter is used. Both cover the files CI formats:
+`.c`, `.cc`, `.cpp`, `.cxx`, `.h`, `.hh`, `.hpp` and `.hxx` files under the `formatRoots` of
+`.ci/project.json` that its `formatExclude` does not match. Pull-request checks run the same formatter over
+the files the pull request changes, or over every file when `.clang-format` or `.clang-format-ignore`
+changes; drift fails the check and retains the patch. The manual `Commit PR formatting` workflow commits
+that formatting to an open same-repository pull request with an ordinary push and requests fresh checks for
+the new head.
 
 The imported MonitorTest flags cover diagnostics opt-in, scrollbar model, document batching/filtering,
 non-dirtying filter changes, bounded visible-range queries, incremental retention eviction (offset deque,

@@ -6,14 +6,15 @@ Generated outputs remain below `.build`; independently launched applications are
 | Tool | Purpose and side effects |
 | --- | --- |
 | `Build-LocalSdkCandidate.ps1` | Explicit local Release SDK viewer, satellites and normal console-test aggregate; isolated outputs/dependencies, live leases, full byte catalog and actual link proof; no test, package or publication acceptance |
-| `Fold-Changelog.ps1` | Folds Changes fragments into CHANGELOG.md on the default branch, normally through `Submit-ChangelogFold.ps1`; Check and WhatIf are read-only |
-| `Submit-ChangelogFold.ps1` | Folds the fetched default branch in a temporary worktree, pushes `changelog/fold-<commit>` and opens its pull request with `gh`; uses the network and never changes this checkout |
-| `Test-Changelog.ps1` | Read-only fragment validation; `-Base <ref>` also refuses any CHANGELOG.md change that is not an exact fold of fragments already on that base |
-| `Test-ChangelogWorkflow.ps1` | Runs shared behavior fixtures in a caller-owned scratch directory |
+| `Fold-Changelog.ps1` | Engine shim. Folds Changes fragments into CHANGELOG.md on the default branch, normally through `Submit-ChangelogFold.ps1`; Check and WhatIf are read-only |
+| `Submit-ChangelogFold.ps1` | Engine shim. Folds the fetched default branch in a temporary worktree, pushes `changelog/fold-<commit>` and opens its pull request with `gh`; uses the network and never changes this checkout |
+| `Test-Changelog.ps1` | Engine shim. Read-only fragment validation; `-Base <ref>` also refuses any CHANGELOG.md change that is not an exact fold of fragments already on that base |
+| `Release-Changelog.ps1` | Engine shim. In a release-only change after every fragment is folded, moves the Unreleased entries under one `## <version> - <date>` heading; WhatIf is read-only |
+| `Test-ChangelogWorkflow.ps1` | Engine shim. Runs the shared behavior fixtures in a caller-owned scratch directory and proves these shims equal the pinned engine's templates |
 | `VisualStudio.psm1` | Read-only discovery of the installed C++ toolchain |
 | `VcpkgTriplet.psm1` | Writes toolchain-pinned overlay triplets under the generated dependency root |
-| `Modules/Documentation/Changelog.psm1` | Shared changelog implementation with explicit exports |
 
+The five engine shims run the shared CI engine's implementation from the pinned `.ci-engine` (Specs/Core/Core_Changes.md).
 Tests/Tooling.Tests.ps1 exercises output boundaries and shared changelog behavior. Source/dependency
 locks, script syntax, documentation links and native project boundaries are checked by validate.ps1.
 

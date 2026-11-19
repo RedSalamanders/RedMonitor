@@ -82,7 +82,6 @@ if ($Phase -eq 'Production') {
     return
 }
 if ($Platform -eq 'x64') {
-    Run 'Tools/Install-ClangFormat.ps1'
     Run 'Tests/Tooling.Tests.ps1'
 }
 Run 'test.ps1' ($profile + @('-SkipBuild'))

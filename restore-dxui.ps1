@@ -36,6 +36,10 @@ if(Test-Path -LiteralPath $directoryIdentity){
     New-Item -ItemType Directory -Force -Path $output|Out-Null
     [IO.File]::WriteAllText($directoryIdentity,$identity.Fingerprint)
 }
+# The pinned DxUi installer makes a partial vcpkg clone, which vcpkg cannot read (Build/VcpkgToolCheckout.psm1);
+# it reuses this complete checkout instead.
+Import-Module (Join-Path $PSScriptRoot 'Build/VcpkgToolCheckout.psm1') -Force
+Initialize-VcpkgToolCheckout -ToolIdentityPath (Join-Path $source 'vcpkg-tool.json') -ToolRoot (Join-Path $output 'vcpkg-tool')
 & (Join-Path $source 'vcpkg-install.ps1') -Platform $Platform -OutputRoot $output
 if ($LASTEXITCODE -ne 0) { throw 'DxUi dependency restore failed.' }
 $properties = [ordered]@{
