@@ -1,5 +1,8 @@
 # Completed work
 
+Completed plans are history: they record sequencing, rationale, and evidence, never current behavior. Each is
+listed once, newest first, as `- [Title](File.md) — outcome`.
+
 - [Viewer freeze, layout, and ETW ingestion responsiveness repair](ViewerFreezeAndResponsiveness_2026-11-09.md) — completed with
   incremental retention eviction, bounded width measurement, coalesced ETW batch dispatch, unified tail-layout rendering/hit-testing,
   immediate ETW session stop, normative contract updates, and full local PrePush qualification.
