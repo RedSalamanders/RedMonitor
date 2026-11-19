@@ -158,6 +158,12 @@ scaling and selftest fixture cleanup. Richer clipboard formats and additional fi
 an explicit RedMonitor decision. These obligations are distinct from the implemented console subset
 and the still-open viewer qualification gates.
 
+User strings live in the `STRINGTABLE` of `src/RedMonitor.rc` and its four satellites under `src/Lang/`.
+`Tests/Tooling.Tests.ResourceStrings.ps1`, part of the tooling tests, checks them without native compilation: every
+string id is defined in `src/resource.h` and every `IDS_` id the viewer source uses has a base string; a placeholder is
+positional (`{0}`, `{1:...}`) with no gap in its indexes, never bare `{}`, `{:...}` or a printf token; and every
+satellite string has a base string with the same placeholders.
+
 Headless console cases do not take desktop focus. UI keyboard/clipboard/IME/AT fixtures require agreement
 to the time and a desktop lease with verified restoration. Screenshots are deterministic application
 harness captures with invented data and source/build/scenario provenance; never desktop screenshots.
