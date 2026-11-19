@@ -1,7 +1,8 @@
 # Completed work
 
-Completed plans are history: they record sequencing, rationale, and evidence, never current behavior. Each is
-listed once, newest first, as `- [Title](File.md) — outcome`.
+Completed plans are history: they record sequencing, rationale, and evidence, never current behavior. A plan is
+added here, newest first, in the change that moves it to Done, as a bullet that links its title to its file and
+ends with an em dash and its outcome.
 
 - [Viewer freeze, layout, and ETW ingestion responsiveness repair](ViewerFreezeAndResponsiveness_2026-11-09.md) — completed with
   incremental retention eviction, bounded width measurement, coalesced ETW batch dispatch, unified tail-layout rendering/hit-testing,
