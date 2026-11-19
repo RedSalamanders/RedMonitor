@@ -156,7 +156,7 @@ if (-not (Test-Path -LiteralPath $vcpkg -PathType Leaf) -or $stampedCommit -ne $
 $platforms = if ($Platform -eq 'All') { @('x64', 'ARM64') } else { @($Platform) }
 foreach ($targetPlatform in $platforms) {
     $platformScope = $targetPlatform
-    $triplet = if ($targetPlatform -eq 'ARM64') { 'arm64-windows-static-md' } else { 'x64-windows-static-md' }
+    $triplet = if ($targetPlatform -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
     $installRoot = Join-Path $buildRoot "vcpkg_installed\$platformScope"
     $buildTreesRoot = Join-Path $buildRoot "vcpkg_buildtrees\$platformScope"
     $packagesRoot = Join-Path $buildRoot "vcpkg_packages\$platformScope"
