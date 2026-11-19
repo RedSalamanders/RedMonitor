@@ -69,6 +69,7 @@ If a behavior has no owning domain spec yet, create that spec in the first chang
 | Domain | Start with |
 | --- | --- |
 | Source boundaries, compatibility, the log document, and file open and export | [Core/Core_Architecture.md](Core/Core_Architecture.md) |
+| Settings files and location, schema, unusable-file recovery, and save | [Core/Core_Settings.md](Core/Core_Settings.md) |
 | ETW schema, the producer client, and session lifetime | [Core/Core_Transport.md](Core/Core_Transport.md) |
 | Performance and resource consumption | [Core/Core_PerformanceAndResources.md](Core/Core_PerformanceAndResources.md) |
 | The viewer window: rendering, filtering, and UI-thread publication | [UI/UI_Viewer.md](UI/UI_Viewer.md) |

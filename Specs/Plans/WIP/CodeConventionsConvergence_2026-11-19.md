@@ -53,9 +53,12 @@ Planned-at commit: `0fbe8a7` (`RedSalamanders/RedMonitor` `main`).
   step (the hooks already exist for write, flush and publish).
 - [ ] **H-08 Resource-string gate.** `src/RedMonitor.rc` and the four satellites have a `STRINGTABLE` and no gate.
   Target: a gate that fails on bare `{}`, printf tokens and unresolved ids.
-- [ ] **H-26 Settings contract name.** The settings contract is a paragraph of
-  [architecture](../../Core/Core_Architecture.md). Target: `Specs/Core/Core_Settings.md`, which owns the file names
-  (already `<Product>.settings.json` and `<Product>-debug.settings.json`), location, schema, validation and save.
+- [x] **H-26 Settings contract name.** The settings contract was a paragraph of
+  [architecture](../../Core/Core_Architecture.md); it is now [Core_Settings.md](../../Core/Core_Settings.md), which
+  owns the file names, location, schema, recovery and save. The Debug file already is
+  `RedSalamanderMonitor-debug.settings.json`, but the Release file is `RedSalamanderMonitor-7.0.settings.json`, not the
+  register's `<Product>.settings.json`: renaming it changes which file existing users read, so it moves with the S4
+  settings migration of the [extraction plan](RedMonitorExtraction_2026-10-21.md), not here.
 
 ## Rows that wait
 
