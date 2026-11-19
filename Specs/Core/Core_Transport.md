@@ -21,11 +21,8 @@ Callback routing belongs to each session's Context/UserContext, never a global l
 Stop first rejects callbacks, stops the kernel trace session (`EVENT_TRACE_CONTROL_STOP`) and closes its
 consumer handle so `ProcessTrace` unblocks immediately without waiting for the real-time flush timer,
 then waits at most five seconds. Only shared owned callback state may outlive that bounded wait.
-ETW batch delivery coalesces `kColorTextViewEtwBatch` window messages so at most one batch notification
-is queued at a time, and paces immediate `UpdateWindow` repaints during sustained batch arrival to at
-most 60 Hz (16 ms) so Win32 input and menu messages are never starved. GUI result payloads use the
-registered token mechanism and are drained at WM_NCDESTROY. Permission denial is visible and recoverable
-without file-view loss.
+Delivery of ETW batches to the window, and how a permission denial is shown, are owned by the
+[viewer](../UI/UI_Viewer.md#publishing-to-the-ui-thread).
 
 Self Info/Perf diagnostics are runtime opt-in with --etw; default operation must not feed its own log
 back into the viewer. Real event roundtrip and permission-denial cases are separate validation gates.
