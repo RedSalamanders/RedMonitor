@@ -3,7 +3,7 @@
   "apiRevision": 1,
   "product": "RedMonitor",
   "status": "extraction-in-progress",
-  "implemented": [
+  "supported": [
     "imported bounded log model",
     "DirectX viewer",
     "legacy ETW schema",
