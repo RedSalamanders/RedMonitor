@@ -17,7 +17,8 @@ Product output is RedMonitor.exe. The initial compatibility contract retains set
 standalone package. Consumer packages contain the client license, with no viewer executable or satellites.
 The shared client discovers only installed production RedMonitor.exe images; explicit launch and optional
 bare Debug asynchronous startup follow the consumption contract. No second live implementation is retained
-in RedSalamander. The later independent-settings migration must preserve old files and rollback.
+in RedSalamander. The later independent-settings migration must preserve old files and rollback. The
+[settings contract](Core_Settings.md) owns the settings files, schema, recovery and save.
 
 The document owns bounded immutable text blocks, copies metadata under lock, and shifts/clamps all
 selection/search/scroll mappings together on oldest-first eviction. Retention eviction updates the
