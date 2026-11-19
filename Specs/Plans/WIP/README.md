@@ -2,9 +2,10 @@
 
 Files in this directory are non-normative execution or decision records; current requirements stay in the owning
 domain spec under `Specs/<Domain>/`. This index is routing only. Every direct plan in this directory is listed
-exactly once, as `- **STATUS**: [Title](File.md) — purpose`. `ACTIVE` is executable work, `HOLD` paused work,
-`DECISION` unresolved product intent, and `RETIRED` a bounded tombstone that names its retirement date, reason,
-current owner, and a `git show` recovery command.
+exactly once, as a bullet that opens with its bold status and a colon (`- **ACTIVE**:`), links its title to its
+file, and ends with an em dash and its purpose. `ACTIVE` is executable work, `HOLD` paused work, `DECISION`
+unresolved product intent, and `RETIRED` a bounded tombstone that names its retirement date, reason, current
+owner, and a `git show` recovery command.
 
 - **ACTIVE**: [RedMonitor extraction and Red-family adoption](RedMonitorExtraction_2026-10-21.md) — standalone
   implementation, RedSalamander cutover, settings reduction, three app adapters and qualification.
