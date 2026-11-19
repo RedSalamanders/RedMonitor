@@ -49,6 +49,15 @@
     "executable": "RedMonitor.exe",
     "alias": "redmonitor",
     "license": "MIT",
-    "minimumOSVersion": "10.0.22000.2600"
+    "minimumOSVersion": "10.0.22000.2600",
+    "smokeTests": [
+      {
+        "command": "redmonitor",
+        "arguments": [
+          "--runtime-contract"
+        ],
+        "timeoutSeconds": 120
+      }
+    ]
   }
 }
