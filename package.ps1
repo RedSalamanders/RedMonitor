@@ -41,6 +41,7 @@ if($Configuration -eq 'ASan Debug'){
     $runtimes|Copy-Item -Destination $stage
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE.txt') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'THIRD-PARTY-NOTICES.md') -Destination $stage
 $dxuiPin=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Dependencies/DxUi.lock.json') -Raw|ConvertFrom-Json
 $knownSdkRecipes=@('PinnedReleaseSdkV1','PinnedQualifiedReleaseSdkV2')
 if($receipt.PSObject.Properties.Name -contains 'dxuiRecipe' -and $receipt.dxuiRecipe.recipe -cnotin (@('PinnedSource')+$knownSdkRecipes)){throw 'Unsupported build dependency recipe; rebuild through a reviewed reader.'}
