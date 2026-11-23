@@ -1,1 +1,0 @@
-- Exercise the formatter's wrong-engine refusal with a local mismatch commit, so the fixture works when hosted qualification supplies only the exact shallow pin.
