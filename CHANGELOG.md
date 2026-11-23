@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Exercise the formatter's wrong-engine refusal with a local mismatch commit, so the fixture works when hosted qualification supplies only the exact shallow pin.
 - The winget block of `.ci/project.json` now declares a smoke test, `redmonitor --runtime-contract` with a
   120-second limit, as RedXe declares one (RedHome CV-6-07, register G-05). The engine runs it after a native winget
   install. The command is the headless check `package.ps1` already runs against every extracted Release package: it
