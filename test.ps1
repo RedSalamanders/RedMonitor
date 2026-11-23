@@ -11,7 +11,14 @@ Debug, Release or ASan Debug.
 .PARAMETER SkipBuild
 Reuse only a source-compatible successful build receipt.
 .PARAMETER IncludeLiveEtw
-Require a real ETW producer/listener roundtrip; permission denial fails this requested gate.
+Require a real ETW producer/listener roundtrip for a direct invocation; permission denial fails this requested gate.
+.PARAMETER Suites
+Shared runner suites: Regression, LiveEtw and ContainedInstallation. LiveEtw includes the regression prerequisite.
+ContainedInstallation is available in Release.
+.PARAMETER SkipTooling
+Accepted by the shared runner, which owns independent validation. This entry point runs native tests.
+.PARAMETER ParallelSuites
+Upper limit for concurrent suites. RedMonitor runs its dependent native and installation gates serially.
 .PARAMETER LocalSdkBuildReceipt
 Original local SDK candidate build record. Runs the same Release scenarios against its complete held output;
 requires LocalSdkBuildSha256, native execution and SkipBuild. Never supplies pinned PrePush/main acceptance.
@@ -21,7 +28,8 @@ Independently retained SHA-256 of the original local candidate build record.
 [CmdletBinding()]
 param([ValidateSet('x64','ARM64')][string]$Platform='x64',
       [ValidateSet('Debug','Release','ASan Debug')][string]$Configuration='Debug',[switch]$SkipBuild,[switch]$IncludeLiveEtw,
-      [string]$LocalSdkBuildReceipt='', [string]$LocalSdkBuildSha256='')
+      [string]$LocalSdkBuildReceipt='', [string]$LocalSdkBuildSha256='',
+      [string[]]$Suites=@(), [switch]$SkipTooling, [ValidateRange(1,8)][int]$ParallelSuites=1)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $localSdkMode=[bool]($LocalSdkBuildReceipt -or $LocalSdkBuildSha256)
@@ -31,9 +39,68 @@ if($localSdkMode -and (-not $IsWindows -or $env:GITHUB_ACTIONS -ceq 'true' -or $
 if($localSdkMode -and (-not $LocalSdkBuildReceipt -or $LocalSdkBuildSha256 -cnotmatch '^[a-f0-9]{64}$' -or $Configuration -cne 'Release' -or -not $SkipBuild)){
     throw 'Local SDK runtime requires the original build record/digest, Release and explicit SkipBuild.'
 }
+$scoped = $PSBoundParameters.ContainsKey('Suites')
+if ($scoped -and ($localSdkMode -or $IncludeLiveEtw)) {
+    throw 'Use scoped suite names separately from the direct live ETW and local SDK options.'
+}
 Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
-if($Platform -eq 'ARM64' -and [Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne 'Arm64'){
-    throw 'ARM64 runtime tests require a native ARM64 host.'
+Import-Module (Join-Path $PSScriptRoot 'Build/ScopedTesting.psm1') -Scope Local
+Assert-ScopedRuntimePlatform -Platform $Platform
+$profileLease = if (-not $localSdkMode) {
+    Enter-ScopedProfileLease -Root $PSScriptRoot -Platform $Platform -Configuration $Configuration
+}
+try {
+if (-not $localSdkMode) {
+    $reports = Get-ScopedReportRoot -Root $PSScriptRoot -Platform $Platform -Configuration $Configuration
+    Remove-ScopedIteration -Root $PSScriptRoot -Path (Join-Path $reports 'iteration.json')
+}
+if ($scoped) {
+    $manifest = Read-ScopedTestManifest -Root $PSScriptRoot -SkipProjectRules
+    $names = @($Suites | ForEach-Object { $_ -split ',' })
+    if (-not $names.Count -or @($names | Where-Object { -not $_ }).Count) {
+        throw 'Provide at least one native suite name.'
+    }
+    $plan = Get-ScopedTestPlan -Manifest $manifest -Scopes $names -Configuration $Configuration
+    $native = @($manifest.scopes | Where-Object { $_.native -and $_.name -cin $plan.scopes } | ForEach-Object name)
+    if ($native.Count -ne $plan.scopes.Count) { throw 'test.ps1 accepts native scopes only.' }
+    if (-not $SkipBuild) {
+        $global:LASTEXITCODE = 0
+        & (Join-Path $PSScriptRoot 'build.ps1') -Platform $Platform -Configuration $Configuration
+        if ($LASTEXITCODE) { throw "Native build exited with code $LASTEXITCODE." }
+    }
+    $sourceIdentity = Get-RedMonitorSourceIdentity
+    Import-Module (Join-Path $PSScriptRoot 'Build/TestRunEvidence.psm1') -Scope Local
+    $evidence = Start-TestRunEvidence -Repository $PSScriptRoot -Context @{
+        project='RedMonitor'; platform=$Platform; configuration=$Configuration; suites=$native; sourceIdentity=$sourceIdentity
+    }
+    $scopedFailure = $null
+    $scopedPassed = $false
+    try {
+        if ('Regression' -in $native -or 'LiveEtw' -in $native) {
+            $global:LASTEXITCODE = 0
+            & $PSCommandPath -Platform $Platform -Configuration $Configuration -SkipBuild -IncludeLiveEtw:('LiveEtw' -in $native)
+            if ($LASTEXITCODE) { throw "Regression or live ETW exited with code $LASTEXITCODE." }
+        }
+        if ('ContainedInstallation' -in $native) {
+            $global:LASTEXITCODE = 0
+            $package = & (Join-Path $PSScriptRoot 'package.ps1') -Platform $Platform -Configuration $Configuration -PassThru
+            if ($LASTEXITCODE -or -not $package) { throw "Packaging failed (exit $LASTEXITCODE)." }
+            & (Join-Path $PSScriptRoot 'Tests/Tooling.Tests.Installation.ps1') -PackageDirectory $package.extracted
+            if ($LASTEXITCODE) { throw "Contained installation exited with code $LASTEXITCODE." }
+        }
+        if ((Get-RedMonitorSourceIdentity) -cne $sourceIdentity) { throw 'Inputs changed during scoped runtime. No scoped success was published.' }
+        foreach ($suite in $native) {
+            Publish-TestRunEvidenceReceipt -Run $evidence -Name "$suite-$Platform-$Configuration.json" -Receipt ([ordered]@{
+                suite=$suite; platform=$Platform; configuration=$Configuration; exitCode=0; skips=@();
+                sourceIdentity=$sourceIdentity; evidenceRun=$evidence.Directory
+            })
+        }
+        $scopedPassed = $true
+    } catch { $scopedFailure=$_; throw }
+    finally {
+        Complete-TestRunEvidenceAfterFailure -Run $evidence -Passed $scopedPassed -PrimaryFailure $scopedFailure
+    }
+    return
 }
 if(-not $SkipBuild){& (Join-Path $PSScriptRoot 'build.ps1') -Platform $Platform -Configuration $Configuration}
 $lease=$null;$runtimeInput=$null
@@ -132,3 +199,4 @@ if(-not $passed){throw 'One or more RedMonitor scenarios failed; see the retaine
     if($null -ne $runtimeInput -and -not $runtimeInput.Closed){Close-CiLocalSdkApplicationRuntimeInput $runtimeInput}
     if($null -ne $lease){$lease.ReleaseMutex();$lease.Dispose()}
 }
+} finally { Exit-ScopedProfileLease $profileLease }

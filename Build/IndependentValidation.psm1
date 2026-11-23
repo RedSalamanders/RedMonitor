@@ -38,32 +38,12 @@ function Write-RedMonitorIndependentRecord {
     }finally{if([IO.File]::Exists($temporary)){[IO.File]::Delete($temporary)}}
 }
 
-function Test-RedMonitorIndependentReceipt {
-    param([string]$Directory,[string]$Scope,[string]$Identity)
-    $latest=Assert-RedMonitorOutputPath (Join-Path $Directory 'latest.json')
-    if(-not [IO.File]::Exists($latest)){return $false}
-    try{
-        if((Get-Item -LiteralPath $latest).Length -gt 4096){return $false}
-        $index=Get-Content -LiteralPath $latest -Raw|ConvertFrom-Json
-        if($index.schema -ne 1 -or $index.status -cne 'passed' -or $index.identity -cne $Identity -or $index.scope -cne $Scope -or $index.attempt -cnotmatch '^[a-f0-9]{32}\.json$'){return $false}
-        $attempt=Assert-RedMonitorOutputPath (Join-Path $Directory $index.attempt)
-        if(-not [IO.File]::Exists($attempt) -or (Get-Item -LiteralPath $attempt).Length -gt 4096){return $false}
-        if((Get-FileHash -LiteralPath $attempt -Algorithm SHA256).Hash -cne $index.sha256){return $false}
-        $record=Get-Content -LiteralPath $attempt -Raw|ConvertFrom-Json
-        return ($record.schema -eq 1 -and $record.scope -ceq $Scope -and $record.status -ceq 'passed' -and $record.identity -ceq $Identity)
-    }catch{return $false}
-}
-
 function Invoke-RedMonitorIndependentCheck {
     [CmdletBinding()]
-    param([string]$Root,[ValidateSet('Validation','Format','Tooling')][string]$Scope,[scriptblock]$Action,[string]$OriginalIdentity,[switch]$Force)
+    param([string]$Root,[ValidateSet('Validation','Format','Tooling')][string]$Scope,[scriptblock]$Action,[string]$OriginalIdentity)
     $before=Get-RedMonitorIndependentIdentity -Root $Root
     if($before -cne $OriginalIdentity){throw 'Inputs changed during independent validation; run again on the current tree.'}
     $directory=Assert-RedMonitorOutputPath (Join-Path $Root ('.build/validation-evidence/independent/'+$Scope))
-    if(-not $Force -and (Test-RedMonitorIndependentReceipt $directory $Scope $before)){
-        Write-Host "REUSED independent $Scope (exact local source/tools/environment)."
-        return
-    }
     $attempt=[guid]::NewGuid().ToString('N')+'.json'
     $index=[ordered]@{schema=1;scope=$Scope;identity=$before;status='started';attempt=$attempt;sha256=$null}
     # Revoke latest-state eligibility before execution. Interruption/failure cannot expose an older green.

@@ -1,0 +1,1 @@
+- Adopt the shared scoped test runner while retaining RedMonitor's live ETW, contained installation and source-bound native gates.

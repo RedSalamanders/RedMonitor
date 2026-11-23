@@ -1,0 +1,167 @@
+{
+  "version": 2,
+  "defaultBranch": "main",
+  "buildNumber": "none",
+  "nativeInventory": {
+    "path": "Tests/native-test-files.json",
+    "testFolders": [
+      "Tests/**"
+    ],
+    "exclude": [
+      "Specs/**",
+      "Measurements/**",
+      "legacy/**",
+      "External/**"
+    ]
+  },
+  "runtimeFiles": [
+    "SettingsStore.schema.json",
+    "Themes/CatppuccinFrappe.theme.json5",
+    "Themes/CatppuccinLatte.theme.json5",
+    "Themes/CatppuccinMocha.theme.json5",
+    "Themes/Dracula.theme.json5",
+    "Themes/ForestMist.theme.json5",
+    "Themes/Licenses/Catppuccin.LICENSE.txt",
+    "Themes/Licenses/Dracula.LICENSE.txt",
+    "Themes/NeonTokyo.theme.json5",
+    "Themes/PaperAndInk.theme.json5",
+    "Themes/RetroTerminal.theme.json5",
+    "Themes/SolarFlare.theme.json5",
+    "Themes/THIRD-PARTY-NOTICES.md",
+    "Themes/Ugly.theme.json5"
+  ],
+  "prose": [
+    "README.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CHANGELOG.md",
+    "Tests/README.md",
+    "Specs/**/*.md",
+    "docs/**/*.md",
+    "Changes/**/*.md",
+    ".agents/**/*.md",
+    ".github/skills/**/*.md"
+  ],
+  "unscoped": [],
+  "scopes": [
+    {
+      "native": true,
+      "name": "Regression",
+      "reuse": false
+    },
+    {
+      "native": true,
+      "name": "LiveEtw",
+      "reuse": false
+    },
+    {
+      "native": true,
+      "name": "ContainedInstallation",
+      "configurations": [
+        "Release"
+      ],
+      "reuse": false
+    },
+    {
+      "native": false,
+      "name": "Validation",
+      "commands": [
+        {
+          "path": "Tools/Invoke-ValidationScope.ps1",
+          "arguments": [
+            "-Scope",
+            "Validation"
+          ]
+        }
+      ],
+      "reuse": true
+    },
+    {
+      "native": false,
+      "name": "Format",
+      "commands": [
+        {
+          "path": "Tools/Invoke-ValidationScope.ps1",
+          "arguments": [
+            "-Scope",
+            "Format"
+          ]
+        }
+      ],
+      "reuse": true
+    },
+    {
+      "native": false,
+      "name": "Tooling",
+      "commands": [
+        {
+          "path": "Tools/Invoke-ValidationScope.ps1",
+          "arguments": [
+            "-Scope",
+            "Tooling"
+          ]
+        }
+      ],
+      "reuse": true
+    }
+  ],
+  "rules": [
+    {
+      "reason": "Native and unknown changes require the unattended regression and independent gates",
+      "pattern": "**",
+      "scopes": [
+        "Regression",
+        "Validation",
+        "Format",
+        "Tooling"
+      ]
+    }
+  ],
+  "interactiveObligations": [],
+  "watchedProcesses": [
+    "RedMonitor.exe",
+    "MonitorTest.exe",
+    "ClientContractTests.exe",
+    "SettingsContractTests.exe",
+    "TransportRoundtripTests.exe",
+    "AsanProbe.exe"
+  ],
+  "prePushProfiles": [
+    {
+      "buildOnly": false,
+      "platform": "x64",
+      "configuration": "Debug"
+    },
+    {
+      "buildOnly": false,
+      "platform": "x64",
+      "configuration": "Release"
+    },
+    {
+      "buildOnly": false,
+      "platform": "x64",
+      "configuration": "ASan Debug"
+    },
+    {
+      "buildOnly": true,
+      "platform": "ARM64",
+      "configuration": "Debug"
+    },
+    {
+      "buildOnly": true,
+      "platform": "ARM64",
+      "configuration": "Release"
+    },
+    {
+      "buildOnly": true,
+      "platform": "ARM64",
+      "configuration": "ASan Debug"
+    }
+  ],
+  "instrumentationVariables": [],
+  "systemFiles": [
+    "d3d10warp.dll",
+    "d3d11.dll",
+    "dwrite.dll"
+  ]
+}

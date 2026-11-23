@@ -7,29 +7,32 @@ engine bytes participate; generated engine `.build` output does not. This input
 is separate from product file/affected discovery, grants no qualification or CI
 delegation, and preserves the current local and main gates.
 
-`Test-Changes.ps1` records Validation, Format and Tooling separately immediately
-after each command succeeds and the original source/tool/environment identity is
-reverified. That identity includes full product source bytes, actual pinned engine
-inputs, selected formatter/Git/PowerShell host and automation-assembly bytes, runtime,
-OS, architecture and the declared discovery/CI environment. The formatter in that
-identity is the one `format.ps1` uses, from the same helper (`Get-RedMonitorClangFormat`).
+## Scoped iteration
 
-Receipts, independent attempt records and their retention are owned by the
+The exact engine pin runs the public `Test-Changes.ps1` shim. `Tests/test-scopes.json` owns
+the affected rules, native inventory, scope commands and profiles. The engine compares the
+local branch merge base and includes staged, working, deleted, renamed and untracked paths.
+An unavailable comparison requires a valid base or an explicit Full run. No network fetch
+is implicit. An ordinary affected success may seed a 24-hour profile baseline.
+
+Owned prose selects Validation, Format and Tooling. Scenario data, unknown inputs, schemas
+and build code also select Regression. The independent run records immutable attempts and
+verifies the actual formatter, tools, source and environment. The shared runner reuses
+exact completed independent receipts and owns the per-profile build and iteration receipts.
+An empty plan reports `NOTHING_SELECTED`. Scoped success reports `repository NOT_EVALUATED`.
+
+Use `./Test-Changes.ps1 -Explain` to review the plan. `-Mode Full` covers one profile.
+`-Mode PrePush` covers x64 Debug, Release and ASan Debug runtime plus three ARM64
+cross-builds. Full and PrePush select LiveEtw for each runnable profile. Release also selects
+ContainedInstallation after the ordinary regression and live transport checks. Direct
+`test.ps1 -IncludeLiveEtw` continues to require that roundtrip explicitly. Native ARM64
+runtime requires its own matching host. The hosted six-scenario regression and both production
+lanes retain their own evidence and authorization.
+
+The product test command retains the exact direct build receipt and output checks. The
+shared profile lease coordinates scoped builds and tests, and individual artifact
+operations keep their existing lock. Details of the attempt records are in the
 [run-evidence contract](Testing_RunEvidence.md).
-
-Use Test-Changes.ps1 -Explain and affected testing during edits; Full/PrePush explicitly account for
-x64 Debug/Release/ASan runtime and six builds. validate.ps1 checks script syntax, links, pins, source
-boundaries and required repository surfaces. format.ps1 -Check verifies native formatting.
-
-Affected selection compares the branch merge base with origin/main and independently includes committed,
-staged, working, deleted, rename-side and untracked paths. A missing comparison retains Debug work. Only
-owned Markdown guides and prose in Specs, docs, Changes and agent skill folders omit native execution;
-runtime/test/fixture/schema/build inputs and unknown paths remain native. Prose still runs real changelog
-validation, validate.ps1, formatting and all tooling controls. Malformed fragments or nonzero child exits fail.
-Source bytes must remain unchanged across planning/independent validation before prose success is reported.
-No-work reports NOTHING_SELECTED; prose reports PROSE_CHECKS_PASSED; neither qualifies the repository.
-Full/PrePush retain all local native profiles, live ETW, ARM64 cross-builds and contained installation controls.
-They never claim native ARM64 execution or separate manual/viewer/performance gates.
 
 `test.ps1` also accepts an explicit local SDK Release record and independently retained SHA-256 through
 `-LocalSdkBuildReceipt` and `-LocalSdkBuildSha256`, with `-SkipBuild`. The shared live runtime reader must
@@ -39,10 +42,10 @@ including optional explicitly required live ETW and the installed-viewer metadat
 held binaries. No ordinary build is invoked or ordinary build receipt created. Output operations remain
 exclusive through the shared candidate lease; unrelated ordinary profiles need no lock for this route.
 
-Tests/Tooling.Tests.ScopedTesting.ps1 exercises the actual public wrapper in owned Git/child-process fixtures,
-using recording native entrypoints. It covers cumulative code followed by docs, staged reversals, Unicode,
-rename sides, missing bases, malformed fragments, nonzero command exits, source mutation and retained Full/
-PrePush obligations. These routing fixtures do not compile or qualify a native application.
+`Tests/Tooling.Tests.ScopedTesting.ps1` exercises the real scoped shim and native scope routing in
+owned Git and recording fixtures. It covers prose, runtime data, malformed fragments, independent
+attempt retention, live ETW and Release installation selection, and child failures. The shared
+engine tests cover Git changes and receipt corruption. The routing fixtures establish orchestration.
 
 `Tests/Tooling.Tests.Build.ps1`, included by the tooling suite, uses fresh owned `.build` Git fixtures
 to check receipt identity against ignored CI cache/Git metadata churn, timestamp-only changes, tracked
@@ -174,7 +177,7 @@ handles, CPU, wakeups and event loss. An unpaired measurement is diagnostic only
 >5% regressions before advice; never silently change the baseline. Required viewer gates include WARP,
 device loss and clean/dirty/hidden resource behavior. The WIP matrix owns remaining execution.
 
-Full/PrePush also run real ETW roundtrips and contained production installer controls. The >2 GiB
+Full and PrePush run real ETW roundtrips on the current native host. The Release profile also runs contained production installer controls. The >2 GiB
 file-size boundary fixture uses FSCTL_SET_SPARSE before extending its logical size, so retained
 test evidence does not reserve gigabytes. A failed filesystem control fails the scenario.
 Consumer local-client controls run with system-only PATH and require no Git/network or viewer.

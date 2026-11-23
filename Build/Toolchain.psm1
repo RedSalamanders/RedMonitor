@@ -55,38 +55,6 @@ function Invoke-RedMonitorGitText {
     }finally{$process.Dispose()}
 }
 
-function Get-RedMonitorChangePlan {
-    [CmdletBinding()]
-    param([string]$Root=(Join-Path $PSScriptRoot '..'),[string]$BaseRef='origin/main')
-    $Root=[IO.Path]::GetFullPath($Root)
-    Import-Module (Join-Path $PSScriptRoot 'AgentGuidance.psm1') -ErrorAction Stop
-    Assert-RedMonitorOrdinaryGuidancePath $Root
-    try{
-        $base=(Invoke-RedMonitorGitText $Root @('rev-parse','--verify','--end-of-options',($BaseRef+'^{commit}'))).Trim()
-        $merge=(Invoke-RedMonitorGitText $Root @('merge-base',$base,'HEAD')).Trim()
-        $paths=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-        foreach($arguments in @(
-            @('diff','--no-ext-diff','--no-textconv','--name-only','--no-renames','-z',$merge,'HEAD','--'),
-            @('diff','--no-ext-diff','--no-textconv','--cached','--name-only','--no-renames','-z','--'),
-            @('diff','--no-ext-diff','--no-textconv','--name-only','--no-renames','-z','--'),
-            @('ls-files','--others','--exclude-standard','-z'))){
-            foreach($path in (Invoke-RedMonitorGitText $Root $arguments).Split([char]0,[StringSplitOptions]::RemoveEmptyEntries)){[void]$paths.Add($path)}
-        }
-    }catch{
-        # Missing Git/base/shared history never supplies permission to omit native work.
-        return [pscustomobject]@{kind='Native';paths=@();reason='Comparison unavailable; conservative Debug coverage. '+$_.Exception.Message}
-    }
-    $ordered=[string[]]@($paths);[Array]::Sort($ordered,[StringComparer]::Ordinal)
-    $native=$false
-    foreach($path in $ordered){
-        if($path -match '(^/|(^|/)\.\.(/|$)|:|\\)'){throw "Invalid changed Git path: $path"}
-        Assert-RedMonitorOrdinaryGuidancePath (Join-Path $Root $path)
-        if($path -notmatch '^(README|AGENTS|CLAUDE|CHANGELOG)\.md$|^Tests/README\.md$|^(Specs|docs|Changes|\.agents|\.github/skills)/.*\.md$'){$native=$true}
-    }
-    return [pscustomobject]@{kind=$(if($native){'Native'}elseif($ordered.Count){'Prose'}else{'None'});paths=$ordered;
-        reason=$(if($native){'Native/build/test or unknown inputs changed.'}elseif($ordered.Count){'Only owned prose changed; independent validation remains required.'}else{'No changed input since the branch merge base.'})}
-}
-
 function Get-RedMonitorSourceSnapshot {
     [CmdletBinding()]
     param([string]$Root = (Join-Path $PSScriptRoot '..'))
@@ -154,4 +122,4 @@ function Enter-RedMonitorOperation {
     return $mutex
 }
 
-Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceSnapshot,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation,Get-RedMonitorChangePlan
+Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceSnapshot,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation

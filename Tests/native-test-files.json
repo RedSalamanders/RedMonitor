@@ -5,5 +5,7 @@
   "Tests/Settings.Tests.Contract.cpp",
   "Tests/Support/TestSupport.Tests.Runner.h",
   "Tests/TestSupport/TestSupport.Tests.FailureReports.h",
-  "Tests/Transport.Tests.Roundtrip.cpp"
+  "Tests/Transport.Tests.Roundtrip.cpp",
+  "support/Common.Tests.PerfJsonl.h",
+  "support/Common.Tests.SandboxPath.h"
 ]

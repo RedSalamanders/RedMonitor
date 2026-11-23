@@ -70,8 +70,8 @@ and non-activating, and no scoped, CI or partial pass closes a focus-taking gate
 ## Scoped testing policy
 
 The user's accepted workflow replaces unconditional full-test iteration. While editing, run `Test-Changes.ps1 -Explain`
-and then the affected default; use `-Mode PrePush` to account for the remaining local and pull-request obligations
-without repeating identical ones, and explicit Full where qualification requires it. A pending CI check is never a
+and then the affected default; use `-Mode PrePush` for the local six-profile matrix and explicit Full for one profile.
+Required pull request checks have their own evidence. A pending CI check is never a
 passed result. Reuse only exact successful evidence for the same source, pin, toolchain, binary and scenario. Native
 test files use contextual `<Component>.Tests.<Subject>.h/.cpp` names, listed in the native file inventory where the
 repository keeps one. Focus-taking work requires agreement to the time, and no scoped pass closes that gate. Build,

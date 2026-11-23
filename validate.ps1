@@ -10,7 +10,7 @@ Import-Module (Join-Path $PSScriptRoot 'Build/AgentGuidance.psm1') -Force
 $failures=[Collections.Generic.List[string]]::new()
 $required=@('AGENTS.md','LICENSE.txt','README.md','capabilities.json','Specs/README.md','Specs/Plans/WIP/README.md','Specs/Plans/Done/README.md',
  'Specs/SourceImport/source-origin.json','src/RedMonitor.vcxproj',
- 'Tests/MonitorTest.vcxproj','Build/Toolchain.psm1','Dependencies/DxUi.lock.json','vcpkg.json','vcpkg-tool.json')
+ 'Tests/MonitorTest.vcxproj','Tests/test-scopes.json','Build/Toolchain.psm1','Dependencies/DxUi.lock.json','vcpkg.json','vcpkg-tool.json')
 foreach($path in $required){if(-not(Test-Path -LiteralPath (Join-Path $PSScriptRoot $path) -PathType Leaf)){$failures.Add("Missing $path")}}
 $files=[Collections.Generic.List[IO.FileInfo]]::new()
 $pending=[Collections.Generic.Stack[string]]::new()
@@ -44,5 +44,11 @@ foreach($file in $files|Where-Object Extension -in '.vcxproj','.props','.targets
 }
 try { Test-RedMonitorAgentGuidance -Root $PSScriptRoot }
 catch [System.Management.Automation.RuntimeException] { $failures.Add($_.Exception.Message) }
+try {
+    Import-Module (Join-Path $PSScriptRoot 'Build/ScopedTesting.psm1') -Scope Local
+    $manifest = Read-ScopedTestManifest -Root $PSScriptRoot
+    $nativeCount = Assert-ScopedTestNames -Root $PSScriptRoot -Manifest $manifest
+    Write-Host "Native test naming checked for $nativeCount files."
+} catch { $failures.Add($_.Exception.Message) }
 if($failures.Count){foreach($failure in $failures){Write-Host $failure -ForegroundColor Red};throw "$($failures.Count) validation failures"}
 Write-Host "Validated $($files.Count) source/documentation/tool files."
