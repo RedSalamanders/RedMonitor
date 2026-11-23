@@ -76,55 +76,16 @@ fails with its identity; CI must install compatible tools rather than weakening 
 
 ## Agent guidance checks
 
-`validate.ps1` uses `Build/AgentGuidance.psm1` for skill structure, declared local references and active-plan
-index checks. These checks are read-only and dependency-free. They do not execute skill examples or establish
-instruction quality, command binding, policy consistency, native behavior or qualification.
+`validate-skills.ps1` checks this repository's skill packages, guidance, instruction pointers and plan indexes
+through the pinned CI engine. The engine's Agent guidance contract in `Specs/ProjectCommands.md` owns rules G1
+through G13 and their fixture coverage. RedMonitor declares its root guidance in `.agents/guidance.json`.
 
-The repository's supported header format has exactly one single-line `name` and `description`, using plain,
-single-quoted or JSON-compatible double-quoted string scalars between `---` delimiters. Blank lines and standalone
-comments are supported. Folder/name mismatch, duplicate keys, empty descriptions/bodies and unsupported header
-syntax fail. Quote numeric/boolean/date-looking text (including hex, infinity and exponent forms) when it is
-intended as a description string. This is a bounded repository format, not a general YAML parser; extend its grammar and tests before
-introducing optional keys or multiline metadata. Declared inline Markdown links in skill packages, including
-supporting Markdown files, must resolve within this repository without reparse files or ancestors. Local absolute
-paths and file URIs are validated as local paths; URI-looking drive names cannot bypass the check. Network URLs,
-protocol-relative external URLs and section-only links are not fetched. Balanced parentheses in destinations are
-supported; fenced illustrations and inline-code pseudo-links are not treated as required resources. Backtick prose
-paths and target anchors are not covered by this check. Full/collapsed reference links resolve normalized,
-case-insensitive labels and check their definition destinations; the first definition wins, and an undefined
-explicit reference label fails. Full/collapsed references require adjacent brackets; space, tab or newline
-separation leaves independent shortcut/text spans. A bracket-only shortcut without a definition remains ordinary text.
-The bounded inline-code scanner ends at blank paragraphs (including whitespace-only blank lines); soft line
-breaks within a paragraph remain supported. Single-line titles may use single quotes, double quotes or
-parentheses, and a reference destination may continue onto the immediately following line. These forms do not
-claim a general CommonMark parser. File URI escapes are decoded once, preserving encoded `#` and literal
-percent sequences in filenames. Quoted ISO dates/timestamps retain their exact string text rather than receiving
-automatic date conversion. Hidden direct skill directories receive the same metadata and package checks.
-Temporal type detection matches a complete scalar. Plain date-prefixed prose such as
-`2026-10-28 migration guidance` remains a string; complete unquoted dates/timestamps still require quotes.
-Backtick fence opening info cannot contain backticks: line-leading same-line code such as
-`` ```literal``` `` remains inline prose; tilde-fence info may contain backticks.
-Recognized fence openers and closers have zero to three leading spaces before the optional list marker.
-Four-space or tab indentation does not open or close a fence in this bounded scanner.
+`validate.ps1` calls the same entry point and checks the project's source, dependency pins and ordinary
+documentation. The product documentation checker resolves declared local links and refuses missing or out-of-repository
+targets. It accepts fenced illustrations and ordinary Markdown links with encoded paths, balanced parentheses and titles.
 
-The public `validate.ps1` documentation check reuses this same Markdown/path helper. It rejects reparse files and
-ancestors before source reads, parsing or traversal; skill headers must not be opened by an earlier, weaker reader.
-
-Every direct WIP plan other than README must have exactly one active-index link. Indexed local targets must
-exist. Count actual inline or resolved full/collapsed/shortcut reference uses, not definition declarations:
-a definition alone is not an index link, two uses of one definition are two links, and an unused second definition
-does not duplicate an actual use. Validate all declared destinations separately, including unused definitions.
-A completed plan may move to Done after its own implementation/test/docs gates close; update the active
-and Done indexes and inbound links in that change. No particular unfinished plan filename is a permanent
-validation prerequisite. The ordinary link check still rejects references left pointing at the old location.
-
-`Tests/Tooling.Tests.AgentGuidance.ps1`, included by `Tests/Tooling.Tests.ps1`, exercises malformed/duplicate
-headers, wrong names, missing entrypoints/contracts, supporting reference boundaries and actual WIP-to-Done
-movement. Snapshots check that accepted and refused validation leave fixture bytes, write times and directory
-contents unchanged. Fixtures are fresh, retained, caller-owned directories beneath `.build/agent-guidance-tests`.
-Checkout-shaped controls run the actual public entrypoint for encoded paths, fenced/inline examples, balanced
-destinations, local URI boundaries and reparse headers. Synthetic link targets stay inside the same owned fixture;
-hosts without symbolic-link privilege report those controls as skipped, not passed.
+`Tests/Tooling.Tests.DocumentationValidation.ps1` exercises the actual full validator against an owned fixture,
+checking the documentation contract, propagation of guidance errors and read-only behavior.
 
 ## Native and performance evidence
 

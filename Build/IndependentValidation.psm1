@@ -1,7 +1,6 @@
 # Local independent checks only: no native result, CI delegation or hosted adoption.
 Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot 'Toolchain.psm1')
-Import-Module (Join-Path $PSScriptRoot 'AgentGuidance.psm1')
 Import-Module (Join-Path $PSScriptRoot 'Formatting.psm1')
 
 function Get-RedMonitorIndependentIdentity {

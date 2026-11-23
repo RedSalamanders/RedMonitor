@@ -1,5 +1,21 @@
 Set-StrictMode -Version Latest
 
+function Assert-RedMonitorOrdinaryGuidancePath {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+    $current = [IO.Path]::GetFullPath($Path)
+    while ($current) {
+        $attributes = $null
+        try { $attributes = [IO.File]::GetAttributes($current) }
+        catch [IO.FileNotFoundException] { }
+        catch [IO.DirectoryNotFoundException] { }
+        if ($null -ne $attributes -and ($attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "Guidance path contains a reparse point: $current"
+        }
+        $current = [IO.Path]::GetDirectoryName($current)
+    }
+}
+
 function Get-RedMonitorMSBuild {
     Import-Module (Join-Path $PSScriptRoot '../Tools/VisualStudio.psm1') -Force
     $installation = Get-RedMonitorVisualStudioInstallation
@@ -62,7 +78,6 @@ function Get-RedMonitorSourceSnapshot {
     if (-not (Test-Path -LiteralPath (Join-Path $Root '.git'))) {
         throw "Source identity requires a Git checkout at '$Root'."
     }
-    Import-Module (Join-Path $PSScriptRoot 'AgentGuidance.psm1') -ErrorAction Stop
     Assert-RedMonitorOrdinaryGuidancePath $Root
 
     # Bind tracked and non-ignored untracked bytes, never generated checkouts or Git metadata.
@@ -122,4 +137,4 @@ function Enter-RedMonitorOperation {
     return $mutex
 }
 
-Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceSnapshot,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation
+Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOrdinaryGuidancePath,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceSnapshot,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation

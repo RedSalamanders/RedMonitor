@@ -53,8 +53,14 @@ paths.
 
 Shared skill index: `../RedHome/AGENTS.md`; packages: `../RedHome/.agents/skills/`. If `../RedHome` is missing, clone https://github.com/RedSalamanders/RedHome.git to that path. This repository's guidance and domain specs own product behavior and validation.
 
-Read the relevant focused skill in `.agents/skills/`: transport-client, viewer-lifetime or consumer-adoption
-(cross-repository C++/WIL and `spec-workflow` skills live in the sibling `RedHome` repository). Building, restoring
+Read the skill for the affected work.
+
+- [transport-client](.agents/skills/transport-client/SKILL.md) covers producer SDK and ETW transport.
+- [viewer-lifetime](.agents/skills/viewer-lifetime/SKILL.md) covers the viewer and its resource ownership.
+- [consumer-adoption](.agents/skills/consumer-adoption/SKILL.md) covers client adoption and dependency pins.
+
+Cross-repository C++/WIL and `spec-workflow` skills live in the sibling RedHome repository.
+Building, restoring
 and packaging, file import and export, and tests and evidence are the shared `native-build`, `file-io-safety` and
 `test-evidence` skills in `RedHome` (formerly build-redmonitor, file-safety and test-harness here), each with
 RedMonitor's commands and rules in its `references/repository-facts.md`.
