@@ -63,7 +63,7 @@ Case 'product scope data preserves the affected lanes and the active native inve
         Require ('Regression' -cin $plan.scopes -and 'LiveEtw' -cnotin $plan.scopes -and 'ContainedInstallation' -cnotin $plan.scopes) "Wrong native scope for $path."
     }
 }
-foreach($path in @('Test-Changes.ps1','Build/Toolchain.psm1','Build/AgentGuidance.psm1','Build/IndependentValidation.psm1',
+foreach($path in @('Test-Changes.ps1','Build/Toolchain.psm1','Build/IndependentValidation.psm1',
     'Build/Formatting.psm1','Build/ScopedTesting.psm1','Build/TestRunEvidence.psm1','Tools/Invoke-ValidationScope.ps1',
     '.ci/project.json','Tests/test-scopes.json')){
     Put $path ([IO.File]::ReadAllText((Join-Path $root $path)))

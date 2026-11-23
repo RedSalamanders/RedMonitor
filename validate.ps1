@@ -6,7 +6,8 @@ Validates standalone source, documentation, dependency pins and script syntax wi
 param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-Import-Module (Join-Path $PSScriptRoot 'Build/AgentGuidance.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'Build/DocumentationValidation.psm1') -Force
 $failures=[Collections.Generic.List[string]]::new()
 $required=@('AGENTS.md','LICENSE.txt','README.md','capabilities.json','Specs/README.md','Specs/Plans/WIP/README.md','Specs/Plans/Done/README.md',
  'Specs/SourceImport/source-origin.json','src/RedMonitor.vcxproj',
@@ -18,7 +19,7 @@ $pending.Push($PSScriptRoot)
 while($pending.Count){
     $directory=$pending.Pop()
     foreach($entry in Get-ChildItem -LiteralPath $directory -Force){
-        if($entry.PSIsContainer -and $entry.Name -in '.git','.build','.vs'){continue}
+        if($entry.PSIsContainer -and $entry.Name -in '.git','.build','.vs','.ci-engine'){continue}
         try{Assert-RedMonitorOrdinaryGuidancePath $entry.FullName}
         catch{$failures.Add($_.Exception.Message);continue}
         if($entry.PSIsContainer){$pending.Push($entry.FullName)}else{$files.Add($entry)}
@@ -35,6 +36,9 @@ foreach($path in 'Dependencies/DxUi.lock.json','vcpkg-tool.json'){
     if($pin.commit -cnotmatch '^[0-9a-f]{40}$'){$failures.Add("Invalid exact pin: $path")}
 }
 foreach($file in $files|Where-Object Extension -eq '.md'|Where-Object FullName -notmatch '[\\/]Themes[\\/]'){
+    $relative = [IO.Path]::GetRelativePath($PSScriptRoot,$file.FullName).Replace('\','/')
+    if ($relative.StartsWith('.agents/skills/',[StringComparison]::OrdinalIgnoreCase) -or $file.Name -ceq 'AGENTS.md' -or
+        $relative -cin @('CLAUDE.md','.github/copilot-instructions.md','Specs/Plans/WIP/README.md','Specs/Plans/Done/README.md')) { continue }
     foreach($problem in Get-RedMonitorMarkdownProblem -Root $PSScriptRoot -Document $file.FullName){$failures.Add("$($file.FullName): $problem")}
 }
 foreach($file in $files|Where-Object Extension -in '.vcxproj','.props','.targets'){
@@ -42,7 +46,7 @@ foreach($file in $files|Where-Object Extension -in '.vcxproj','.props','.targets
     if($content -match '(?i)[A-Z]:[\\/]src[\\/]|\.\.\W+RedSalamander[\\/]|Common\.vcxproj'){$failures.Add("Sibling dependency in $($file.FullName)")}
     try{$null=[xml]$content}catch{$failures.Add("Invalid XML: $($file.FullName)")}
 }
-try { Test-RedMonitorAgentGuidance -Root $PSScriptRoot }
+try { & (Join-Path $PSScriptRoot 'validate-skills.ps1') }
 catch [System.Management.Automation.RuntimeException] { $failures.Add($_.Exception.Message) }
 if($failures.Count){foreach($failure in $failures){Write-Host $failure -ForegroundColor Red};throw "$($failures.Count) validation failures"}
 Write-Host "Validated $($files.Count) source/documentation/tool files."
