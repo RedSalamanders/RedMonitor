@@ -140,6 +140,14 @@ try{
 $log=Join-Path $run 'build.log'
 [IO.File]::WriteAllText($log,'Build succeeded. 0 Warning(s) 0 Error(s)')
 Assert-NativeBuildDiagnostics -LogPath $log
+$exceptionLog = Join-Path $run 'tool-exception.log'
+[IO.File]::WriteAllLines($exceptionLog, @(
+    '2>ExceptionCode = 0xC0000005'
+    'Build succeeded.'
+    '    0 Warning(s)'
+    '    0 Error(s)'
+))
+Refuses { Assert-NativeBuildDiagnostics -LogPath $exceptionLog } 'tool process exception dump'
 foreach($diagnostic in @(
     'source.cpp(4): warning C4100: unused parameter',
     '2>C:\work\source.cpp(4): warning C4365: sign conversion',

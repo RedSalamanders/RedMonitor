@@ -26,14 +26,14 @@ First-party diagnostics and the zero-warning acceptance check remain enforced.
 
 `build.ps1` prints the RedMonitor ASCII wordmark and target profile before restore/compilation.
 Interactive terminals receive color; redirected output retains readable text, and `NO_COLOR` disables
-automatic color. The shared Red-family `Build/BuildConsole.psm1` formats the final green summary with
+automatic color. `Build/BuildConsole.psm1`, the shared CI engine's module shim for `Ci.BuildConsole.psm1`, formats the final green summary with
 entrypoint elapsed time, zero-warning/error status, artifact/log/receipt paths and a quoted PowerShell
 launch command. Supported terminals receive local file hyperlinks; ARM64 outputs on x64 are labelled
 for execution on ARM64. Printing a command or hyperlink never launches an application.
 The independent helper's [import provenance](../SourceImport/build-console-origin.json) records its source.
 
-Success is published only after MSBuild exits successfully, its log has zero warnings and errors,
-viewer version/test metadata matches, the source snapshot still matches and the receipt has been written.
+Success requires a successful MSBuild exit, a log with zero warnings and errors and no structured tool process exception dump,
+matching viewer version/test metadata, an unchanged source snapshot, and a written receipt.
 The Git checkout is required even with `-SkipRestore`. Source identity uses NUL-delimited UTF-8
 `git ls-files --cached --others --exclude-standard` paths in ordinal order, binding each path and current
 SHA-256 file content. Missing tracked files have an explicit marker. Tracked ignored files remain inputs;
