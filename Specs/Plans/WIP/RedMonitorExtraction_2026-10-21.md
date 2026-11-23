@@ -8,6 +8,18 @@ This is the single execution plan for extraction and adoption. Intended contract
 Update this checklist and the evidence table at every implementation checkpoint. A checked
 delivery item does not close the independent runtime, platform, performance or release gates.
 
+## CV-5-04 shared scoped testing
+
+The migration uses the reviewed shared engine at 39251c1d. The preflight preserved all 20
+representative affected paths and the empty-plan result at product baseline 9664659f. The
+15 original local wrapper fixtures passed before migration. The new native inventory
+includes both live imported support test seams.
+
+The owning contracts are [validation](../../Testing/Testing_Validation.md) and
+[run evidence](../../Testing/Testing_RunEvidence.md). Retain the direct local SDK route,
+the hosted six-scenario receipt and production barrier, the explicitly requested live
+ETW check and the contained Release installation controls.
+
 ## Accepted integration boundary — 2026-10-23
 
 The owner clarified that RedMonitor is an optional side-process helper, not a consumer build target.

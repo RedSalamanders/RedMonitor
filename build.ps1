@@ -49,9 +49,16 @@ Import-Module (Join-Path $PSScriptRoot 'Build/BuildPresentation.psm1') -ErrorAct
 $engineRoot=Join-Path $PSScriptRoot '.ci-engine'
 Import-Module (Join-Path $engineRoot 'Tools/Modules/Ci.Policy.psm1') -ErrorAction Stop
 Write-RedMonitorBuildBanner -Platform $Platform -Configuration $Configuration -ProductionOnly:$ProductionOnly
-$lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
+Import-Module (Join-Path $PSScriptRoot 'Build/ScopedTesting.psm1') -Scope Local
+$profileLease = Enter-ScopedProfileLease -Root $PSScriptRoot -Platform $Platform -Configuration $Configuration
+$lease = $null
 $sdkInput=$null;$buildFailure=$null
 try {
+$reports = Get-ScopedReportRoot -Root $PSScriptRoot -Platform $Platform -Configuration $Configuration
+foreach ($name in @('build.json', 'iteration.json')) {
+    Remove-ScopedIteration -Root $PSScriptRoot -Path (Join-Path $reports $name)
+}
+$lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
 $output=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ".build/$Platform/$Configuration")
 Assert-RedMonitorOutputNotRunning $output
 $msbuild=Get-RedMonitorMSBuild
@@ -123,5 +130,8 @@ Write-NativeBuildResult -Project RedMonitor -Platform $Platform -Configuration $
 finally {
     try{if($null -ne $sdkInput -and -not $sdkInput.Closed){Close-CiPinnedSdkInput $sdkInput}}
     catch{if($null -eq $buildFailure){throw}else{Write-Warning ('SDK close also failed: '+$_.Exception.Message)}}
-    finally{$lease.ReleaseMutex();$lease.Dispose()}
+    finally {
+        try { if ($lease) { $lease.ReleaseMutex(); $lease.Dispose() } }
+        finally { Exit-ScopedProfileLease $profileLease }
+    }
 }

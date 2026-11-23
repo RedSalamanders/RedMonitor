@@ -1,23 +1,25 @@
 # Generated test-run evidence
 
 Status: normative current tooling contract
-Last reviewed: 2026-11-19
+Last reviewed: 2026-11-23
 
 This contract owns what a RedMonitor build, test or validation run leaves behind and what that record proves.
 The commands that produce it, and the scopes they select, are owned by [validation](Testing_Validation.md).
 
 ## Receipts and attempt records
 
-A later native failure preserves the original successful attempt bytes. An identical
-retry may reuse those independent checks; it still executes all requested native,
-live ETW, cross-build, packaging and installation obligations. `-Force` reruns the
-independent checks. Before execution, the latest-state index is marked started;
-failure or interruption cannot fall back to an older green attempt. Failed or
-input-mutating checks stop before native work. Corrupt/missing/mismatched evidence
-is never a pass. Attempts are create-only records beneath `.build/validation-evidence/independent`,
-with a bounded digest-checked latest-state index. The independent operation lease
-does not cover later native execution. Final source drift refuses current-tree
-success. No independent receipt grants native or repository-wide qualification.
+The shared scoped runner owns reusable independent receipts under `.build/reports/scoped-tests/independent`.
+Each executed independent command also records an immutable RedMonitor attempt under
+`.build/validation-evidence/independent`. The latest-state index records that attempt's
+started, failed or passed state and digest. On retry, exact independent success can be
+reused through the engine and native gates still execute when selected. A failed attempt,
+a changed source or a corrupt shared receipt cannot grant reuse.
+
+Scoped native test calls keep their ordinary scenario output under `.build/test-runs` and
+record a run through the pinned evidence module. Canonical per-scope reports appear in
+`.build/reports` only after the requested work passes. Failed scoped runs retain their
+failure state. Direct hosted regression retains its six-scenario receipt and assertion
+probe. The shared profile lease protects builds and tests across child processes.
 
 Local SDK runtime results have role `LocalUnpinnedApplicationRuntimeResult`, bind the original build digest,
 dependency and complete runtime-byte digest, and live only under `.build/local-sdk-test-runs`, outside hosted

@@ -1,70 +1,206 @@
-<#
-.SYNOPSIS Exercises affected planning and the actual public wrapper in isolated Git/process fixtures.
-.NOTES Native entrypoints are recording fixtures, never native acceptance. All outputs remain below .build.
-#>
+<# .SYNOPSIS Exercises the product's real scoped runner in isolated Git and recording fixtures. #>
 [CmdletBinding()]param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 Import-Module (Join-Path $root 'Build/Toolchain.psm1') -Force
+Import-Module (Join-Path $root 'Build/ScopedTesting.psm1')
 $run=Assert-RedMonitorOutputPath (Join-Path $root ('.build/scoped-tooling-tests/'+[guid]::NewGuid().ToString('N')))
 $fixture=Join-Path $run 'repository'
 [void][IO.Directory]::CreateDirectory($fixture)
 $passed=0
 function Require([bool]$Value,[string]$Message){if(-not $Value){throw $Message}}
 function Case([string]$Name,[scriptblock]$Body){& $Body;$script:passed++;Write-Host "PASS $Name"}
-function Put([string]$Name,[string]$Text){$path=Join-Path $fixture $Name;[void][IO.Directory]::CreateDirectory((Split-Path $path));[IO.File]::WriteAllText($path,$Text,[Text.UTF8Encoding]::new($false))}
-function Git([string[]]$Arguments){& (Get-Command git -CommandType Application | Select-Object -First 1).Source -C $fixture @Arguments *> $null;if($LASTEXITCODE){throw "Fixture Git failed: $Arguments"}}
-function Checkpoint {Git @('add','-A');Git @('commit','--allow-empty','-qm','fixture checkpoint');Git @('update-ref','refs/remotes/origin/main','HEAD')}
-function Calls {if(Test-Path (Join-Path $fixture '.build/calls.txt')){@(Get-Content (Join-Path $fixture '.build/calls.txt'))}else{@()}}
-function Invoke-Runner([string]$Mode='Affected',[switch]$Explain,[switch]$Force){
-    $calls=Join-Path $fixture '.build/calls.txt';if(Test-Path $calls){[IO.File]::Delete($calls)}
+function Put([string]$Name,[string]$Text){
+    $path=Join-Path $fixture $Name
+    [void][IO.Directory]::CreateDirectory((Split-Path $path))
+    [IO.File]::WriteAllText($path,$Text,[Text.UTF8Encoding]::new($false))
+}
+function Invoke-FixtureGit([string[]]$Arguments){
+    & git -C $fixture @Arguments *> $null
+    if($LASTEXITCODE){throw "Fixture Git failed: $Arguments"}
+}
+function Checkpoint {
+    Invoke-FixtureGit @('add','-A')
+    Invoke-FixtureGit @('commit','--allow-empty','-qm','fixture checkpoint')
+    Invoke-FixtureGit @('update-ref','refs/remotes/origin/main','HEAD')
+}
+function Calls {
+    $path=Join-Path $fixture '.build/calls.txt'
+    if(Test-Path -LiteralPath $path){ Get-Content -LiteralPath $path }
+}
+function Invoke-Runner([string[]]$Arguments=@()) {
+    $calls=Join-Path $fixture '.build/calls.txt'
+    if(Test-Path -LiteralPath $calls){[IO.File]::Delete($calls)}
     $start=[Diagnostics.ProcessStartInfo]::new((Get-Process -Id $PID).Path)
-    $start.UseShellExecute=$false;$start.CreateNoWindow=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
-    foreach($argument in @('-NoProfile','-File',(Join-Path $fixture 'Test-Changes.ps1'),'-Mode',$Mode)){$start.ArgumentList.Add($argument)}
-    if($Explain){$start.ArgumentList.Add('-Explain')}
-    if($Force){$start.ArgumentList.Add('-Force')}
+    $start.UseShellExecute=$false;$start.CreateNoWindow=$true
+    $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
+    foreach($argument in @('-NoProfile','-NonInteractive','-File',(Join-Path $fixture 'Test-Changes.ps1'),'-BaseRef','origin/main')+$Arguments){
+        $start.ArgumentList.Add($argument)
+    }
     $child=[Diagnostics.Process]::Start($start)
     try{
         $stdout=$child.StandardOutput.ReadToEndAsync();$stderr=$child.StandardError.ReadToEndAsync()
-        if(-not $child.WaitForExit(30000)){$child.Kill($true);throw 'Owned public-wrapper fixture timed out.'}
+        if(-not $child.WaitForExit(90000)){$child.Kill($true);throw 'Owned scoped runner fixture timed out.'}
         $text=$stdout.GetAwaiter().GetResult()+$stderr.GetAwaiter().GetResult()
         [IO.File]::WriteAllText((Join-Path $run ([guid]::NewGuid().ToString('N')+'.log')),$text)
-        return [pscustomobject]@{exit=$child.ExitCode;text=$text}
+        [pscustomobject]@{exit=$child.ExitCode;text=$text}
     }finally{$child.Dispose()}
 }
-foreach($path in @('Test-Changes.ps1','Build/Toolchain.psm1','Build/AgentGuidance.psm1','Build/IndependentValidation.psm1','Build/Formatting.psm1','Tools/Test-Changelog.ps1','.ci/project.json')){
+function Snapshot-Attempts {
+    $folder = Join-Path $fixture '.build/validation-evidence/independent'
+    return (@(Get-ChildItem -LiteralPath $folder -Recurse -File | Sort-Object FullName | ForEach-Object {
+        $_.FullName + ':' + (Get-FileHash -LiteralPath $_.FullName).Hash
+    }) -join '|')
+}
+
+$manifest=Read-ScopedTestManifest -Root $root -SkipProjectRules
+Case 'product scope data preserves the affected lanes and the active native inventory' {
+    Require ((Assert-ScopedTestNames -Root $root -Manifest $manifest) -eq 9) 'Native inventory lost one of the imported test seams.'
+    Require ((Get-ScopedTestPlan -Manifest $manifest -ChangedPaths @()).scopes.Count -eq 0) 'An empty change selected work.'
+    foreach ($path in @('Tests/Fixtures/README.md','Tests/Data/日本語.md','src/unknown.md','Specs/runtime.schema.json')) {
+        $plan = Get-ScopedTestPlan -Manifest $manifest -ChangedPaths @($path) -Configuration Debug
+        Require ('Regression' -cin $plan.scopes -and 'LiveEtw' -cnotin $plan.scopes -and 'ContainedInstallation' -cnotin $plan.scopes) "Wrong native scope for $path."
+    }
+}
+foreach($path in @('Test-Changes.ps1','Build/Toolchain.psm1','Build/AgentGuidance.psm1','Build/IndependentValidation.psm1',
+    'Build/Formatting.psm1','Build/ScopedTesting.psm1','Build/TestRunEvidence.psm1','Tools/Invoke-ValidationScope.ps1',
+    '.ci/project.json','Tests/test-scopes.json')){
     Put $path ([IO.File]::ReadAllText((Join-Path $root $path)))
 }
-# The Tools/Test-Changelog.ps1 engine shim and the formatter both run the pinned engine from the fixture's own .ci-engine.
-$fixtureEngine=& (Get-Command git -CommandType Application | Select-Object -First 1).Source clone --quiet --no-hardlinks (Join-Path $root '.ci-engine') (Join-Path $fixture '.ci-engine') 2>&1
-if($LASTEXITCODE){throw "Owned engine fixture clone failed: $fixtureEngine"}
-Put '.gitignore' ".build/`n.ci-engine/`n"
+$clone=& git -c core.longpaths=true clone --quiet --no-hardlinks (Join-Path $root '.ci-engine') (Join-Path $fixture '.ci-engine') 2>&1
+if($LASTEXITCODE){throw "Owned engine fixture clone failed: $clone"}
+Put '.gitignore' (".build/",".ci-engine/" -join [Environment]::NewLine)
 Put 'README.md' '# Fixture guide'
 Put 'src/runtime.cpp' 'initial runtime source'
-Put 'CHANGELOG.md' "# Changelog`n`n## Unreleased`n"
+Put 'CHANGELOG.md' ('# Changelog'+[Environment]::NewLine+[Environment]::NewLine+'## Unreleased'+[Environment]::NewLine)
 Put 'Changes/README.md' '# Fragment guide'
-[void][IO.Directory]::CreateDirectory((Join-Path $fixture '.build'))
-# The fixture formats with its engine clone, as format.ps1 does; the verified wheel avoids a download.
-Import-Module (Join-Path $root 'Build/Formatting.psm1') -Force
+Put 'Tests/native-test-files.json' '[]'
+Import-Module (Join-Path $root 'Build/Formatting.psm1') -Scope Local
 $null=Get-RedMonitorClangFormat -Root $root
 [void][IO.Directory]::CreateDirectory((Join-Path $fixture '.build/shared-format'))
 [IO.File]::Copy((Join-Path $root '.build/shared-format/clang-format.whl'),(Join-Path $fixture '.build/shared-format/clang-format.whl'))
+
 $stub=@'
-param([switch]$Check,[string]$Configuration,[string]$Platform,[switch]$IncludeLiveEtw,[switch]$PassThru,[string]$PackageDirectory)
+param([switch]$Check,[string]$Configuration,[string]$Platform,[switch]$PassThru,[string]$PackageDirectory)
 $root=$PSScriptRoot
-if((Split-Path $root -Leaf) -eq 'Tests'){$root=Split-Path $root}
+if((Split-Path $root -Leaf) -eq 'Tests'){$root=Split-Path -Parent $root}
 $name=[IO.Path]::GetRelativePath($root,$PSCommandPath).Replace('\','/')
-[IO.File]::AppendAllText((Join-Path $root '.build/calls.txt'),($name+'|'+$Configuration+'|'+$Platform+'|'+$IncludeLiveEtw.IsPresent+"`n"))
+[IO.File]::AppendAllText((Join-Path $root '.build/calls.txt'),("$name|$Configuration|$Platform"+[Environment]::NewLine))
 if((Test-Path (Join-Path $root '.build/fail')) -and [IO.File]::ReadAllText((Join-Path $root '.build/fail')) -ceq $name){exit 19}
-if($name -ceq 'validate.ps1' -and (Test-Path (Join-Path $root '.build/mutate'))){[IO.File]::AppendAllText((Join-Path $root 'src/runtime.cpp'),' concurrent edit')}
+if($name -ceq 'validate.ps1' -and (Test-Path (Join-Path $root '.build/mutate'))){
+    [IO.File]::AppendAllText((Join-Path $root 'src/runtime.cpp'),' concurrent edit')
+}
+if($name -ceq 'build.ps1'){
+    $manifest=Get-Content (Join-Path $root 'Tests/test-scopes.json') -Raw|ConvertFrom-Json
+    foreach($relative in @('RedMonitor.exe')+@($manifest.runtimeFiles)){
+        $path=Join-Path $root ".build/$Platform/$Configuration/$relative"
+        [void][IO.Directory]::CreateDirectory((Split-Path -Parent $path))
+        [IO.File]::WriteAllText($path,'stable recording-only artifact')
+    }
+}
 if($PassThru){[pscustomobject]@{extracted=(Join-Path $root '.build/synthetic-package')}}
 exit 0
 '@
-foreach($path in @('validate.ps1','format.ps1','Tests/Tooling.Tests.ps1','test.ps1','build.ps1','package.ps1','Tests/Tooling.Tests.Installation.ps1')){Put $path $stub}
-Git @('init','-q','-b','main')
-foreach($setting in @(@('user.name','Scoped fixture'),@('user.email','fixture@example.invalid'),@('core.autocrlf','false'),@('commit.gpgsign','false'),@('core.hooksPath',(Join-Path $fixture '.git/no-hooks')))){Git (@('config')+$setting)}
+foreach($path in @('validate.ps1','format.ps1','Tests/Tooling.Tests.ps1','build.ps1','package.ps1','Tests/Tooling.Tests.Installation.ps1')){
+    Put $path $stub
+}
+# Keep the real public scoped routing. Replace its low-level process-launching tail in the recording fixture only.
+$test=[IO.File]::ReadAllText((Join-Path $root 'test.ps1'))
+$marker='if(-not $SkipBuild){& (Join-Path $PSScriptRoot'
+$index=$test.IndexOf($marker,[StringComparison]::Ordinal)
+Require ($index -gt 0) 'Cannot identify the direct runtime boundary in test.ps1.'
+$fixtureTail=@'
+$fixtureOutput=Join-Path $PSScriptRoot '.build'
+[IO.File]::AppendAllText((Join-Path $fixtureOutput 'calls.txt'),
+    ("test.ps1|$Configuration|$Platform|$($IncludeLiveEtw.IsPresent)"+[Environment]::NewLine))
+$failure=Join-Path $fixtureOutput 'fail'
+if((Test-Path -LiteralPath $failure) -and [IO.File]::ReadAllText($failure) -ceq 'test.ps1'){throw 'synthetic runtime failure'}
+} finally { Exit-ScopedProfileLease $profileLease }
+'@
+Put 'test.ps1' ($test.Substring(0,$index)+$fixtureTail)
+Invoke-FixtureGit @('init','-q','-b','main')
+foreach($setting in @(@('user.name','Scoped fixture'),@('user.email','fixture@example.invalid'),
+    @('core.autocrlf','false'),@('commit.gpgsign','false'),@('core.hooksPath',(Join-Path $fixture '.git/no-hooks')))){Invoke-FixtureGit (@('config')+$setting)}
 Checkpoint
+
+Case 'the real entry point explains six profiles and executes nothing for an empty change' {
+    $result=Invoke-Runner @('-Explain','-Mode','PrePush')
+    Require ($result.exit -eq 0 -and @(Calls).Count -eq 0) $result.text
+    foreach($configuration in @('Debug','Release','ASan Debug')){
+        Require ($result.text.Contains("PrePush profile x64 $configuration") -and
+            $result.text.Contains("PrePush profile ARM64 $configuration (build only)")) "Missing PrePush profile $configuration"
+    }
+    $none=Invoke-Runner
+    Require ($none.exit -eq 0 -and $none.text.Contains('NOTHING_SELECTED') -and @(Calls).Count -eq 0) $none.text
+}
+Case 'owned prose runs all independent attempts and keeps native gates out' {
+    Put 'README.md' '# Changed fixture guide'
+    $result=Invoke-Runner
+    $paths=@(Calls|ForEach-Object {($_ -split '\|')[0]})
+    Require ($result.exit -eq 0 -and $result.text.Contains('PROSE_CHECKS_PASSED')) $result.text
+    Require (($paths -join ',') -ceq 'validate.ps1,format.ps1,Tests/Tooling.Tests.ps1') "Unexpected prose operations: $paths"
+    Checkpoint
+}
+Case 'malformed fragments fail before independent or native side effects' {
+    Put 'Changes/2026-11-23-invalid.md' 'missing fragment bullet'
+    $result=Invoke-Runner
+    Require ($result.exit -ne 0 -and @(Calls).Count -eq 0) $result.text
+    [IO.File]::Delete((Join-Path $fixture 'Changes/2026-11-23-invalid.md'))
+}
+Case 'affected native input selects the ordinary regression and publishes its canonical report' {
+    Put 'src/runtime.cpp' 'changed runtime source'
+    $result=Invoke-Runner
+    Require ($result.exit -eq 0 -and $result.text.Contains('PASSED Regression')) $result.text
+    Require (@(Calls|Where-Object {$_ -ceq 'test.ps1|Debug|x64|False'}).Count -eq 1) 'Regression did not execute once.'
+    Require (@(Calls|Where-Object {$_ -like '*Installation*' -or $_ -like 'package.ps1*'}).Count -eq 0) 'Affected selected installation.'
+    Checkpoint
+}
+Case 'Full Release runs live transport, packaging and installation once' {
+    $result=Invoke-Runner @('-Mode','Full','-Configuration','Release')
+    Require ($result.exit -eq 0 -and $result.text.Contains('FULL_PASSED')) $result.text
+    Require (@(Calls|Where-Object {$_ -ceq 'test.ps1|Release|x64|True'}).Count -eq 1) 'Full lost the combined regression/live path.'
+    Require (@(Calls|Where-Object {$_ -ceq 'package.ps1|Release|x64'}).Count -eq 1 -and
+        @(Calls|Where-Object {$_ -like 'Tests/Tooling.Tests.Installation.ps1|*'}).Count -eq 1) 'Full lost contained installation.'
+}
+Case 'a later runtime failure preserves all completed independent attempts on the replay' {
+    Put '.build/fail' 'test.ps1'
+    $result=Invoke-Runner @('-Mode','Full','-Force')
+    Require ($result.exit -ne 0 -and $result.text.Contains('synthetic runtime failure')) $result.text
+    $before=Snapshot-Attempts
+    [IO.File]::Delete((Join-Path $fixture '.build/fail'))
+    $result=Invoke-Runner @('-Mode','Full')
+    foreach($scope in @('Validation','Format','Tooling')){Require ($result.text.Contains("REUSED $scope")) $result.text}
+    Require ($result.exit -eq 0 -and (Snapshot-Attempts) -ceq $before) 'Independent attempt history changed.'
+    Require (@(Calls|Where-Object {$_ -ceq 'test.ps1|Debug|x64|True'}).Count -eq 1) 'Independent reuse dropped native work.'
+}
+Case 'a forced independent failure revokes shared reuse before runtime' {
+    Put '.build/fail' 'format.ps1'
+    $result=Invoke-Runner @('-Mode','Full','-Force')
+    Require ($result.exit -ne 0 -and @(Calls|Where-Object {$_ -like 'test.ps1*'}).Count -eq 0) $result.text
+    $latest=Get-Content (Join-Path $fixture '.build/validation-evidence/independent/Format/latest.json') -Raw|ConvertFrom-Json
+    Require ($latest.status -ceq 'failed') 'The failed attempt retained a green state.'
+    [IO.File]::Delete((Join-Path $fixture '.build/fail'))
+    $result=Invoke-Runner @('-Mode','Full')
+    Require ($result.exit -eq 0 -and @(Calls|Where-Object {$_ -like 'format.ps1*'}).Count -eq 1) $result.text
+}
+Case 'package and installation failures reach the caller' {
+    foreach($name in 'package.ps1','Tests/Tooling.Tests.Installation.ps1'){
+        Put '.build/fail' $name
+        $result=Invoke-Runner @('-Mode','Full','-Configuration','Release')
+        Require ($result.exit -ne 0 -and -not $result.text.Contains('FULL_PASSED')) $result.text
+    }
+    [IO.File]::Delete((Join-Path $fixture '.build/fail'))
+}
+Case 'a source edit during prose validation refuses success' {
+    Put 'README.md' '# Concurrent edit fixture'
+    Put '.build/mutate' 'mutate source during validation'
+    $result=Invoke-Runner
+    Require ($result.exit -ne 0 -and $result.text.Contains('Inputs changed during independent validation') -and
+        -not $result.text.Contains('PROSE_CHECKS_PASSED')) $result.text
+    Require (@(Calls|Where-Object {$_ -like 'test.ps1*'}).Count -eq 0) 'Mixed-source native execution was attempted.'
+    [IO.File]::Delete((Join-Path $fixture '.build/mutate'))
+}
 Case 'actual ignored engine participates in source and build identity independently of file discovery' {
     $fixture=Join-Path $run 'engine-input-project'
     [void][IO.Directory]::CreateDirectory($fixture)
@@ -72,7 +208,7 @@ Case 'actual ignored engine participates in source and build identity independen
     Put '.gitignore' ".build/`n.ci-engine/`n"
     Put '.ci/project.json' ([IO.File]::ReadAllText((Join-Path $root '.ci/project.json')))
     Put 'runtime.cpp' 'synthetic source'
-    Git @('init','--quiet')
+    Invoke-FixtureGit @('init','--quiet')
     $engine=Join-Path $fixture '.ci-engine'
     $clone=& (Get-Command git -CommandType Application | Select-Object -First 1).Source clone --quiet --no-hardlinks (Join-Path $root '.ci-engine') $engine 2>&1
     if($LASTEXITCODE){throw "Owned engine fixture clone failed: $clone"}
@@ -92,118 +228,6 @@ Case 'actual ignored engine participates in source and build identity independen
         Require ($reason.Contains('Local engine checkout must be clean')) 'Modified ignored engine retained reusable evidence'
     }finally{[IO.File]::WriteAllBytes($policy,$original)}
     Require ((Get-RedMonitorSourceIdentity $fixture) -ceq $before.Identity) 'Restored exact engine did not recover its identity'
-}
-Case 'no-work and explain never execute checks or claim qualification' {
-    $result=Invoke-Runner
-    Require ($result.exit -eq 0 -and $result.text.Contains('NOTHING_SELECTED; repository NOT_EVALUATED') -and @(Calls).Count -eq 0) $result.text
-    Put 'README.md' '# Changed guide'
-    $result=Invoke-Runner -Explain
-    Require ($result.exit -eq 0 -and @(Calls).Count -eq 0 -and -not $result.text.Contains('PROSE_CHECKS_PASSED')) $result.text
-}
-Case 'owned prose runs real fragment validation and independent checks without native entrypoints' {
-    Put 'Specs/Testing/fixture.md' '# Fixture contract'
-    Put 'Changes/2026-11-09-fixture.md' '- Fixture prose change.'
-    Require ((Get-RedMonitorChangePlan $fixture).kind -ceq 'Prose') 'Owned prose selected native work'
-    $result=Invoke-Runner
-    Require ($result.exit -eq 0 -and $result.text.Contains('PROSE_CHECKS_PASSED; repository NOT_EVALUATED')) $result.text
-    Require ((@(Calls) -join ',') -ceq 'validate.ps1|||False,format.ps1|||False,Tests/Tooling.Tests.ps1|||False') 'Native work ran or independent checks were omitted'
-}
-Case 'malformed fragments fail before prose success or native work' {
-    Put 'Changes/2026-11-09-fixture.md' 'not a valid bullet'
-    $result=Invoke-Runner
-    Require ($result.exit -ne 0 -and -not $result.text.Contains('PROSE_CHECKS_PASSED') -and @(Calls).Count -eq 0) $result.text
-    Put 'Changes/2026-11-09-fixture.md' '- Fixture prose change.'
-    Checkpoint
-}
-Case 'cumulative committed code followed by prose retains Debug execution' {
-    Put 'src/runtime.cpp' 'changed runtime source';Git @('add','src/runtime.cpp');Git @('commit','-qm','native change')
-    Put 'README.md' '# Later documentation'
-    $result=Invoke-Runner
-    Require ($result.exit -eq 0 -and $result.text.Contains('SELECTED_DEBUG_PASSED')) $result.text
-    Require (@(Calls|Where-Object {$_ -ceq 'test.ps1|Debug||False'}).Count -eq 1) 'Cumulative native work was hidden by prose'
-    Checkpoint
-}
-Case 'independent staged and working discovery retains a staged native edit reverted only on disk' {
-    $original=[IO.File]::ReadAllText((Join-Path $fixture 'src/runtime.cpp'))
-    Put 'src/runtime.cpp' 'staged native change';Git @('add','src/runtime.cpp');Put 'src/runtime.cpp' $original
-    Require ((Get-RedMonitorChangePlan $fixture).kind -ceq 'Native') 'Staged native edit disappeared'
-    Git @('add','src/runtime.cpp')
-}
-Case 'rename sides, deletion, Unicode fixtures and schema inputs stay native' {
-    [IO.File]::Move((Join-Path $fixture 'src/runtime.cpp'),(Join-Path $fixture 'Specs/moved.md'))
-    $plan=Get-RedMonitorChangePlan $fixture
-    Require ($plan.kind -ceq 'Native' -and 'src/runtime.cpp' -cin $plan.paths -and 'Specs/moved.md' -cin $plan.paths) 'Rename lost its native side'
-    [IO.File]::Move((Join-Path $fixture 'Specs/moved.md'),(Join-Path $fixture 'src/runtime.cpp'))
-    foreach($path in @('Tests/Fixtures/README.md','Tests/Data/日本語.md','src/unknown.md','Specs/runtime.schema.json')){
-        Put $path 'new runtime input'
-        $plan=Get-RedMonitorChangePlan $fixture
-        Require ($plan.kind -ceq 'Native' -and $path -cin $plan.paths) "Unknown/runtime input was treated as prose: $path"
-        [IO.File]::Delete((Join-Path $fixture $path))
-    }
-}
-Case 'missing comparison retains native work instead of silently selecting nothing' {
-    Git @('update-ref','-d','refs/remotes/origin/main')
-    $plan=Get-RedMonitorChangePlan $fixture
-    Require ($plan.kind -ceq 'Native' -and $plan.reason.Contains('Comparison unavailable')) 'Missing base did not fail conservatively'
-    $result=Invoke-Runner
-    Require ($result.exit -eq 0 -and @(Calls|Where-Object {$_ -ceq 'test.ps1|Debug||False'}).Count -eq 1) $result.text
-    Checkpoint
-}
-Case 'explicit Full and PrePush retain every local profile, live transport and installation obligation on unchanged input' {
-    foreach($mode in @('Full','PrePush')){
-        $result=Invoke-Runner $mode
-        Require ($result.exit -eq 0 -and $result.text.Contains('LOCAL_OBLIGATIONS_PASSED')) $result.text
-        $calls=@(Calls)
-        foreach($configuration in @('Debug','Release','ASan Debug')){
-            Require (@($calls|Where-Object {$_ -ceq "test.ps1|$configuration||True"}).Count -eq 1) "$mode omitted $configuration native tests/live ETW"
-            Require (@($calls|Where-Object {$_ -ceq "build.ps1|$configuration|ARM64|False"}).Count -eq 1) "$mode omitted $configuration ARM64 cross-build"
-        }
-        Require (@($calls|Where-Object {$_ -like 'package.ps1|*'}).Count -eq 1 -and @($calls|Where-Object {$_ -like 'Tests/Tooling.Tests.Installation.ps1|*'}).Count -eq 1) "$mode omitted packaging/installation"
-    }
-}
-Case 'nonzero independent, runtime, build and package commands cannot become success' {
-    foreach($command in @('validate.ps1','format.ps1','Tests/Tooling.Tests.ps1','test.ps1','build.ps1','package.ps1','Tests/Tooling.Tests.Installation.ps1')){
-        Put '.build/fail' $command
-        $result=Invoke-Runner Full -Force
-        Require ($result.exit -ne 0 -and -not $result.text.Contains('LOCAL_OBLIGATIONS_PASSED') -and $result.text.Contains('Validation failed: '+$command)) "Nonzero exit was lost: $command $($result.text)"
-    }
-    [IO.File]::Delete((Join-Path $fixture '.build/fail'))
-}
-Case 'a later native failure retains exact independent success bytes and retries reuse every completed check' {
-    Put 'README.md' '# Independent retention fixture'
-    Put '.build/fail' 'test.ps1'
-    $failed=Invoke-Runner Full -Force
-    Require ($failed.exit -ne 0 -and $failed.text.Contains('Validation failed: test.ps1')) $failed.text
-    $receipts=Join-Path $fixture '.build/validation-evidence/independent'
-    $before=@(Get-ChildItem -LiteralPath $receipts -Recurse -File|Sort-Object FullName|ForEach-Object {$_.FullName+':'+(Get-FileHash -LiteralPath $_.FullName).Hash}) -join "`n"
-    [IO.File]::Delete((Join-Path $fixture '.build/fail'))
-    $retried=Invoke-Runner Full
-    Require ($retried.exit -eq 0 -and $retried.text.Contains('LOCAL_OBLIGATIONS_PASSED')) $retried.text
-    foreach($scope in @('Validation','Format','Tooling')){Require ($retried.text.Contains("REUSED independent $scope")) "Completed scope reran: $scope $($retried.text)"}
-    Require (@(Calls|Where-Object {$_ -like 'validate.ps1|*' -or $_ -like 'format.ps1|*' -or $_ -like 'Tests/Tooling.Tests.ps1|*'}).Count -eq 0) 'Identical independent checks executed twice'
-    Require (@(Calls|Where-Object {$_ -like 'test.ps1|*'}).Count -eq 3) 'Independent reuse skipped native profile obligations'
-    $after=@(Get-ChildItem -LiteralPath $receipts -Recurse -File|Sort-Object FullName|ForEach-Object {$_.FullName+':'+(Get-FileHash -LiteralPath $_.FullName).Hash}) -join "`n"
-    Require ($after -ceq $before) 'Native continuation rewrote original independent evidence'
-}
-Case 'a forced independent failure prevents old-green masking while preserving prior successful attempts' {
-    Put '.build/fail' 'format.ps1'
-    $failed=Invoke-Runner Full -Force
-    Require ($failed.exit -ne 0 -and @(Calls|Where-Object {$_ -like 'test.ps1|*'}).Count -eq 0) $failed.text
-    $latest=Get-Content (Join-Path $fixture '.build/validation-evidence/independent/Format/latest.json') -Raw|ConvertFrom-Json
-    Require ($latest.status -ceq 'failed') 'Forced failed check retained reusable green latest state'
-    [IO.File]::Delete((Join-Path $fixture '.build/fail'))
-    $retried=Invoke-Runner Full
-    Require ($retried.exit -eq 0 -and @((Calls)|Where-Object {$_ -like 'format.ps1|*'}).Count -eq 1 -and -not $retried.text.Contains('REUSED independent Format')) $retried.text
-}
-Case 'corrupt or interrupted latest evidence never reuses an older independent pass' {
-    foreach($state in @('corrupt','started')){
-        $path=Join-Path $fixture '.build/validation-evidence/independent/Format/latest.json'
-        $index=Get-Content -LiteralPath $path -Raw|ConvertFrom-Json
-        if($state -ceq 'corrupt'){$index.sha256='0'*64}else{$index.status='started'}
-        [IO.File]::WriteAllText($path,($index|ConvertTo-Json))
-        $retried=Invoke-Runner Full
-        Require ($retried.exit -eq 0 -and @(Calls|Where-Object {$_ -like 'format.ps1|*'}).Count -eq 1 -and -not $retried.text.Contains('REUSED independent Format')) "$state latest evidence was reused: $($retried.text)"
-    }
 }
 Case 'complete independent identity detects source and discovery-environment changes without rewriting input' {
     # Keep fixture modules inside fixture child processes; importing one here would
@@ -225,12 +249,6 @@ Case 'complete independent identity detects source and discovery-environment cha
     }finally{[IO.File]::WriteAllBytes($readme,$original)}
     Require ((Get-RedMonitorIndependentIdentity -Root $fixture) -ceq $before) 'Input acquisition mutated source or caller environment'
 }
-Case 'a native edit during prose validation refuses success' {
-    Put 'README.md' '# Prose candidate'
-    Put '.build/mutate' 'mutate source inside independent validation'
-    $result=Invoke-Runner
-    Require ($result.exit -ne 0 -and $result.text.Contains('Inputs changed during independent validation') -and -not $result.text.Contains('PROSE_CHECKS_PASSED')) $result.text
-    Require (@(Calls|Where-Object {$_ -like 'test.ps1|*'}).Count -eq 0) 'Mixed-source native execution was attempted'
-}
-Write-Host "PASS $passed affected-planning/public-runner cases; recording fixtures only: $run"
+
+Write-Host "PASS $passed affected-planning and public runner cases. Recording fixtures retained at $run."
 $global:LASTEXITCODE=0

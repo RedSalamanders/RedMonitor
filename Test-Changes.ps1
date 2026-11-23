@@ -1,59 +1,69 @@
 <#
 .SYNOPSIS
-Explains or runs affected validation and explicit local Full/PrePush qualification.
-.PARAMETER Explain
-Print required coverage without executing it.
+Explains and runs the tests that a change affects, reusing identical successful local evidence.
+.DESCRIPTION
+Affected (the default) compares the checkout with its merge base with -BaseRef, or, in an ordinary local run, with the
+last successful affected run of the profile for 24 hours. Full runs every scope of one profile. PrePush refuses an
+uncommitted changelog, checks it against the base and runs every scope of each PrePush profile this repository lists.
+An unmapped input selects every scope; interactive suites are listed as INTERACTIVE_NOT_RUN and never run.
+Tests/test-scopes.json (version 2) holds this repository's scopes, rules and profiles.
+Engine shim: runs Tools/Test-Changes.ps1 of the shared CI engine that .ci/project.json pins, from .ci-engine, and
+refuses with one message when that checkout is missing, at another commit or changed. The engine's
+Specs/ProjectCommands.md is the contract (Scoped testing).
+.PARAMETER Root
+Repository root; defaults to the repository containing this command.
 .PARAMETER Mode
-Affected compares cumulative committed and dirty work: owned prose runs independent checks, native/unknown work also tests Debug, and no change evaluates nothing. Full/PrePush retain all local profiles; PrePush also checks CHANGELOG.md against origin/main. No hosted CI pass is inferred.
+Affected, Full or PrePush.
+.PARAMETER BaseRef
+Comparison ref, by default origin/<defaultBranch>. Never fetched. An explicit value turns the iteration baseline off.
+.PARAMETER Scopes
+Explicit scopes of an Affected run, as names or comma-separated strings.
+.PARAMETER Configuration
+Debug, Release or ASan Debug, for Affected and Full.
+.PARAMETER Platform
+x64 or ARM64, for Affected and Full. Runtime tests need a host of the same architecture.
+.PARAMETER Explain
+Prints the plan, its reasons and the interactive obligations, then stops: no changelog gate, lease, build, test or write.
 .PARAMETER Force
-Executes independent checks again instead of reusing exact local success. Native, live transport and installation obligations always retain their existing execution.
+Runs every selected scope even when identical successful evidence exists, and ignores the iteration baseline.
+.PARAMETER SkipBuild
+Uses only build outputs whose attestation still matches.
+.PARAMETER ParallelSuites
+Suites test.ps1 may run at once (1 to 8).
+.OUTPUTS
+The plan with its reasons, REUSED/PASSED lines and one token: NOTHING_SELECTED, PROSE_CHECKS_PASSED, SELECTED_PASSED or
+FULL_PASSED, followed by "; repository NOT_EVALUATED". Any failure is a terminating error.
+.NOTES
+Requires PowerShell 7, Git and the pinned engine at .ci-engine. Runs Tools/Test-Changelog.ps1, build.ps1, test.ps1 and
+the scopes' commands; writes evidence under .build/reports/scoped-tests. No fetch, network or desktop focus.
+.EXAMPLE
+./Test-Changes.ps1 -Explain
+.EXAMPLE
+./Test-Changes.ps1 -Mode PrePush
 #>
 [CmdletBinding()]
-param([switch]$Explain,[ValidateSet('Affected','Full','PrePush')][string]$Mode='Affected',[switch]$Force)
+param(
+    [string]$Root = $PSScriptRoot,
+    [ValidateSet('Affected', 'Full', 'PrePush')][string]$Mode = 'Affected',
+    [string]$BaseRef = '',
+    [string[]]$Scopes = @(),
+    [ValidateSet('Debug', 'Release', 'ASan Debug')][string]$Configuration = 'Debug',
+    [ValidateSet('x64', 'ARM64')][string]$Platform = 'x64',
+    [switch]$Explain,
+    [switch]$Force,
+    [switch]$SkipBuild,
+    [ValidateRange(1, 8)][int]$ParallelSuites = 1
+)
 Set-StrictMode -Version Latest
-$ErrorActionPreference='Stop'
-function Invoke-CheckedChangeCommand {
-    param([string]$Relative,[hashtable]$Parameters=@{})
-    $global:LASTEXITCODE=0
-    & (Join-Path $PSScriptRoot $Relative) @Parameters
-    $succeeded=$?
-    if(-not $succeeded -or $LASTEXITCODE){throw "Validation failed: $Relative (exit $LASTEXITCODE)."}
+$ErrorActionPreference = 'Stop'
+# Engine shim (Specs/ProjectCommands.md in the engine); the same lines in every shim.
+# A root shim's product root is its own folder, so a copy in a nested fixture never binds to the product around it.
+$project = $PSScriptRoot
+$binding = Join-Path $project '.ci-engine/Tools/Modules/Ci.EngineBinding.psm1'
+if (-not [IO.File]::Exists($binding)) {
+    throw "$($MyInvocation.MyCommand.Name) runs the shared CI engine that .ci/project.json pins from .ci-engine, and $project/.ci-engine is missing or predates engine shims. Check out the pinned commit (engine.ref in .ci/project.json): git -C .ci-engine fetch origin <engine.ref>; git -C .ci-engine checkout --detach <engine.ref> (first time: git clone https://github.com/RedSalamanders/.github.git .ci-engine)."
 }
-# PrePush must reject an invalid changelog before build or test discovery, including in isolated callers.
-if(-not $Explain -and $Mode -eq 'PrePush'){Invoke-CheckedChangeCommand 'Tools/Test-Changelog.ps1' @{Base='origin/main'}}
-Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
-$sourceBefore=if(-not $Explain){Get-RedMonitorSourceIdentity -Root $PSScriptRoot}else{''}
-$plan=Get-RedMonitorChangePlan -Root $PSScriptRoot
-Write-Host "Affected inputs: $($plan.kind). $($plan.reason)"
-foreach($path in $plan.paths){Write-Host "  $path"}
-if($Explain){
-    Write-Host "Mode $Mode : independent validation; Debug runtime when native/unknown inputs changed."
-    if($Mode -ne 'Affected'){Write-Host 'Also x64 Release/ASan runtime and all three ARM64 cross-builds. Native/manual/UI/performance gates remain separate.'}
-    return
-}
-if($Mode -eq 'Affected' -and $plan.kind -ceq 'None'){
-    if((Get-RedMonitorSourceIdentity -Root $PSScriptRoot) -cne $sourceBefore){throw 'Inputs changed during planning; run again on the current tree.'}
-    Write-Host 'NOTHING_SELECTED; repository NOT_EVALUATED';return
-}
-# Pending fragments are expected: they are folded on the default branch after merge. CHANGELOG.md may change only by such a fold.
-if($Mode -ne 'PrePush'){Invoke-CheckedChangeCommand 'Tools/Test-Changelog.ps1'}
-Import-Module (Join-Path $PSScriptRoot 'Build/IndependentValidation.psm1')
-$independentLease=Enter-RedMonitorOperation -Scope 'independent-validation'
-try{
-    $independentIdentity=Get-RedMonitorIndependentIdentity -Root $PSScriptRoot
-    Invoke-RedMonitorIndependentCheck $PSScriptRoot Validation {Invoke-CheckedChangeCommand 'validate.ps1'} $independentIdentity -Force:$Force
-    Invoke-RedMonitorIndependentCheck $PSScriptRoot Format {Invoke-CheckedChangeCommand 'format.ps1' @{Check=$true}} $independentIdentity -Force:$Force
-    Invoke-RedMonitorIndependentCheck $PSScriptRoot Tooling {Invoke-CheckedChangeCommand 'Tests/Tooling.Tests.ps1'} $independentIdentity -Force:$Force
-}finally{$independentLease.ReleaseMutex();$independentLease.Dispose()}
-if((Get-RedMonitorSourceIdentity -Root $PSScriptRoot) -cne $sourceBefore){throw 'Inputs changed during independent validation; run again on the current tree.'}
-if($Mode -eq 'Affected' -and $plan.kind -ceq 'Prose'){Write-Host 'PROSE_CHECKS_PASSED; repository NOT_EVALUATED';return}
-$configs=if($Mode -eq 'Affected'){@('Debug')}else{@('Debug','Release','ASan Debug')}
-foreach($configuration in $configs){Invoke-CheckedChangeCommand 'test.ps1' @{Configuration=$configuration;IncludeLiveEtw=($Mode -ne 'Affected')}}
-if($Mode -ne 'Affected'){
-    foreach($configuration in 'Debug','Release','ASan Debug'){Invoke-CheckedChangeCommand 'build.ps1' @{Platform='ARM64';Configuration=$configuration}}
-    $package=Invoke-CheckedChangeCommand 'package.ps1' @{PassThru=$true}
-    Invoke-CheckedChangeCommand 'Tests/Tooling.Tests.Installation.ps1' @{PackageDirectory=$package.extracted}
-}
-if((Get-RedMonitorSourceIdentity -Root $PSScriptRoot) -cne $sourceBefore){throw 'Inputs changed during native validation; run again on the current tree.'}
-if($Mode -eq 'Affected'){Write-Host 'SELECTED_DEBUG_PASSED; repository NOT_EVALUATED'}
-else{Write-Host 'LOCAL_OBLIGATIONS_PASSED; native ARM64/manual gates remain separate'}
+Import-Module $binding -Force
+$command = Resolve-CiPinnedEngineCommand -ProjectRoot $project -Name $MyInvocation.MyCommand.Name
+$PSBoundParameters['Root'] = $Root
+& $command @PSBoundParameters

@@ -50,6 +50,10 @@ if ($Phase -eq 'Static') {
     $baseCommit = Resolve-CiCommit $root $Base
     Run 'Tools/Test-Changelog.ps1' @('-Base',$baseCommit)
     Run 'validate.ps1'
+    Import-Module (Join-Path $EngineRoot 'Tools/Modules/Ci.ScopedTesting.psm1') -Scope Local
+    $manifest = Read-ScopedTestManifest -Root $root
+    $nativeCount = Assert-ScopedTestNames -Root $root -Manifest $manifest
+    Write-Host "Native test naming checked for $nativeCount files."
     return
 }
 if ($Phase -ne 'Qualification') { $Configuration = 'Release' }
