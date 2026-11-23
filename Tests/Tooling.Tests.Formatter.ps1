@@ -38,13 +38,24 @@ $sourceBefore=(Get-FileHash -LiteralPath $source).Hash
 $result=Invoke-Format @('-Check')
 if($result.exit -eq 0 -or $result.text -notmatch 'needs the shared CI engine'){throw "A missing engine was not refused: $($result.text)"}
 $engine=Join-Path $fixture '.ci-engine'
-$clone=& $git clone --quiet --no-hardlinks (Join-Path $repo '.ci-engine') $engine 2>&1
+$engineSource=[uri](Join-Path $repo '.ci-engine')
+$clone=& $git clone --quiet --depth 1 -c advice.detachedHead=false $engineSource.AbsoluteUri $engine 2>&1
 if($LASTEXITCODE){throw "Fixture engine clone failed: $clone"}
+if ((& $git -C $engine rev-parse --is-shallow-repository) -cne 'true' -or $LASTEXITCODE) {
+    throw 'The formatter fixture must use the same shallow engine topology as hosted qualification.'
+}
 $pin=(Get-Content -LiteralPath (Join-Path $fixture '.ci/project.json') -Raw|ConvertFrom-Json).engine.ref
-& $git -C $engine -c advice.detachedHead=false checkout -q --detach "$pin~1"
+$tree=& $git -C $engine rev-parse "$pin^{tree}"
+if ($LASTEXITCODE) { throw 'The fixture clone did not retain the pinned engine tree.' }
+# A hosted clone may have no parent for the pin. A local descendant tests the mismatch without fetching history.
+$wrongPin=& $git -C $engine -c user.name='Formatter Fixture' -c user.email='fixture@example.invalid' -c commit.gpgsign=false commit-tree $tree -p $pin -m 'Fixture wrong engine pin'
+if ($LASTEXITCODE -or $wrongPin -cnotmatch '^[0-9a-f]{40}$') { throw 'Could not create the fixture mismatch commit.' }
+& $git -C $engine -c advice.detachedHead=false checkout -q --detach $wrongPin
+if ($LASTEXITCODE) { throw 'Could not select the fixture mismatch commit.' }
 $result=Invoke-Format @('-Check')
 if($result.exit -eq 0 -or $result.text -notmatch 'pins'){throw "A mismatched engine was not refused: $($result.text)"}
 & $git -C $engine -c advice.detachedHead=false checkout -q --detach $pin
+if ($LASTEXITCODE) { throw 'Could not restore the fixture engine pin.' }
 
 $result=Invoke-Format @('-Check')
 if($result.exit -eq 0 -or $result.text -notmatch 'Needs formatting: src/FormatterFixture\.cpp'){throw "The strict check accepted unformatted source: $($result.text)"}
