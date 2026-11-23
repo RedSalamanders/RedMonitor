@@ -1,1 +1,0 @@
-- Validate RedMonitor skills and guidance with the pinned shared CI engine and retain the product documentation and source checks.

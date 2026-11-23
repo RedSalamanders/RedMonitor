@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Validate RedMonitor skills and guidance with the pinned shared CI engine and retain the product documentation and source checks.
 - Adopt the shared scoped test runner while retaining RedMonitor's live ETW, contained installation and source-bound native gates.
 - Exercise the formatter's wrong-engine refusal with a local mismatch commit, so the fixture works when hosted qualification supplies only the exact shallow pin.
 - The winget block of `.ci/project.json` now declares a smoke test, `redmonitor --runtime-contract` with a
