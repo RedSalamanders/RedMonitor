@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "repository": "https://github.com/RedSalamanders/RedSalamander",
-  "commit": "6b6f5646be297fbc232d137f1df6a00c5cb74461",
+  "repository": "https://github.com/RedSalamanders/.github",
+  "commit": "d3ef637d1ac0b1e62c4f439f69aa0bd8559c74c1",
   "license": "MIT",
-  "importDate": "2026-10-31",
+  "importDate": "2026-11-19",
   "files": [
     {
-      "source": "Build/BuildConsole.psm1",
+      "source": "Templates/Project/Build/BuildConsole.psm1",
       "destination": "Build/BuildConsole.psm1",
-      "sha256": "cd4477e0d4430758f150baa37de247446bccb3901851f38c2e378d8d60efc818",
-      "sha256Kind": "imported working-tree bytes with CRLF line endings",
-      "disposition": "byte-identical local copy of the shared Red-family terminal result helper; no sibling runtime dependency"
+      "sha256": "c6746e8f3875e401b7e4f480fe5ac349c2cd8c37201ba5ef43d5c7b740bb2832",
+      "sha256Kind": "engine template blob bytes with LF line endings",
+      "disposition": "engine module shim; the implementation is the pinned engine's Tools/Modules/Ci.BuildConsole.psm1 (Specs/ProjectCommands.md)"
     }
   ]
 }
