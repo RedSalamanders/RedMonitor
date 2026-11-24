@@ -86,6 +86,7 @@ fails with its identity; CI must install compatible tools rather than weakening 
 through the pinned CI engine. The engine's Agent guidance contract in `Specs/ProjectCommands.md` owns rules G1
 through G13 and their fixture coverage. RedMonitor declares its root guidance in `.agents/guidance.json`.
 
+`validate-specs.ps1` checks the specification indexes and local documentation references under `Specs/`.
 `validate.ps1` calls the same entry point and checks the project's source, dependency pins and ordinary
 documentation. The product documentation checker resolves declared local links and refuses missing or out-of-repository
 targets. It accepts fenced illustrations and ordinary Markdown links with encoded paths, balanced parentheses and titles.
