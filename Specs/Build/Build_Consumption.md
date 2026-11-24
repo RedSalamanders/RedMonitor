@@ -12,7 +12,8 @@ caller parameters and the product's generated triplet comment.
 Both vcpkg restores use a complete clone of the pinned vcpkg repository. vcpkg extracts versioned ports
 with `git read-tree` and `git checkout-index` in an environment that holds only `GIT_INDEX_FILE`, so it
 cannot fetch an object a partial clone left on the server ("Could not resolve host: github.com").
-`vcpkg-install.ps1` clones completely, fetches the pinned commit without `--depth` only when it is
+`vcpkg-install.ps1` uses the pinned CI engine to prepare the complete clone and
+manifest arguments. It fetches the pinned commit without `--depth` only when it is
 missing, and completes an earlier partial checkout in place. The pinned DxUi installer still makes a
 partial clone, so `restore-dxui.ps1` first prepares its `<output>/vcpkg-tool` as a complete checkout at
 the commit that DxUi's `vcpkg-tool.json` names (`Build/VcpkgToolCheckout.psm1`), which that installer
