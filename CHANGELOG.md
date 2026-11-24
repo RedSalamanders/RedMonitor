@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Own the viewer's graphics and text COM interfaces with nonthrowing WIL pointers and use the existing DXGI factory interface for window association.
 - Rebuild the viewer after a device hang or driver internal error and use the same device-loss handling for full draws, partial draws and presentation.
 - Support the shared `-Clean`, `-Rebuild` and `-MaxCpuCount` options on the RedMonitor build command.
 - Add a read-only root `validate-specs.ps1` command for the specification indexes and local documentation links.
