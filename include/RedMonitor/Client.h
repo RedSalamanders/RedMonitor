@@ -77,7 +77,7 @@ namespace Detail
         std::copy(application.begin(), application.end(), storage.begin() + 1);
         storage[application.size() + 1] = L']';
         storage[application.size() + 2] = L' ';
-        std::copy(message.begin(), message.end(), storage.begin() + application.size() + 3);
+        std::copy(message.begin(), message.end(), storage.data() + application.size() + 3);
         payload = {storage.data(), application.size() + 3 + message.size()};
     }
     const uint64_t fileTime = (static_cast<uint64_t>(timestamp.dwHighDateTime) << 32u) | timestamp.dwLowDateTime;
@@ -130,7 +130,7 @@ public:
     {
         bool expected = false;
         _owns         = Detail::g_hasOwner.compare_exchange_strong(expected, true, std::memory_order_acq_rel);
-        _status       = _owns ? TraceLoggingRegister(Detail::g_provider) : ERROR_ALREADY_EXISTS;
+        _status       = _owns ? static_cast<ULONG>(TraceLoggingRegister(Detail::g_provider)) : ERROR_ALREADY_EXISTS;
     }
 
     ~Provider() noexcept
@@ -193,6 +193,11 @@ public:
     explicit Application(std::wstring_view label) noexcept : _label(label)
     {
     }
+
+    Application(const Application&)            = delete;
+    Application& operator=(const Application&) = delete;
+    Application(Application&&)                 = delete;
+    Application& operator=(Application&&)      = delete;
 
     [[nodiscard]] ULONG Status() const noexcept
     {

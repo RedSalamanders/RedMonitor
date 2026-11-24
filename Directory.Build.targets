@@ -9,6 +9,7 @@
   <PropertyGroup>
     <!-- Extend after Microsoft.Cpp.props has supplied the system include defaults. -->
     <ExternalIncludePath>$(RedMonitorPackages)include;$(ExternalIncludePath)</ExternalIncludePath>
+    <ExternalIncludePath Condition="'$(DxUiConsumerOutputRoot)'!='' and '$(DxUiConsumerTriplet)'!=''">$(ExternalIncludePath);$(DxUiConsumerOutputRoot)vcpkg_installed\$(Platform)\$(DxUiConsumerTriplet)\include</ExternalIncludePath>
   </PropertyGroup>
   <Target Name="CopyRedMonitorRuntimeDependencies" AfterTargets="Link"
           Condition="'$(MSBuildProjectExtension)'=='.vcxproj' and '$(ConfigurationType)'=='Application'">

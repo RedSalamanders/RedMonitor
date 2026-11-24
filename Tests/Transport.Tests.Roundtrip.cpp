@@ -21,6 +21,13 @@ int wmain(int argc, wchar_t** argv)
     }
     struct State
     {
+        State() = default;
+
+        State(const State&)            = delete;
+        State& operator=(const State&) = delete;
+        State(State&&)                 = delete;
+        State& operator=(State&&)      = delete;
+
         std::wstring expected = L"[RedPrism] RedMonitor roundtrip \u00e9\u65e5\U0001F642";
         wil::unique_event received;
         std::atomic<bool> valid{false};
