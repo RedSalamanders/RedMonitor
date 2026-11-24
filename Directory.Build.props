@@ -5,7 +5,7 @@
     <RedMonitorBuildNumber Condition="'$(RedMonitorBuildNumber)'==''">0</RedMonitorBuildNumber>
     <RedMonitorOutputRoot Condition="'$(RedMonitorOutputRoot)'==''">$(RedMonitorRoot).build\</RedMonitorOutputRoot>
     <OutDir>$(RedMonitorOutputRoot)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(RedMonitorOutputRoot)obj\$(Platform)\$(Configuration)\$(MSBuildProjectName)\</IntDir>
+    <IntDir>$(RedMonitorOutputRoot)Intermediate\$(Platform)\$(Configuration)\$(MSBuildProjectName)\</IntDir>
     <VcpkgEnabled>false</VcpkgEnabled>
     <PreferredToolArchitecture Condition="'$(PreferredToolArchitecture)'=='' and '$(PROCESSOR_ARCHITECTURE)'=='ARM64'">arm64</PreferredToolArchitecture>
     <PreferredToolArchitecture Condition="'$(PreferredToolArchitecture)'==''">x64</PreferredToolArchitecture>
