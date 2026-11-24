@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Apply the shared lean Windows header definitions to RedMonitor's C++ profiles.
 - Use the conforming C++ preprocessor in RedMonitor's native profiles.
 - Adopt the shared hosted MSVC action and pinned formatting and repository policy checks.
 - Use Edit and Continue symbols for the RedMonitor Debug profile.

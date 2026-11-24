@@ -1,1 +1,0 @@
-- Apply the shared lean Windows header definitions to RedMonitor's C++ profiles.
