@@ -1,1 +1,0 @@
-- Honor the Windows native-architecture value when choosing the RedMonitor compiler host.
