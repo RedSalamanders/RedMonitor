@@ -1,1 +1,0 @@
-- Add a read-only root `validate-specs.ps1` command for the specification indexes and local documentation links.
