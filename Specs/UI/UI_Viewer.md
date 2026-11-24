@@ -9,6 +9,11 @@ hit-tests lines, and how ETW batches and worker results reach it. The document i
 
 ## Rendering and filtering
 
+The viewer uses one device-loss predicate for partial draws, full draws and presentation. On
+`D2DERR_RECREATE_TARGET`, `DXGI_ERROR_DEVICE_REMOVED`, `DXGI_ERROR_DEVICE_RESET`,
+`DXGI_ERROR_DEVICE_HUNG` or `DXGI_ERROR_DRIVER_INTERNAL_ERROR`, it discards device-dependent
+resources, resets presentation state and requests a full redraw to rebuild the view.
+
 Launch with `--warp` to use software rendering for the log view, the toolbar and the status bar.
 The log view keeps that choice when it recreates its device. Ordinary launches try the hardware device
 first and use WARP if hardware device creation fails.

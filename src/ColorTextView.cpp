@@ -72,6 +72,15 @@ namespace
 {
 constexpr uint64_t kMonitorAutoScrollModeValue = 1u;
 constexpr uint64_t kMonitorScrollBackModeValue = 2u;
+
+[[nodiscard]] constexpr bool IsDeviceLoss(HRESULT result) noexcept
+{
+    return result == D2DERR_RECREATE_TARGET || result == DXGI_ERROR_DEVICE_REMOVED || result == DXGI_ERROR_DEVICE_RESET ||
+           result == DXGI_ERROR_DEVICE_HUNG || result == DXGI_ERROR_DRIVER_INTERNAL_ERROR;
+}
+
+static_assert(IsDeviceLoss(DXGI_ERROR_DEVICE_HUNG) && IsDeviceLoss(DXGI_ERROR_DRIVER_INTERNAL_ERROR));
+static_assert(! IsDeviceLoss(E_FAIL) && ! IsDeviceLoss(DXGI_STATUS_OCCLUDED));
 } // namespace
 
 static inline bool IsKeyDown(int vk)
@@ -3028,7 +3037,7 @@ void ColorTextView::OnPaint()
         {
             auto errorMsg = std::format("!!! Partial EndDraw failed: HRESULT = 0x{:08X}\n", hr);
             OutputDebugStringA(errorMsg.c_str());
-            if (hr == D2DERR_RECREATE_TARGET || hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+            if (IsDeviceLoss(hr))
             {
                 DiscardDeviceResources();
                 ResetPresentationState();
@@ -3063,7 +3072,7 @@ void ColorTextView::OnPaint()
             auto errorMsg = std::format("!!! EndDraw failed: HRESULT = 0x{:08X}\n", hr);
             OutputDebugStringA(errorMsg.c_str());
 
-            if (hr == D2DERR_RECREATE_TARGET || hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+            if (IsDeviceLoss(hr))
             {
                 OutputDebugStringA("!!! Device lost during full render, discarding resources\n");
                 DiscardDeviceResources();
@@ -3117,9 +3126,9 @@ void ColorTextView::OnPaint()
         auto presentMsg = std::format("!!! Present1 failed: HRESULT = 0x{:08X}\n", presentHr);
         OutputDebugStringA(presentMsg.c_str());
 
-        if (presentHr == DXGI_ERROR_DEVICE_REMOVED || presentHr == DXGI_ERROR_DEVICE_RESET)
+        if (IsDeviceLoss(presentHr))
         {
-            OutputDebugStringA("!!! Present failed due to device removed/reset, discarding resources\n");
+            OutputDebugStringA("!!! Device lost during Present, discarding resources\n");
             DiscardDeviceResources();
         }
 
