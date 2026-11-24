@@ -1,0 +1,1 @@
+- Restore and link instrumented RedMonitor vcpkg dependencies in ASan Debug.

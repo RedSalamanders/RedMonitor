@@ -77,7 +77,7 @@ if($DxUiSdkInputDescriptor){
 }
 if (-not $SkipRestore) {
     if($null -ne $sdkInput){& (Join-Path $PSScriptRoot 'vcpkg-install.ps1') -Platform $Platform}
-    else{& (Join-Path $PSScriptRoot 'restore.ps1') -Platform $Platform}
+    else{Invoke-RedMonitorDependencyRestore -Platform $Platform -Asan:($Configuration -eq 'ASan Debug')}
     if(-not $? -or $LASTEXITCODE){throw 'RedMonitor dependency restore failed.'}
 }
 New-Item -ItemType Directory -Force -Path $output | Out-Null

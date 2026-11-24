@@ -22,12 +22,16 @@ Target platform: x64, ARM64, or All.
 .PARAMETER OutputRoot
 Directory that holds the managed vcpkg checkout, overlay triplets, downloads, build trees, packages, and installed
 trees. Defaults to this checkout's .build.
+
+.PARAMETER Asan
+Restore the instrumented ASan Debug tree for the selected architecture.
 #>
 [CmdletBinding()]
 param(
     [ValidateSet('x64', 'ARM64', 'All')]
     [string] $Platform = 'x64',
-    [string] $OutputRoot = ''
+    [string] $OutputRoot = '',
+    [switch] $Asan
 )
 
 Set-StrictMode -Version Latest
@@ -85,12 +89,18 @@ $platforms = if ($Platform -eq 'All') { @('x64', 'ARM64') } else { @($Platform) 
 foreach ($targetPlatform in $platforms) {
     $platformScope = $targetPlatform
     $triplet = if ($targetPlatform -eq 'ARM64') { 'arm64-windows' } else { 'x64-windows' }
+    if ($Asan) {
+        $platformScope += '-asan'
+        $triplet += '-asan'
+        $tripletSource = Join-Path $repoRoot "Build/vcpkg-triplets/$triplet.cmake"
+    } else {
+        $tripletSource = Join-Path $toolRoot "triplets/$triplet.cmake"
+    }
     $installRoot = Join-Path $buildRoot "vcpkg_installed\$platformScope"
     $buildTreesRoot = Join-Path $buildRoot "vcpkg_buildtrees\$platformScope"
     $packagesRoot = Join-Path $buildRoot "vcpkg_packages\$platformScope"
     $downloadsRoot = Join-Path $buildRoot 'vcpkg_downloads'
-    # The pinned checkout's own triplet, copied and pinned; vcpkg takes an overlay in place of the triplet of the same name.
-    $overlay = Update-RedMonitorVcpkgOverlayTriplet -StockTripletPath (Join-Path $toolRoot "triplets/$triplet.cmake") -Toolset $toolset `
+    $overlay = Update-RedMonitorVcpkgOverlayTriplet -StockTripletPath $tripletSource -Toolset $toolset `
         -OutputDirectory (Join-Path $buildRoot "vcpkg-triplets\$platformScope")
     Write-Host "Overlay triplet $($overlay.Path) $(if ($overlay.Changed) { 'written' } else { 'unchanged' })" -ForegroundColor Cyan
 
@@ -98,6 +108,9 @@ foreach ($targetPlatform in $platforms) {
     $arguments = Get-CiVcpkgManifestInstallArguments -ProjectRoot $repoRoot -Triplet $triplet `
         -InstallRoot $installRoot -BuildTreesRoot $buildTreesRoot -PackagesRoot $packagesRoot `
         -DownloadsRoot $downloadsRoot -OverlayTriplets $overlay.Directory
+    if ($Asan) {
+        $arguments += '--binarysource=clear'
+    }
     & $vcpkg @arguments
     if ($LASTEXITCODE -ne 0) {
         throw "vcpkg install failed for $triplet with exit code $LASTEXITCODE."

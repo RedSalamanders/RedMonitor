@@ -18,7 +18,7 @@ if (-not (Test-Path -LiteralPath $source)) {
 }
 & (Join-Path $source 'Tools/validate_consumer.ps1') -DxUiRoot $source -LockFile $pinPath
 if ($LASTEXITCODE -ne 0) { throw 'DxUi source pin validation failed.' }
-Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'Build/Toolchain.psm1') -Scope Local -ErrorAction Stop
 Import-Module (Join-Path $source 'Tools/ConsumerBuild.psm1') -Force
 $msbuild = Get-RedMonitorMSBuild
 $previousHost = [Environment]::GetEnvironmentVariable('PreferredToolArchitecture', 'Process')

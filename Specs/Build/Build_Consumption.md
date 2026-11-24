@@ -47,6 +47,11 @@ The independent helper's [import provenance](../SourceImport/build-console-origi
 
 Native object and tracking files live in `.build/Intermediate/<Platform>/<Configuration>/<Project>`.
 Executables and receipts use the corresponding `.build/<Platform>/<Configuration>` output directory.
+
+ASan Debug restores instrumented vcpkg libraries in `.build/vcpkg_installed/<Platform>-asan` and
+loads its matching yyjson runtime. The restore uses the pinned default compiler, dynamic linkage and
+MSVC STL annotations, with AddressSanitizer enabled and `/RTC1` removed from the debug toolchain.
+`vcpkg-install.ps1 -Platform <architecture> -Asan` prepares this tree independently.
 The root command selects a native MSBuild executable. The project default prefers ARM64 compiler tools when either Windows architecture value reports ARM64. An explicit PreferredToolArchitecture selects the requested host.
 
 Success requires a successful MSBuild exit, a log with zero warnings and errors and no structured tool process exception dump,

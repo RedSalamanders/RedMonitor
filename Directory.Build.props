@@ -14,7 +14,10 @@
     <!-- The standard dynamic triplets (RedHome CV-4-07, register C-14): vcpkg DLLs ship beside each executable. -->
     <RedMonitorTriplet Condition="'$(Platform)'=='x64'">x64-windows</RedMonitorTriplet>
     <RedMonitorTriplet Condition="'$(Platform)'=='ARM64'">arm64-windows</RedMonitorTriplet>
-    <RedMonitorPackages>$(RedMonitorRoot).build\vcpkg_installed\$(Platform)\$(RedMonitorTriplet)\</RedMonitorPackages>
+    <RedMonitorVcpkgScope>$(Platform)</RedMonitorVcpkgScope>
+    <RedMonitorVcpkgScope Condition="'$(Configuration)'=='ASan Debug'">$(Platform)-asan</RedMonitorVcpkgScope>
+    <RedMonitorTriplet Condition="'$(Configuration)'=='ASan Debug'">$(RedMonitorTriplet)-asan</RedMonitorTriplet>
+    <RedMonitorPackages>$(RedMonitorRoot).build\vcpkg_installed\$(RedMonitorVcpkgScope)\$(RedMonitorTriplet)\</RedMonitorPackages>
     <RedMonitorPackages Condition="'$(CiSdkContract)'=='LocalUnpinnedAbiV1'">$(RedMonitorRoot).build\local-sdk-dependencies\vcpkg_installed\$(Platform)\$(RedMonitorTriplet)\</RedMonitorPackages>
     <RedMonitorRuntimeDir Condition="'$(Configuration)'=='Release'">$(RedMonitorPackages)bin\</RedMonitorRuntimeDir>
     <RedMonitorRuntimeDir Condition="'$(Configuration)'!='Release'">$(RedMonitorPackages)debug\bin\</RedMonitorRuntimeDir>
