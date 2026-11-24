@@ -26,6 +26,10 @@ after Microsoft.Cpp.props supplies its system SDK defaults; an early nonempty va
 prevent those defaults from being initialized. It is not a per-source item metadata field.
 First-party diagnostics and the zero-warning acceptance check remain enforced.
 
+Open `RedMonitor.sln` in Visual Studio for the six profiles after restoring the corresponding dependencies.
+The root `build.ps1` builds through `RedMonitor.proj` and records the native build receipt. Every native project
+checks the selected MSVC toolset against `RequiredMsvcToolsVersion` before preparing its build.
+
 ## Command-line build output and source receipts
 
 `build.ps1` prints the RedMonitor ASCII wordmark and target profile before restore/compilation.

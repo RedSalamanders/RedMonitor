@@ -21,6 +21,8 @@
     <Copy SourceFiles="@(RedMonitorRuntimeDependency)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="RedMonitorValidateProfile" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(MSBuildProjectExtension)'=='.vcxproj' and !$([System.String]::Copy('$(VCToolsVersion)').StartsWith('$(RequiredMsvcToolsVersion).'))"
+           Text="RedMonitor requires MSVC build tools $(RequiredMsvcToolsVersion).x. Selected $(VCToolsVersion). Install and select the required default C++ toolset." />
     <Error Condition="'$(Platform)'!='x64' and '$(Platform)'!='ARM64'" Text="RedMonitor requires x64 or ARM64." />
     <Error Condition="'$(Configuration)'!='Debug' and '$(Configuration)'!='Release' and '$(Configuration)'!='ASan Debug'" Text="Invalid RedMonitor configuration." />
     <Error Condition="!Exists('$(RedMonitorPackages)include\wil\resource.h')" Text="Run restore.ps1 before building RedMonitor." />
