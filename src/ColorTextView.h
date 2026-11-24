@@ -347,23 +347,23 @@ private:
     Document _document;
 
     // Factories & resources
-    wil::com_ptr<ID2D1Factory1> _d2d1Factory;
-    wil::com_ptr<IDWriteFactory> _dwriteFactory;
+    wil::com_ptr_nothrow<ID2D1Factory1> _d2d1Factory;
+    wil::com_ptr_nothrow<IDWriteFactory> _dwriteFactory;
     // D3D/DXGI device stack
     bool _forceWarp = false;
-    wil::com_ptr<ID3D11Device> _d3dDevice;
-    wil::com_ptr<ID3D11DeviceContext> _d3dContext;
-    wil::com_ptr<IDXGISwapChain1> _swapChain;
+    wil::com_ptr_nothrow<ID3D11Device> _d3dDevice;
+    wil::com_ptr_nothrow<ID3D11DeviceContext> _d3dContext;
+    wil::com_ptr_nothrow<IDXGISwapChain1> _swapChain;
     // D2D device and context (we keep name _rt for minimal changes)
-    wil::com_ptr<ID2D1Device> _d2dDevice;
-    wil::com_ptr<ID2D1DeviceContext> _d2dCtx;
-    wil::com_ptr<ID2D1Bitmap1> _d2dTargetBitmap; // backbuffer as D2D target
+    wil::com_ptr_nothrow<ID2D1Device> _d2dDevice;
+    wil::com_ptr_nothrow<ID2D1DeviceContext> _d2dCtx;
+    wil::com_ptr_nothrow<ID2D1Bitmap1> _d2dTargetBitmap; // backbuffer as D2D target
 #if defined(ENABLE_TESTS)
     HRESULT _debugLastDeviceCreateHr = S_OK;
     bool _debugUsesWarp              = false;
 #endif
     // Offscreen slice cache bitmap
-    wil::com_ptr<ID2D1Bitmap1> _sliceBitmap;
+    wil::com_ptr_nothrow<ID2D1Bitmap1> _sliceBitmap;
     float _sliceBitmapYBase = 0.f;
     float _sliceDipW        = 0.f;
     float _sliceDipH        = 0.f;
@@ -376,8 +376,8 @@ private:
     };
     SliceDirtyRegion _sliceDirtyRegion;
     // Offscreen slice cache (command list in DIPs to avoid DPI issues)
-    wil::com_ptr<ID2D1CommandList> _sliceCmd;
-    wil::com_ptr<IDWriteTextLayout> _fallbackLayout;
+    wil::com_ptr_nothrow<ID2D1CommandList> _sliceCmd;
+    wil::com_ptr_nothrow<IDWriteTextLayout> _fallbackLayout;
     size_t _fallbackStartLine  = 0;
     size_t _fallbackEndLine    = 0;
     float _fallbackLayoutWidth = 0.f;
@@ -386,7 +386,7 @@ private:
     using BrushCacheKey = std::tuple<float, float, float, float>;
     struct BrushCacheEntry
     {
-        wil::com_ptr<ID2D1SolidColorBrush> brush;
+        wil::com_ptr_nothrow<ID2D1SolidColorBrush> brush;
         uint64_t lastAccess = 0;
     };
     struct BrushKeyHash
@@ -409,9 +409,9 @@ private:
     std::unordered_map<BrushCacheKey, BrushCacheEntry, BrushKeyHash> _brushCache;
     uint64_t _brushAccessCounter = 0;
 
-    wil::com_ptr<IDWriteTextFormat> _textFormat;
-    wil::com_ptr<IDWriteTextFormat> _gutterTextFormat;
-    wil::com_ptr<IDWriteTextLayout> _textLayout;
+    wil::com_ptr_nothrow<IDWriteTextFormat> _textFormat;
+    wil::com_ptr_nothrow<IDWriteTextFormat> _gutterTextFormat;
+    wil::com_ptr_nothrow<IDWriteTextLayout> _textLayout;
     std::vector<DWRITE_LINE_METRICS> _lineMetrics;
     // Map logical document lines to display line indices (start) for precise gutter placement
     std::vector<UINT32> _docLineToDisplayStart;
@@ -510,7 +510,7 @@ private:
         UINT32 firstDisplayRow = 0; // Display row offset for filtered rendering
         bool isFiltered        = false;
         std::vector<FilteredTextRun> filteredRuns;
-        wil::com_ptr<IDWriteTextLayout> layout;
+        wil::com_ptr_nothrow<IDWriteTextLayout> layout;
     };
     std::vector<CachedSlice> _layoutCache; // small LRU
     static constexpr size_t kSliceBlockLines = 256;
@@ -534,9 +534,9 @@ private:
     RenderMode _renderMode = RenderMode::AUTO_SCROLL;
 
     // AUTO-SCROLL mode state (hot path)
-    wil::com_ptr<IDWriteTextLayout> _tailLayout; // Layout for last N lines
-    size_t _tailFirstLine              = 0;      // First line in tail layout
-    static constexpr size_t kTailLines = 100;    // Fixed window size for tail
+    wil::com_ptr_nothrow<IDWriteTextLayout> _tailLayout; // Layout for last N lines
+    size_t _tailFirstLine              = 0;              // First line in tail layout
+    static constexpr size_t kTailLines = 100;            // Fixed window size for tail
     bool _tailLayoutValid              = false;
     bool _tailIsFiltered               = false;
     UINT32 _tailStartPos               = 0;
@@ -560,7 +560,7 @@ private:
         UINT32 sliceFirstDisplayRow{}; // Display row offset for filtered rendering
         bool sliceIsFiltered{};        // True if text contains only visible lines
         std::vector<FilteredTextRun> filteredRuns;
-        wil::com_ptr<IDWriteTextLayout> layout;
+        wil::com_ptr_nothrow<IDWriteTextLayout> layout;
     };
     struct WidthPacket
     {
@@ -638,8 +638,8 @@ private:
     void ClearTextLayoutEffects();
 
 #if RS_MONITOR_INVALID_RECT_VISUALIZATION_ENABLED
-    wil::com_ptr<ID2D1SolidColorBrush> _debugDirtyRectBrush;
-    wil::com_ptr<ID2D1SolidColorBrush> _debugDirtyRectFillBrush;
+    wil::com_ptr_nothrow<ID2D1SolidColorBrush> _debugDirtyRectBrush;
+    wil::com_ptr_nothrow<ID2D1SolidColorBrush> _debugDirtyRectFillBrush;
     size_t _debugDirtyColorIndex = 0;
 #endif
 

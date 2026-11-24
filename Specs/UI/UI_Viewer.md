@@ -14,6 +14,9 @@ The viewer uses one device-loss predicate for partial draws, full draws and pres
 `DXGI_ERROR_DEVICE_HUNG` or `DXGI_ERROR_DRIVER_INTERNAL_ERROR`, it discards device-dependent
 resources, resets presentation state and requests a full redraw to rebuild the view.
 
+The viewer owns its Direct3D, DXGI, Direct2D and DirectWrite interfaces through
+`wil::com_ptr_nothrow`. COM queries use checked results and follow the viewer's existing recovery paths.
+
 Launch with `--warp` to use software rendering for the log view, the toolbar and the status bar.
 The log view keeps that choice when it recreates its device. Ordinary launches try the hardware device
 first and use WARP if hardware device creation fails.
