@@ -393,7 +393,7 @@ namespace
                 return false;
             }
         }
-        const auto exportResult = RedSalamanderMonitor::WriteMonitorTextSnapshot(outputPath, firstRead.snapshot, {});
+        const auto exportResult = RedSalamanderMonitor::WriteMonitorTextSnapshot({.path = outputPath}, firstRead.snapshot, {});
         const auto secondRead =
             RedSalamanderMonitor::ReadMonitorTextFile(outputPath, {}, {.maxEncodedBytes = 4'096u, .maxRetainedTextBytes = 4'096u, .maxLines = 16u});
         if (FAILED(exportResult.hr) || readBytes(outputPath) != testCase.canonical || FAILED(secondRead.hr) ||
@@ -753,6 +753,18 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
     }
 
     const std::filesystem::path target = root / L"monitor-export.txt";
+    const auto exportObserved          = [&](const RedSalamanderMonitor::MonitorTextSnapshot& snapshot,
+                                             std::stop_token stopToken                                       = {},
+                                             const RedSalamanderMonitor::MonitorFileExportProgress& progress = {})
+    {
+        RedSalamanderMonitor::MonitorFileExportTarget selected{.path = target};
+        const HRESULT status = RedSalamanderMonitor::ObserveMonitorFileExportTarget(selected);
+        if (FAILED(status))
+        {
+            return RedSalamanderMonitor::MonitorFileExportResult{.hr = status};
+        }
+        return RedSalamanderMonitor::WriteMonitorTextSnapshot(selected, snapshot, stopToken, progress);
+    };
     {
         std::ofstream original(target, std::ios::binary | std::ios::trunc);
         original << "previous-good";
@@ -765,7 +777,7 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
     Document invalidDocument;
     std::wstring malformed(1u, static_cast<wchar_t>(0xD800u));
     invalidDocument.AppendInfoLine(malformed, MakeTestInfo(Debug::InfoParam::Type::Text, 10u));
-    const auto invalidResult = RedSalamanderMonitor::WriteMonitorTextSnapshot(target, invalidDocument.CaptureTextSnapshot(), std::stop_token{});
+    const auto invalidResult = exportObserved(invalidDocument.CaptureTextSnapshot());
     if (SUCCEEDED(invalidResult.hr) || ReadMonitorTestFile(target) != "previous-good")
     {
         return false;
@@ -774,7 +786,7 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
     Document validDocument;
     validDocument.AppendInfoLine(L"valid export", MakeTestInfo(Debug::InfoParam::Type::Text, 11u));
     const std::string expected = std::string("\xEF\xBB\xBF", 3u) + "valid export\n";
-    const auto validResult     = RedSalamanderMonitor::WriteMonitorTextSnapshot(target, validDocument.CaptureTextSnapshot(), std::stop_token{});
+    const auto validResult     = exportObserved(validDocument.CaptureTextSnapshot());
     if (FAILED(validResult.hr) || ReadMonitorTestFile(target) != expected)
     {
         return false;
@@ -784,7 +796,7 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
     ingestingDocument.AppendInfoLine(L"snapshot-start", MakeTestInfo(Debug::InfoParam::Type::Text, 12u));
     RedSalamanderMonitor::MonitorTextSnapshot startSnapshot = ingestingDocument.CaptureTextSnapshot();
     ingestingDocument.AppendInfoLine(L"arrived-during-export", MakeTestInfo(Debug::InfoParam::Type::Text, 13u));
-    const auto startSnapshotResult          = RedSalamanderMonitor::WriteMonitorTextSnapshot(target, startSnapshot, std::stop_token{});
+    const auto startSnapshotResult          = exportObserved(startSnapshot);
     const std::string expectedStartSnapshot = std::string("\xEF\xBB\xBF", 3u) + "snapshot-start\n";
     if (FAILED(startSnapshotResult.hr) || ReadMonitorTestFile(target) != expectedStartSnapshot || ingestingDocument.TotalLineCount() != 2u)
     {
@@ -795,7 +807,7 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
     tailMutationDocument.SetText(L"captured-tail");
     const RedSalamanderMonitor::MonitorTextSnapshot tailMutationSnapshot = tailMutationDocument.CaptureTextSnapshot();
     tailMutationDocument.AppendText(L"-after-capture");
-    const auto tailMutationResult = RedSalamanderMonitor::WriteMonitorTextSnapshot(target, tailMutationSnapshot, {});
+    const auto tailMutationResult = exportObserved(tailMutationSnapshot);
     if (FAILED(tailMutationResult.hr) || ReadMonitorTestFile(target) != std::string("\xEF\xBB\xBF", 3u) + "captured-tail\n" ||
         tailMutationDocument.GetSourceLine(0u).text != L"captured-tail-after-capture")
     {
@@ -814,7 +826,7 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
     static_cast<void>(lifetimeDocument.EnforceRetentionLimits(1u, 1u * 1024u * 1024u));
     lifetimeDocument.Clear();
     lifetimeDocument.SetText(L"replacement");
-    const auto lifetimeResult          = RedSalamanderMonitor::WriteMonitorTextSnapshot(target, lifetimeSnapshot, {});
+    const auto lifetimeResult          = exportObserved(lifetimeSnapshot);
     const std::string expectedLifetime = std::string("\xEF\xBB\xBF", 3u) + "retained-before-capture\nembedded\nrecord\n";
     if (FAILED(lifetimeResult.hr) || ReadMonitorTestFile(target) != expectedLifetime || lifetimeDocument.GetSourceLine(0u).text != L"replacement")
     {
@@ -854,16 +866,98 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
     largeSnapshot.lines.push_back(std::wstring(200'000u, L'x'));
     largeSnapshot.retainedTextBytes = largeSnapshot.lines[0].size() * sizeof(wchar_t);
     std::stop_source exportCancellation;
-    const auto cancelledResult = RedSalamanderMonitor::WriteMonitorTextSnapshot(
-        target, largeSnapshot, exportCancellation.get_token(), [&exportCancellation](uint64_t, size_t) noexcept { exportCancellation.request_stop(); });
+    const auto cancelledResult =
+        exportObserved(largeSnapshot, exportCancellation.get_token(), [&exportCancellation](uint64_t, size_t) noexcept { exportCancellation.request_stop(); });
     if (cancelledResult.hr != HRESULT_FROM_WIN32(ERROR_CANCELLED) || ReadMonitorTestFile(target) != "previous-good")
     {
         return false;
     }
 
     Common::Files::Testing::FailNextLocalFileTransactionWrite(HRESULT_FROM_WIN32(ERROR_DISK_FULL));
-    const auto failedResult = RedSalamanderMonitor::WriteMonitorTextSnapshot(target, startSnapshot, std::stop_token{});
+    const auto failedResult = exportObserved(startSnapshot);
     if (failedResult.hr != HRESULT_FROM_WIN32(ERROR_DISK_FULL) || ReadMonitorTestFile(target) != "previous-good")
+    {
+        return false;
+    }
+
+    using RedSalamanderMonitor::kMonitorFileExportConflict;
+    using RedSalamanderMonitor::MonitorFileExportTarget;
+    using RedSalamanderMonitor::ObserveMonitorFileExportTarget;
+    using RedSalamanderMonitor::WriteMonitorTextSnapshot;
+    const auto edited = exportObserved(startSnapshot,
+                                       {},
+                                       [&](uint64_t, size_t)
+    {
+        std::ofstream concurrent(target, std::ios::binary | std::ios::trunc);
+        concurrent << "new external edit";
+    });
+    if (edited.hr != kMonitorFileExportConflict || ReadMonitorTestFile(target) != "new external edit")
+    {
+        return false;
+    }
+
+    MonitorFileExportTarget accepted{.path = target};
+    if (FAILED(ObserveMonitorFileExportTarget(accepted)) || ! accepted.acceptedVersion)
+    {
+        return false;
+    }
+    const auto renamedPath = root / L"renamed-target.txt";
+    std::filesystem::rename(target, renamedPath, ec);
+    if (ec || WriteMonitorTextSnapshot(accepted, startSnapshot, {}).hr != kMonitorFileExportConflict ||
+        ReadMonitorTestFile(renamedPath) != "new external edit" || std::filesystem::exists(target))
+    {
+        return false;
+    }
+    std::filesystem::rename(renamedPath, target, ec);
+    if (ec || FAILED(ObserveMonitorFileExportTarget(accepted)))
+    {
+        return false;
+    }
+    const auto deletedPath = root / L"deleted-target.txt";
+    std::filesystem::copy_file(target, deletedPath, ec);
+    MonitorFileExportTarget deleted{.path = deletedPath};
+    if (ec || FAILED(ObserveMonitorFileExportTarget(deleted)) || ! deleted.acceptedVersion)
+    {
+        return false;
+    }
+    std::filesystem::remove(deletedPath, ec);
+    if (ec || WriteMonitorTextSnapshot(deleted, startSnapshot, {}).hr != kMonitorFileExportConflict || std::filesystem::exists(deletedPath))
+    {
+        return false;
+    }
+    wil::unique_hfile externalWriter(CreateFileW(
+        target.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+    if (! externalWriter || WriteMonitorTextSnapshot(accepted, startSnapshot, {}).hr != kMonitorFileExportConflict)
+    {
+        return false;
+    }
+    externalWriter.reset();
+    Common::Files::Testing::ForceNextClassicReplaceForTest();
+    if (FAILED(WriteMonitorTextSnapshot(accepted, startSnapshot, {}).hr) || ReadMonitorTestFile(target) != expectedStartSnapshot)
+    {
+        return false;
+    }
+
+    const auto newPath = root / L"competing-export.txt";
+    MonitorFileExportTarget newTarget{.path = newPath};
+    if (FAILED(ObserveMonitorFileExportTarget(newTarget)) || newTarget.acceptedVersion)
+    {
+        return false;
+    }
+    const auto createConflict = WriteMonitorTextSnapshot(newTarget,
+                                                         startSnapshot,
+                                                         {},
+                                                         [&](uint64_t, size_t)
+    {
+        std::ofstream concurrent(newPath, std::ios::binary | std::ios::trunc);
+        concurrent << "competing creation";
+    });
+    if (createConflict.hr != kMonitorFileExportConflict || ReadMonitorTestFile(newPath) != "competing creation")
+    {
+        return false;
+    }
+    std::filesystem::remove(newPath, ec);
+    if (ec)
     {
         return false;
     }

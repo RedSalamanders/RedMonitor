@@ -30,5 +30,10 @@ retention: 100000 lines and 64 MiB UTF-16 text; search: 100000 matches. Preserve
 ranges during extraction.
 
 Open streams strict UTF-8/UTF-16LE in bounded chunks on an owned cancellable worker. Failed or cancelled
-open never replaces the document. Export writes strict UTF-8+BOM through a sibling temporary and atomic
-replacement; failure/cancellation preserves the destination. UI publication rejects stale completions.
+open never replaces the document. Export writes strict UTF-8+BOM through a flushed sibling temporary.
+The caller observes the destination before confirming replacement. The worker holds the accepted
+file with writes denied, verifies the path again before each replacement path and refuses a
+conflict when the destination changed or the filesystem cannot protect its identity. The final
+name check and replacement remain separate filesystem operations. A new path uses atomic creation
+and preserves any competing file. Failed or cancelled exports preserve the destination and the log
+document. UI publication rejects stale completions.

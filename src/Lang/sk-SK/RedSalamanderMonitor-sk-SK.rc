@@ -124,6 +124,8 @@ BEGIN
     IDS_MSG_OPEN_CANCEL_REQUESTED "Ruší sa otváranie súboru..."
     IDS_STATUS_OPEN_PROGRESS_FMT "Otváranie: {0:L} / {1:L} bajtov"
     IDS_MSG_SAVE_FAILED "Súbor sa nepodarilo uložiť."
+    IDS_MSG_SAVE_OVERWRITE_FMT "Nahradiť existujúci súbor?\n{0}"
+    IDS_MSG_SAVE_CONFLICT "Cieľový súbor sa zmenil alebo je otvorený na zápis. Pred ďalším uložením súbor skontrolujte."
     IDS_MSG_FILE_WORKER_START_FAILED "Operáciu so súborom na pozadí sa nepodarilo spustiť."
     IDS_MSG_SAVE_CANCEL_REQUESTED "Ruší sa ukladanie súboru..."
     IDS_STATUS_SAVE_PROGRESS_FMT "Ukladanie: {0:L} bajtov / {1:L} riadkov"
