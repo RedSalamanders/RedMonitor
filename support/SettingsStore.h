@@ -48,6 +48,8 @@ struct WindowBounds
     int y      = 0;
     int width  = 0;
     int height = 0;
+
+    bool operator==(const WindowBounds&) const noexcept = default;
 };
 
 enum class WindowState : uint8_t
@@ -62,6 +64,8 @@ struct WindowPlacement
     WindowBounds bounds{};
     std::optional<unsigned int> dpi;
     std::wstring monitorDeviceName;
+
+    bool operator==(const WindowPlacement&) const noexcept = default;
 };
 
 enum class FolderDisplayMode : uint8_t

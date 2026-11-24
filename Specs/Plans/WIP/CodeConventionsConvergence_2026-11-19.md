@@ -51,6 +51,9 @@ Planned-at commit: `0fbe8a7` (`RedSalamanders/RedMonitor` `main`).
   (`FileRenameInfoEx`, POSIX semantics), then `MoveFileExW`. Target: `ReplaceFileW` over an existing destination
   after its identity check, `MoveFileExW(MOVEFILE_WRITE_THROUGH)` for a new one, with one fault-injection hook per
   step (the hooks already exist for write, flush and publish).
+- [ ] **H-15 Settings reload.** The viewer uses a coalesced directory watcher and applies accepted edits on the UI
+  thread. Verify the watcher and no-recovery read, then record source-bound viewer and test evidence. The
+  [settings contract](../../Core/Core_Settings.md) owns the profile identity and legacy startup fallback.
 - [x] **H-08 Resource-string gate.** `src/RedMonitor.rc` and the four satellites have a `STRINGTABLE` and no gate.
   Target: a gate that fails on bare `{}`, printf tokens and unresolved ids.
 - [x] **H-26 Settings contract name.** The settings contract was a paragraph of
@@ -69,8 +72,6 @@ Planned-at commit: `0fbe8a7` (`RedSalamanders/RedMonitor` `main`).
 - **H-24 Crash handler and contract.** RedMonitor has no crash handler. The handler's artifacts, retention and
   next-start prompt are register row H-16, which has no chosen shape yet; the handler and
   `Specs/Core/Core_CrashHandling.md` wait for it.
-- **H-15 Settings reload.** RedMonitor has no settings watcher, and the register does not list it as moving; adding
-  live reload would be new behavior. Unchanged here.
 - **H-23 Keyboard state under hidden self-tests.** No RedMonitor self-test drives keyboard input
   (`ColorTextView` reads `GetKeyState` only for real input), so the row does not apply until one does.
 - **H-01, H-02** wait for API 6 (D20).

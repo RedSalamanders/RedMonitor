@@ -73,6 +73,7 @@
 #include "MonitorFileReader.h"
 #include "RedMonitor.h"
 #include "SettingsStore.h"
+#include "SettingsWatcher.h"
 #include "Version.h"
 #include "WindowBackdropPolicy.h"
 #include "WindowSizing.h"
@@ -2322,9 +2323,9 @@ void UpdateThemeMenuChecks() noexcept
     CheckMenuRadioItem(g_viewThemeMenu, IDM_VIEW_THEME_SYSTEM, IDM_VIEW_THEME_RAINBOW, checkedId, MF_BYCOMMAND);
 }
 
-void SaveMonitorSettings(HWND hWnd) noexcept
+void SaveMonitorSettings(HWND hWnd, bool retainAuthoredPlacement) noexcept
 {
-    if (hWnd)
+    if (hWnd && ! retainAuthoredPlacement)
     {
         WINDOWPLACEMENT placement{};
         placement.length = sizeof(placement);
@@ -3938,6 +3939,8 @@ private:
     LRESULT HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
     wil::unique_hwnd _window;
+    SettingsWatcher _settingsWatcher;
+    bool _retainAuthoredPlacement = false;
 };
 } // namespace
 
@@ -4538,6 +4541,16 @@ HWND MonitorWindow::Create(HINSTANCE hInstance, int nCmdShow)
     ShowWindow(hWnd, g_monitorChromeSelfTest.enabled ? SW_SHOWNOACTIVATE : showCmd);
     UpdateWindow(hWnd);
 
+    if (! g_monitorChromeSelfTest.enabled)
+    {
+        const auto path       = Common::Settings::GetSettingsPath(kAppId);
+        const HRESULT watched = _settingsWatcher.Start(hWnd, path.parent_path());
+        if (FAILED(watched))
+        {
+            DBGOUT_ERROR(L"Settings watcher failed to start (hr=0x{:08X}).\n", static_cast<unsigned long>(watched));
+        }
+    }
+
     return _window.get();
 }
 
@@ -4595,6 +4608,94 @@ void AddLine(PCWSTR line)
 
 namespace
 {
+void ApplyStoredMonitorPresentation(HWND hWnd, bool live)
+{
+    g_colorView.EnableShowIds(g_showIds);
+    g_colorView.EnableLineNumbers(g_lineNumbersVisible);
+    g_colorView.SetAutoScroll(g_autoScrollEnabled);
+    g_colorView.SetFilterMask(g_filterMask);
+    const Common::Settings::MonitorRetentionSettings retention = g_settings.monitor.value_or(Common::Settings::MonitorSettings{}).retention;
+    g_colorView.SetRetentionLimits(ColorTextView::RetentionLimits{
+        .maxQueuedEvents      = retention.maxQueuedEvents,
+        .maxRetainedLines     = retention.maxRetainedLines,
+        .maxRetainedTextBytes = retention.maxRetainedTextBytes,
+        .maxSearchMatches     = retention.maxSearchMatches,
+    });
+    ApplyMonitorTheme(live ? hWnd : nullptr);
+
+    if (g_hToolbar)
+    {
+        ShowWindow(g_hToolbar.get(), g_toolbarVisible ? SW_SHOWNA : SW_HIDE);
+    }
+
+    const bool windowIsTopmost = (GetWindowLongPtrW(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+    if ((live || g_alwaysOnTop) && windowIsTopmost != g_alwaysOnTop)
+    {
+        SetWindowPos(hWnd, g_alwaysOnTop ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    HMENU hMenu = GetMenu(hWnd);
+    if (hMenu)
+    {
+        CheckMenuItem(hMenu, IDM_VIEW_TOOLBAR, static_cast<UINT>(MF_BYCOMMAND | (g_toolbarVisible ? MF_CHECKED : MF_UNCHECKED)));
+        CheckMenuItem(hMenu, IDM_OPTION_TOP, static_cast<UINT>(MF_BYCOMMAND | (g_alwaysOnTop ? MF_CHECKED : MF_UNCHECKED)));
+        CheckMenuItem(hMenu, IDM_OPTION_ID, static_cast<UINT>(MF_BYCOMMAND | (g_showIds ? MF_CHECKED : MF_UNCHECKED)));
+        CheckMenuItem(hMenu, IDM_VIEW_LINE_NUMBERS, static_cast<UINT>(MF_BYCOMMAND | (g_colorView.IsLineNumbersEnabled() ? MF_CHECKED : MF_UNCHECKED)));
+
+        SyncMonitorFilterMenuChecks(hMenu, g_filterMask);
+
+        CheckMenuItem(hMenu, IDM_OPTION_AUTO_SCROLL, static_cast<UINT>(MF_BYCOMMAND | (g_colorView.GetAutoScroll() ? MF_CHECKED : MF_UNCHECKED)));
+
+        RebuildThemeMenuDynamicItems(hWnd);
+        UpdateThemeMenuChecks();
+    }
+
+    AdjustLayout(hWnd);
+    UpdateStatusBar();
+}
+
+void ReloadMonitorSettings(HWND hWnd, bool& retainAuthoredPlacement) noexcept
+{
+    using namespace Common::Settings;
+    SettingsFileStamp observed;
+    if (TryGetSettingsFileStamp(kAppId, observed) != S_OK || g_settings.persistence.expectedFileStamp == observed)
+    {
+        return;
+    }
+
+    Settings loaded;
+    if (TryLoadSettingsNoRecovery(kAppId, loaded) != S_OK || loaded.persistence.expectedFileStamp != observed)
+    {
+        return;
+    }
+
+    const auto currentPlacement = g_settings.windows.find(kWindowId);
+    const auto loadedPlacement  = loaded.windows.find(kWindowId);
+    if (currentPlacement != g_settings.windows.end())
+    {
+        retainAuthoredPlacement |= loadedPlacement == loaded.windows.end() || currentPlacement->second != loadedPlacement->second;
+    }
+    else
+    {
+        retainAuthoredPlacement |= loadedPlacement != loaded.windows.end();
+    }
+
+    g_settings           = std::move(loaded);
+    const auto monitor   = g_settings.monitor.value_or(MonitorSettings{});
+    g_toolbarVisible     = monitor.menu.toolbarVisible;
+    g_lineNumbersVisible = monitor.menu.lineNumbersVisible;
+    g_alwaysOnTop        = monitor.menu.alwaysOnTop;
+    g_showIds            = monitor.menu.showIds;
+    g_autoScrollEnabled  = monitor.menu.autoScroll;
+    g_filterMask         = monitor.filter.mask & kMonitorFilterAllMask;
+    g_lastFilterPreset   = LegacyFromPreset(monitor.filter.preset);
+    if (g_lastFilterPreset == -1)
+    {
+        g_lastFilterPreset = InferLegacyPresetFromMask(g_filterMask);
+    }
+    ApplyStoredMonitorPresentation(hWnd, true);
+}
+
 LRESULT OnCreateMainWindow(HWND hWnd)
 {
     InitPostedPayloadWindow(hWnd);
@@ -4618,47 +4719,7 @@ LRESULT OnCreateMainWindow(HWND hWnd)
         g_colorView.ColorizeWord(L"right", D2D1::ColorF(D2D1::ColorF::Green));
     }
 
-    g_colorView.EnableShowIds(g_showIds);
-    g_colorView.EnableLineNumbers(g_lineNumbersVisible);
-    g_colorView.SetAutoScroll(g_autoScrollEnabled);
-    g_colorView.SetFilterMask(g_filterMask);
-    const Common::Settings::MonitorRetentionSettings retention = g_settings.monitor.value_or(Common::Settings::MonitorSettings{}).retention;
-    g_colorView.SetRetentionLimits(ColorTextView::RetentionLimits{
-        .maxQueuedEvents      = retention.maxQueuedEvents,
-        .maxRetainedLines     = retention.maxRetainedLines,
-        .maxRetainedTextBytes = retention.maxRetainedTextBytes,
-        .maxSearchMatches     = retention.maxSearchMatches,
-    });
-    ApplyMonitorTheme(nullptr);
-
-    if (g_hToolbar)
-    {
-        ShowWindow(g_hToolbar.get(), g_toolbarVisible ? SW_SHOW : SW_HIDE);
-    }
-
-    if (g_alwaysOnTop)
-    {
-        SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    }
-
-    HMENU hMenu = GetMenu(hWnd);
-    if (hMenu)
-    {
-        CheckMenuItem(hMenu, IDM_VIEW_TOOLBAR, static_cast<UINT>(MF_BYCOMMAND | (g_toolbarVisible ? MF_CHECKED : MF_UNCHECKED)));
-        CheckMenuItem(hMenu, IDM_OPTION_TOP, static_cast<UINT>(MF_BYCOMMAND | (g_alwaysOnTop ? MF_CHECKED : MF_UNCHECKED)));
-        CheckMenuItem(hMenu, IDM_OPTION_ID, static_cast<UINT>(MF_BYCOMMAND | (g_showIds ? MF_CHECKED : MF_UNCHECKED)));
-        CheckMenuItem(hMenu, IDM_VIEW_LINE_NUMBERS, static_cast<UINT>(MF_BYCOMMAND | (g_colorView.IsLineNumbersEnabled() ? MF_CHECKED : MF_UNCHECKED)));
-
-        SyncMonitorFilterMenuChecks(hMenu, g_filterMask);
-
-        CheckMenuItem(hMenu, IDM_OPTION_AUTO_SCROLL, static_cast<UINT>(MF_BYCOMMAND | (g_colorView.GetAutoScroll() ? MF_CHECKED : MF_UNCHECKED)));
-
-        RebuildThemeMenuDynamicItems(hWnd);
-        UpdateThemeMenuChecks();
-    }
-
-    AdjustLayout(hWnd);
-    UpdateStatusBar();
+    ApplyStoredMonitorPresentation(hWnd, false);
 
     if (! g_monitorChromeSelfTest.enabled)
     {
@@ -5018,11 +5079,11 @@ LRESULT OnPaintMainWindow(HWND hWnd)
     return 0;
 }
 
-LRESULT OnDestroyMainWindow(HWND hWnd)
+LRESULT OnDestroyMainWindow(HWND hWnd, bool retainAuthoredPlacement)
 {
     if (! g_monitorChromeSelfTest.enabled)
     {
-        SaveMonitorSettings(hWnd);
+        SaveMonitorSettings(hWnd, retainAuthoredPlacement);
     }
     KillTimer(hWnd, kStatusBarTimerId);
 
@@ -5118,10 +5179,18 @@ LRESULT MonitorWindow::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPA
         case kMsgMonitorFileOpenCompleted: return OnMonitorFileOpenCompleted(hWnd, lParam);
         case kMsgMonitorFileSaveProgress: return OnMonitorFileSaveProgress(hWnd, lParam);
         case kMsgMonitorFileSaveCompleted: return OnMonitorFileSaveCompleted(hWnd, lParam);
+        case SettingsWatcher::ChangedMessage:
+            _settingsWatcher.Acknowledge();
+            if (! g_monitorChromeSelfTest.enabled)
+            {
+                ReloadMonitorSettings(hWnd, _retainAuthoredPlacement);
+            }
+            return 0;
         case WM_COMMAND: return OnCommandMainWindow(hWnd, LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
         case WM_PAINT: return OnPaintMainWindow(hWnd);
-        case WM_DESTROY: return OnDestroyMainWindow(hWnd);
+        case WM_DESTROY: _settingsWatcher.Stop(); return OnDestroyMainWindow(hWnd, _retainAuthoredPlacement);
         case WM_NCDESTROY:
+            _settingsWatcher.Stop();
             static_cast<void>(DrainPostedPayloadsForWindow(hWnd));
             SetWindowLongPtrW(hWnd, GWLP_USERDATA, 0);
             if (_window.get() == hWnd)

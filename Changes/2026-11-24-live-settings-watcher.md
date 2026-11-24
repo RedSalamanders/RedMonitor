@@ -1,0 +1,1 @@
+- Apply accepted settings edits while RedMonitor runs, and preserve the authored file when a live edit cannot be read.

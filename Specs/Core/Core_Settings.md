@@ -1,7 +1,7 @@
 # Settings
 
 Status: current normative contract
-Last reviewed: 2026-11-19
+Last reviewed: 2026-11-24
 
 RedMonitor's settings contract: where the file lives, what it is called, how it is read, what happens when it is
 unusable, and how it is saved. It is the same contract name as in every RedSalamanders application (RedHome register
@@ -28,9 +28,8 @@ RedSalamander Preferences that it inherited with the private `support/` snapshot
 
 - [SettingsStore.schema.json](../SettingsStore.schema.json) is the schema. It ships as `SettingsStore.schema.json` next to
   the executable, among the artifacts every build receipt records.
-- The file is read with `yyjson` using `YYJSON_READ_JSON5 | YYJSON_READ_ALLOW_BOM`, once at startup, before the main
-  window is created. There is no settings watcher: an edit made while RedMonitor runs applies at the next start
-  (register H-15 does not move RedMonitor).
+- The store reads settings with `yyjson` using `YYJSON_READ_JSON5 | YYJSON_READ_ALLOW_BOM`.
+  Startup reads the canonical profile or its documented legacy fallback before creating the window.
 - The setting ranges validated by the extraction source stay validated.
 
 ## Unusable files
@@ -45,9 +44,22 @@ RedSalamander Preferences that it inherited with the private `support/` snapshot
 - While the unusable file is still in place, defaults are never saved over it: saving then requires an explicit
   replacement, which moves the file to such a backup first.
 
+## Live settings
+
+A worker waits on the canonical profile's directory and a stop event. The parent-directory notification lets it
+attach when the settings directory appears. It coalesces notifications into a single pending window message. The
+UI thread checks the file's identity stamp and reads changed settings through the no-recovery loader. A failed
+read keeps the current settings and the on-disk bytes. The watcher joins before the viewer saves or destroys its
+window.
+
+Accepted edits update the viewer's theme, toolbar, line numbers, always-on-top state, IDs, auto-scroll, filter and
+retention limits. An edited or removed saved window placement takes effect on the next start and is preserved at
+shutdown. Language also takes effect at the next start. Legacy fallback files are used during startup.
+
 ## Saving
 
-- Settings are saved when the main window is destroyed, except in the chrome self-test.
+- Settings are saved when the main window is destroyed, except in the chrome self-test. A live reload performs no
+  save, backup or recovery.
 - A save goes through `support/LocalFileTransaction.h`: a temporary in the same folder, flushed, then published by
   atomically replacing the previous file (see [architecture](Core_Architecture.md)). A failed save leaves it as it
   was.
