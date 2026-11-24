@@ -88,7 +88,7 @@ if ($Phase -eq 'Production') {
 if ($Platform -eq 'x64') {
     Run 'Tests/Tooling.Tests.ps1'
 }
-Run 'test.ps1' ($profile + @('-SkipBuild'))
+Run 'test.ps1' ($profile + @('-SkipBuild','-SkipTooling'))
 $probe = Invoke-CiAssertionProbe -Context $context -Executable ".build/$Platform/$Configuration/ClientContractTests.exe" -ExpectedExitCode 21
 if ($Phase -eq 'Qualification') { Write-Host 'Explicit native qualification finished.'; return }
 $receipts = @(Get-ChildItem $evidenceDirectory -Recurse -Filter 'receipt.json' -File | Where-Object LastWriteTimeUtc -ge $started)

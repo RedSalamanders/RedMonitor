@@ -7,6 +7,7 @@ The view uses Direct2D/DirectWrite/D3D11 and an exact pinned DxUi library.
 ```powershell
 ./build.ps1 -Configuration Debug
 ./test.ps1 -Configuration Debug
+./test.ps1 -Full -Configuration Debug
 ./validate.ps1
 ./format.ps1 -Check
 ./package.ps1 -Configuration Release
