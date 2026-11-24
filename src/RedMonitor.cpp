@@ -6,6 +6,7 @@
 #endif
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -63,8 +64,8 @@
 
 #include "ColorTextView.h"
 #include "Configuration.h"
+#include "CrashReports.h"
 #include "EtwListener.h"
-#include "ExceptionHelpers.h" // Shared exception handling utilities
 #include "LocalizationManager.h"
 #include "MinimumOsVersion.h"
 #include "MonitorDiagnostics.h"
@@ -79,6 +80,7 @@
 #include <DxUi/DxUi.h>
 
 #if defined(ENABLE_TESTS)
+#include "TestSupport.Tests.Runner.h"
 #include "TestSupport/TestSupport.Tests.FailureReports.h"
 #endif
 
@@ -4055,8 +4057,11 @@ Localization::LanguagePreference GetLanguagePreferenceFromSettings(const Common:
 // Separate function with C++ objects (cannot use __try/__except)
 static int RunApplication(HINSTANCE hInstance, int nCmdShow)
 {
+    namespace CrashReports      = RedSalamanderMonitor::CrashReports;
+    const bool crashProbe       = HasCommandLineArg(L"--crash-probe");
+    const bool crashWorkerProbe = HasCommandLineArg(L"--crash-probe-worker");
 #if ! defined(ENABLE_TESTS)
-    if (HasCommandLineArg(kMonitorChromeSelfTestArg) || HasCommandLineArg(kMonitorScrollbackSelfTestArg))
+    if (crashProbe || crashWorkerProbe || HasCommandLineArg(kMonitorChromeSelfTestArg) || HasCommandLineArg(kMonitorScrollbackSelfTestArg))
         return ERROR_NOT_SUPPORTED;
 #endif
     // Distribution contract only: runs before settings, registry, mutex, ETW or HWND creation.
@@ -4095,15 +4100,75 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
         return 0;
     }
 
+#if defined(ENABLE_TESTS)
+    if (crashProbe || crashWorkerProbe)
+    {
+        RedSalamander::TestSupport::RouteFailureReportsAwayFromDialogs();
+        std::error_code error;
+        const auto directory = RedSalamander::TestSupport::AcquireTestDirectory({L"crash-probes", crashWorkerProbe ? L"worker" : L"main", L""}, error);
+        if (error || directory.empty())
+            return ERROR_ACCESS_DENIED;
+        if (const HRESULT installed = CrashReports::Install(directory); FAILED(installed))
+            return static_cast<int>(installed);
+
+        const auto fault = []() noexcept
+        {
+#if defined(__SANITIZE_ADDRESS__)
+            constexpr DWORD code = 0xE0524DFF;
+#else
+            constexpr DWORD code = EXCEPTION_ACCESS_VIOLATION;
+#endif
+            RaiseException(code, EXCEPTION_NONCONTINUABLE, 0, nullptr);
+        };
+        if (crashWorkerProbe)
+        {
+            std::atomic<bool> start{false};
+            const auto worker = [&]() noexcept
+            {
+                start.wait(false, std::memory_order_acquire);
+                fault();
+            };
+            std::thread first(worker);
+            std::thread second(worker);
+            start.store(true, std::memory_order_release);
+            start.notify_all();
+            first.join();
+            second.join();
+        }
+        else
+        {
+            fault();
+        }
+        return ERROR_GEN_FAILURE;
+    }
+#endif
+
+    g_monitorChromeSelfTest.enabled            = HasCommandLineArg(kMonitorChromeSelfTestArg);
+    g_monitorEtwBurstOptions                   = ReadMonitorEtwBurstOptions();
+    g_monitorScrollbackSelfTestOptions.enabled = HasCommandLineArg(kMonitorScrollbackSelfTestArg);
+    std::wstring perfJsonlPath;
+    const bool customPerfPath     = TryGetCommandLineArgValue(L"--perf=", perfJsonlPath);
+    const bool perfCapture        = customPerfPath || HasCommandLineArg(L"--perf");
+    const bool useLocalCrashStore = ! g_monitorChromeSelfTest.enabled && ! g_monitorScrollbackSelfTestOptions.enabled &&
+                                    ! g_monitorEtwBurstOptions.latencyMode && ! perfCapture && nCmdShow != SW_HIDE;
+    std::filesystem::path crashDirectory;
+    if (useLocalCrashStore)
+    {
+        crashDirectory = CrashReports::LocalDirectory();
+        if (const HRESULT installed = CrashReports::Install(crashDirectory); FAILED(installed))
+        {
+            OutputDebugStringW(L"RedMonitor could not initialize its local crash report store.\n");
+            return static_cast<int>(installed);
+        }
+    }
+
     if (HasCommandLineArg(L"--etw"))
     {
         Debug::detail::SetRuntimeMonitorDiagnosticsEnabled(true);
         static_cast<void>(::SetEnvironmentVariableW(L"REDSALAMANDER_DIAGNOSTICS_ETW", L"1"));
     }
 
-    std::wstring perfJsonlPath;
-    const bool customPerfPath = TryGetCommandLineArgValue(L"--perf=", perfJsonlPath);
-    if (customPerfPath || HasCommandLineArg(L"--perf"))
+    if (perfCapture)
     {
         const std::filesystem::path perfPath =
             (customPerfPath && ! perfJsonlPath.empty()) ? std::filesystem::path(perfJsonlPath) : GetDefaultMonitorPerfJsonlPath();
@@ -4111,10 +4176,7 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
     }
 
     wil::unique_handle instanceMutex;
-    DWORD mutexCreationError                   = ERROR_SUCCESS;
-    g_monitorChromeSelfTest.enabled            = HasCommandLineArg(kMonitorChromeSelfTestArg);
-    g_monitorEtwBurstOptions                   = ReadMonitorEtwBurstOptions();
-    g_monitorScrollbackSelfTestOptions.enabled = HasCommandLineArg(kMonitorScrollbackSelfTestArg);
+    DWORD mutexCreationError = ERROR_SUCCESS;
 #if defined(ENABLE_TESTS)
     // A self-test run never waits on a dialog: a failed Debug-CRT or STL check ends the run with exit code 3 instead of opening a
     // modal Abort/Retry/Ignore box. An interactive run keeps its dialogs, which a developer can attach to.
@@ -4276,6 +4338,20 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
         return g_monitorChromeSelfTest.enabled ? 1 : FALSE;
     }
 
+    if (useLocalCrashStore)
+    {
+        if (const auto previous = CrashReports::TakePendingNotice(crashDirectory, true))
+        {
+            std::wstring caption;
+            std::wstring pattern;
+            Localization::LoadString(hInstance, IDS_APP_TITLE, caption);
+            Localization::LoadString(hInstance, IDS_MSG_PREVIOUS_CRASH_FMT, pattern);
+            const auto message = FormatLoadedStringResource(IDS_MSG_PREVIOUS_CRASH_FMT, pattern, previous->native());
+            ShowModalMessageDialog(hInstance, hWnd.value(), caption.c_str(), message.c_str());
+        }
+        CrashReports::RetainRecent(crashDirectory);
+    }
+
     wil::unique_haccel hAccelTable(Localization::LoadAcceleratorsResource(hInstance, MAKEINTRESOURCEW(IDC_REDSALAMANDERMONITOR)));
 
     MSG msg;
@@ -4298,32 +4374,6 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
     return static_cast<int>(msg.wParam);
 }
 
-namespace
-{
-void BuildFatalExceptionMessage(HINSTANCE hInstance, const wchar_t* exceptionName, DWORD exceptionCode, wchar_t* outMessage, size_t outMessageChars) noexcept
-{
-    if (! outMessage || outMessageChars == 0)
-    {
-        return;
-    }
-    outMessage[0] = L'\0';
-
-    const std::wstring msg = FormatStringResource(hInstance, IDS_FATAL_EXCEPTION_FMT, exceptionName, static_cast<unsigned>(exceptionCode));
-    if (! msg.empty())
-    {
-        static_cast<void>(wcsncpy_s(outMessage, outMessageChars, msg.c_str(), _TRUNCATE));
-        return;
-    }
-
-    const auto max = std::min<std::size_t>(outMessageChars - 1, static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()));
-    const auto r   = std::format_to_n(
-        outMessage, static_cast<std::ptrdiff_t>(max), L"Fatal Exception ({0}, 0x{1:08X}).", exceptionName, static_cast<unsigned>(exceptionCode));
-    const std::ptrdiff_t cap                                       = static_cast<std::ptrdiff_t>(max);
-    const std::ptrdiff_t written                                   = (r.size < 0) ? 0 : ((r.size > cap) ? cap : r.size);
-    outMessage[(written <= 0) ? 0u : static_cast<size_t>(written)] = L'\0';
-}
-} // namespace
-
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance*/, _In_ LPWSTR /*lpCmdLine*/, _In_ int nCmdShow)
 {
     if (! Common::MinimumOsVersion::EnsureCurrentWindowsVersionSupported(nullptr))
@@ -4336,31 +4386,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstan
     {
         return RunApplication(hInstance, nCmdShow);
     }
-    __except (EXCEPTION_EXECUTE_HANDLER)
+    __except (RedSalamanderMonitor::CrashReports::HandleException(GetExceptionInformation()))
     {
-        // Handle all exceptions including SEH exceptions
-        const DWORD exceptionCode    = GetExceptionCode();
-        const wchar_t* exceptionName = exception::GetExceptionName(exceptionCode);
-
-        wchar_t errorMsg[512]{};
-        BuildFatalExceptionMessage(hInstance, exceptionName, exceptionCode, errorMsg, std::size(errorMsg));
-        OutputDebugStringW(errorMsg);
-
-#if defined(ENABLE_TESTS)
-        // Fatal-error UI never blocks a self-test lane (Testing_SelfTests.md): the trace row, the debugger output and the nonzero exit
-        // code carry the failure, as they do for RedSalamander.exe's ShowFatalErrorDialog.
-        if (g_monitorChromeSelfTest.enabled || g_monitorScrollbackSelfTestOptions.enabled)
-        {
-            AppendMonitorChromeSelfTestTrace(errorMsg);
-            return -1;
-        }
-#endif
-
-        wchar_t caption[256]{};
-        const int captionLength = LoadStringW(hInstance, IDS_FATAL_ERROR_CAPTION, caption, static_cast<int>(sizeof(caption) / sizeof(caption[0])));
-        ShowModalMessageDialog(hInstance, nullptr, captionLength > 0 ? caption : L"", errorMsg);
-
-        return -1;
+        return static_cast<int>(GetExceptionCode());
     }
 }
 

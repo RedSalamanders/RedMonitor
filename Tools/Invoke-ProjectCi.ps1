@@ -94,8 +94,18 @@ if ($Phase -eq 'Qualification') { Write-Host 'Explicit native qualification fini
 $receipts = @(Get-ChildItem $evidenceDirectory -Recurse -Filter 'receipt.json' -File | Where-Object LastWriteTimeUtc -ge $started)
 if ($receipts.Count -ne 1) { throw 'Expected one fresh scenario receipt.' }
 $receipt = Get-Content $receipts[0].FullName -Raw | ConvertFrom-Json -AsHashtable
-if (-not $receipt.passed -or @($receipt.scenarios).Count -ne 6 -or @($receipt.scenarios | Where-Object { -not $_.passed }).Count) { throw 'The normal six native scenarios did not pass.' }
-$evidence = @{ discovered = 6; executed = @($receipt.scenarios).Count; evidence = (Get-CiEvidenceReference @($receipts[0].FullName)) }
+$requiredScenarios = @(
+    'diagnostics-gate', 'scrollbar-model', 'document-model', 'local-crash-store',
+    'client-contract', 'settings-contract', 'installed-production-metadata',
+    'crash-probe-main', 'crash-probe-worker', 'headless-crash-markers'
+)
+$actualScenarios = @($receipt.scenarios | ForEach-Object scenario)
+if (-not $receipt.passed -or $actualScenarios.Count -ne $requiredScenarios.Count -or
+    (Compare-Object $requiredScenarios $actualScenarios -CaseSensitive) -or
+    @($receipt.scenarios | Where-Object { -not $_.passed }).Count) {
+    throw 'The required native regression scenarios did not pass.'
+}
+$evidence = @{ discovered = $requiredScenarios.Count; executed = $actualScenarios.Count; evidence = (Get-CiEvidenceReference @($receipts[0].FullName)) }
 $binaries = Get-CiProfileArtifacts -Context $context
 
 

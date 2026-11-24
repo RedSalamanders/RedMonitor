@@ -3,7 +3,8 @@
 Runs non-activating standalone model, file and listener-lifetime tests.
 .DESCRIPTION
 Builds unless SkipBuild is selected, validates the build receipt and artifact hashes, and runs owned
-console processes with timeouts. Test data and source-bound receipts stay under a fresh .build/test-runs directory.
+console processes with timeouts. Receipts stay under a fresh .build/test-runs directory. Probe dumps stay in a
+separate local .build/crash-probe-artifacts directory outside the CI artifact uploads.
 .PARAMETER Platform
 x64 runtime target. ARM64 requires a native ARM64 host.
 .PARAMETER Configuration
@@ -142,18 +143,32 @@ try{
         @{name='diagnostics-gate';exe='MonitorTest.exe';argument='--diagnostics-gate-selftest'},
         @{name='scrollbar-model';exe='MonitorTest.exe';argument='--scrollbar-model-selftest'},
         @{name='document-model';exe='MonitorTest.exe';argument='--document-model-selftest'},
+        @{name='local-crash-store';exe='MonitorTest.exe';argument='--crash-store-selftest'},
         @{name='client-contract';exe='ClientContractTests.exe';argument=$null},
         @{name='settings-contract';exe='SettingsContractTests.exe';argument=$null})
     if($IncludeLiveEtw){$scenarios+=@{name='transport-roundtrip';exe='TransportRoundtripTests.exe';argument=$null}}
     $scenarios+=@{name='installed-production-metadata';exe='ClientContractTests.exe';argument=$null;
         arguments=@($(if($build.viewerTestsEnabled -or $Configuration -ne 'Release'){'--expect-development'}else{'--expect-production'}),(Join-Path $output 'RedMonitor.exe'))}
     $asanProbe=$Configuration -eq 'ASan Debug'
+    $markerHashes=@{}
+    if($build.viewerTestsEnabled){
+        $crashArtifactRoot=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ('.build/crash-probe-artifacts/'+(Split-Path -Leaf $run)))
+        New-Item -ItemType Directory -Path $crashArtifactRoot|Out-Null
+        $crashExit=if($asanProbe){0xE0524DFF}else{0xC0000005}
+        $scenarios+=@(
+            @{name='crash-probe-main';exe='RedMonitor.exe';argument='--crash-probe';crashRoot='main';expectedExit=$crashExit},
+            @{name='crash-probe-worker';exe='RedMonitor.exe';argument='--crash-probe-worker';crashRoot='worker';expectedExit=$crashExit},
+            @{name='headless-crash-markers';exe='RedMonitor.exe';argument='--runtime-contract';preserveMarkers=$true})
+    }
     if($asanProbe){$scenarios+=@{name='asan-detection';exe='AsanProbe.exe';argument='--detect';expectedAsan=$true}}
     foreach($entry in $scenarios){
         $scenario=$entry.name
         $start=[Diagnostics.ProcessStartInfo]::new((Join-Path $output $entry.exe))
         if($entry.argument){$start.ArgumentList.Add($entry.argument)}
         if($entry.ContainsKey('arguments')){foreach($argument in $entry.arguments){$start.ArgumentList.Add($argument)}}
+        if($entry.ContainsKey('crashRoot') -or $entry.ContainsKey('preserveMarkers')){
+            $start.Environment['REDMONITOR_TEST_ROOT']=$crashArtifactRoot
+        }
         $start.UseShellExecute=$false;$start.CreateNoWindow=$true
         $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
         $process=[Diagnostics.Process]::new();$process.StartInfo=$start
@@ -165,9 +180,34 @@ try{
             $text=$stdout.GetAwaiter().GetResult()+$stderr.GetAwaiter().GetResult()
             [IO.File]::WriteAllText((Join-Path $run "$scenario.log"),$text)
             $expectedAsan=$entry.ContainsKey('expectedAsan') -and $entry.expectedAsan
-            $scenarioPassed=if($expectedAsan){$process.ExitCode -ne 0 -and $text -match 'AddressSanitizer: heap-buffer-overflow'}else{$process.ExitCode -eq 0}
-            $rows.Add([pscustomobject][ordered]@{scenario=$scenario;exitCode=$process.ExitCode;passed=$scenarioPassed;expectedAsanDetection=[bool]$expectedAsan;elapsedMs=$timer.Elapsed.TotalMilliseconds})
-            Write-Host "$scenario : exit $($process.ExitCode), passed=$scenarioPassed, $([math]::Round($timer.Elapsed.TotalMilliseconds,2)) ms"
+            $expectedExit=if($entry.ContainsKey('expectedExit')){$entry.expectedExit}else{0}
+            $scenarioPassed=if($expectedAsan){$process.ExitCode -ne 0 -and $text -match 'AddressSanitizer: heap-buffer-overflow'}else{$process.ExitCode -eq $expectedExit}
+            $row=[ordered]@{scenario=$scenario;exitCode=$process.ExitCode;passed=$scenarioPassed;expectedAsanDetection=[bool]$expectedAsan;elapsedMs=$timer.Elapsed.TotalMilliseconds}
+            if($entry.ContainsKey('crashRoot')){
+                $directory=Assert-RedMonitorOutputPath (Join-Path $crashArtifactRoot "crash-probes/$($entry.crashRoot)")
+                $marker=Join-Path $directory 'pending.txt'
+                $dumps=@(Get-ChildItem -LiteralPath $directory -File -Filter 'RedMonitor-report-*.dmp' -ErrorAction SilentlyContinue)
+                $row.passed=$row.passed -and $dumps.Count -eq 1 -and (Test-Path -LiteralPath $marker -PathType Leaf)
+                if($row.passed){
+                    $stream=[IO.File]::OpenRead($dumps[0].FullName)
+                    try{
+                        $signature=[byte[]]::new(4)
+                        $row.passed=$stream.Read($signature,0,4) -eq 4 -and [Text.Encoding]::ASCII.GetString($signature) -ceq 'MDMP'
+                    }finally{$stream.Dispose()}
+                    $row.passed=$row.passed -and [IO.File]::ReadAllText($marker,[Text.Encoding]::Unicode) -ceq $dumps[0].Name
+                    $row.dumpSha256=(Get-FileHash -LiteralPath $dumps[0].FullName).Hash
+                    $markerHashes[$marker]=(Get-FileHash -LiteralPath $marker).Hash
+                }
+            }
+            if($entry.ContainsKey('preserveMarkers')){
+                $row.passed=$row.passed -and $markerHashes.Count -eq 2
+                foreach($marker in $markerHashes.Keys){
+                    $row.passed=$row.passed -and (Test-Path -LiteralPath $marker -PathType Leaf) -and
+                        (Get-FileHash -LiteralPath $marker).Hash -ceq $markerHashes[$marker]
+                }
+            }
+            $rows.Add([pscustomobject]$row)
+            Write-Host "$scenario : exit $($process.ExitCode), passed=$($row.passed), $([math]::Round($timer.Elapsed.TotalMilliseconds,2)) ms"
         }finally{$process.Dispose()}
     }
 }catch{$primaryFailure=$_;throw}finally{
@@ -176,7 +216,8 @@ try{
     if($null -ne $runtimeInput -and -not $runtimeInput.Closed){
         try{Close-CiLocalSdkApplicationRuntimeInput $runtimeInput}catch{$closeFailure=$_}
     }
-    $expected=if($IncludeLiveEtw){7}else{6}
+    $expected=if($IncludeLiveEtw){8}else{7}
+    if($build.viewerTestsEnabled){$expected+=3}
     if($Configuration -eq 'ASan Debug'){$expected++}
     $passed=$null -eq $primaryFailure -and $null -eq $closeFailure -and $rows.Count -eq $expected -and @($rows|Where-Object passed -eq $false).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
     $record=[ordered]@{schemaVersion=1;passed=$passed;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;

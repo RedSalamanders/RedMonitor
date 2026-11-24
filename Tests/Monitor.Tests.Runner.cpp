@@ -39,6 +39,7 @@ static_assert(! RedSalamanderMonitor::kInvalidRectVisualizationEnabled,
 #include "EtwListener.h"
 #include "ExceptionHelpers.h"
 #include "Helpers.h"
+#include "Monitor.Tests.CrashReports.h"
 #include "MonitorDiagnostics.h"
 #include "MonitorFileExporter.h"
 #include "MonitorFileReader.h"
@@ -1316,6 +1317,11 @@ static int RunMonitorTest()
 int main(int argc, char** argv)
 {
     RedSalamander::TestSupport::RouteFailureReportsAwayFromDialogs();
+
+    if (argc > 1 && argv[1] != nullptr && lstrcmpA(argv[1], "--crash-store-selftest") == 0)
+    {
+        return RedSalamanderMonitor::Testing::RunCrashStoreSelfTest() ? 0 : 2;
+    }
 
     if (argc > 1 && argv[1] != nullptr && lstrcmpA(argv[1], "--diagnostics-gate-selftest") == 0)
     {

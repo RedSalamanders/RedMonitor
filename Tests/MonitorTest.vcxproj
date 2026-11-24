@@ -11,7 +11,7 @@
  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
 
  <ItemDefinitionGroup><ClCompile><AdditionalIncludeDirectories>$(RedMonitorRoot)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><PreprocessorDefinitions>ENABLE_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile><Link><SubSystem>Console</SubSystem><AdditionalDependencies>yyjson.lib;%(AdditionalDependencies)</AdditionalDependencies></Link></ItemDefinitionGroup>
- <ItemGroup><ClCompile Include="Monitor.Tests.Runner.cpp"/><ClCompile Include="..\src\Document.cpp"/><ClCompile Include="..\src\EtwListener.cpp"/><ClCompile Include="..\src\MonitorFileReader.cpp"/><ClCompile Include="..\src\MonitorFileExporter.cpp"/></ItemGroup>
+ <ItemGroup><ClCompile Include="Monitor.Tests.Runner.cpp"/><ClCompile Include="..\src\CrashReports.cpp"/><ClCompile Include="..\src\Document.cpp"/><ClCompile Include="..\src\EtwListener.cpp"/><ClCompile Include="..\src\MonitorFileReader.cpp"/><ClCompile Include="..\src\MonitorFileExporter.cpp"/></ItemGroup>
  <ItemGroup><ProjectReference Include="..\support\RedMonitorSupport.vcxproj"/></ItemGroup>
  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

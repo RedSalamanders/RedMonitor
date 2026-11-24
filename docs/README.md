@@ -9,6 +9,9 @@ extraction keeps the legacy monitor settings identity for RedSalamander integrat
 Real-time ETW needs appropriate Windows session permissions. A failed session does not prevent file
 viewing. Self diagnostics are opt-in with `--etw`. Printing remains unsupported.
 
+After a crash, the next ordinary launch shows the path of the local minidump once. RedMonitor keeps
+the ten most recent new dumps under "RedMonitor/Crashes" in Windows Local AppData.
+
 Client-only applications include the public producer header and own one registration per module.
 Viewer distribution is optional and separately pinned. RedPrism, RedXe and RedTilde adoption remains
 tracked by the [WIP plan](../Specs/Plans/WIP/RedMonitorExtraction_2026-10-21.md).

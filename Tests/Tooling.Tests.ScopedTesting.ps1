@@ -86,6 +86,7 @@ param([switch]$Check,[string]$Configuration,[string]$Platform,[switch]$PassThru,
 $root=$PSScriptRoot
 if((Split-Path $root -Leaf) -eq 'Tests'){$root=Split-Path -Parent $root}
 $name=[IO.Path]::GetRelativePath($root,$PSCommandPath).Replace('\','/')
+if($name -ceq 'format.ps1' -and -not $Check.IsPresent){throw 'The formatter must run in read-only check mode.'}
 [IO.File]::AppendAllText((Join-Path $root '.build/calls.txt'),("$name|$Configuration|$Platform"+[Environment]::NewLine))
 if((Test-Path (Join-Path $root '.build/fail')) -and [IO.File]::ReadAllText((Join-Path $root '.build/fail')) -ceq $name){exit 19}
 if($name -ceq 'validate.ps1' -and (Test-Path (Join-Path $root '.build/mutate'))){

@@ -1,6 +1,7 @@
 [
   "Tests/Asan.Tests.Probe.cpp",
   "Tests/Client.Tests.Runner.cpp",
+  "Tests/Monitor.Tests.CrashReports.h",
   "Tests/Monitor.Tests.Runner.cpp",
   "Tests/Settings.Tests.Contract.cpp",
   "Tests/Support/TestSupport.Tests.Runner.h",
