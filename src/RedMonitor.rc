@@ -271,6 +271,8 @@ BEGIN
     IDS_MSG_OPEN_CANCEL_REQUESTED "Cancelling file open..."
     IDS_STATUS_OPEN_PROGRESS_FMT "Opening: {0:L} / {1:L} bytes"
     IDS_MSG_SAVE_FAILED "Failed to save file."
+    IDS_MSG_SAVE_OVERWRITE_FMT "Replace the existing file?\n{0}"
+    IDS_MSG_SAVE_CONFLICT "The destination changed or is open for writing. Review the file before saving again."
     IDS_MSG_FILE_WORKER_START_FAILED "The background file operation could not be started."
     IDS_MSG_SAVE_CANCEL_REQUESTED "Cancelling file save..."
     IDS_STATUS_SAVE_PROGRESS_FMT "Saving: {0:L} bytes / {1:L} lines"

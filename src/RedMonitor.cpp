@@ -2939,7 +2939,8 @@ LRESULT OnMonitorFileSaveCompleted(HWND owner, LPARAM lParam)
     {
         Debug::Warning(L"Monitor file save failed before publication: 0x{:08X}", static_cast<uint32_t>(completion->result.hr));
         const std::wstring caption = LoadStringResource(g_hInstance, IDS_CAPTION_SAVE);
-        const std::wstring message = LoadStringResource(g_hInstance, IDS_MSG_SAVE_FAILED);
+        const UINT messageId       = completion->result.hr == RedSalamanderMonitor::kMonitorFileExportConflict ? IDS_MSG_SAVE_CONFLICT : IDS_MSG_SAVE_FAILED;
+        const std::wstring message = LoadStringResource(g_hInstance, messageId);
         ShowModalMessageDialog(g_hInstance, owner, caption.c_str(), message.c_str());
     }
     UpdateStatusBar();
@@ -2960,7 +2961,9 @@ void EmitMonitorFileSaveSnapshotMetrics(const RedSalamanderMonitor::MonitorTextS
     Debug::Perf::EmitValue(L"monitor.file_save.peak_additional_snapshot_bytes", snapshot.peakAdditionalSnapshotBytes, hr);
 }
 
-[[nodiscard]] HRESULT StartMonitorFileSaveWorker(HWND owner, std::filesystem::path path, RedSalamanderMonitor::MonitorTextSnapshot snapshot) noexcept
+[[nodiscard]] HRESULT StartMonitorFileSaveWorker(HWND owner,
+                                                 RedSalamanderMonitor::MonitorFileExportTarget target,
+                                                 RedSalamanderMonitor::MonitorTextSnapshot snapshot) noexcept
 {
     const uint64_t generation = ++g_monitorFileSaveGeneration;
     auto state                = std::make_shared<MonitorFileSaveWorkerState>();
@@ -2973,12 +2976,12 @@ void EmitMonitorFileSaveSnapshotMetrics(const RedSalamanderMonitor::MonitorTextS
             throw std::system_error(std::error_code(ERROR_NOT_ENOUGH_MEMORY, std::system_category()), "injected Monitor save thread-start failure");
         }
 #endif
-        g_monitorFileSaveThread = std::thread([owner, path = std::move(path), snapshot = std::move(snapshot), state, generation]()
+        g_monitorFileSaveThread = std::thread([owner, target = std::move(target), snapshot = std::move(snapshot), state, generation]()
         {
             const auto started       = std::chrono::steady_clock::now();
             uint64_t lastPostedBytes = 0u;
             RedSalamanderMonitor::MonitorFileExportResult result =
-                RedSalamanderMonitor::WriteMonitorTextSnapshot(path,
+                RedSalamanderMonitor::WriteMonitorTextSnapshot(target,
                                                                snapshot,
                                                                state->stopSource.get_token(),
                                                                [owner, generation, &lastPostedBytes](uint64_t bytesWritten, size_t completedLines)
@@ -3048,17 +3051,42 @@ bool DoFileSaveAs(HWND owner)
     ofn.lpstrFilter = filter.empty() ? nullptr : filter.c_str();
     ofn.lpstrFile   = file;
     ofn.nMaxFile    = static_cast<DWORD>(std::size(file));
-    ofn.Flags       = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_EXPLORER;
+    ofn.Flags       = OFN_PATHMUSTEXIST | OFN_NOTESTFILECREATE | OFN_EXPLORER;
     ofn.lpstrDefExt = defaultExt.empty() ? nullptr : defaultExt.c_str();
-    if (! GetSaveFileNameW(&ofn))
-        return false;
+
+    RedSalamanderMonitor::MonitorFileExportTarget target;
+    const std::wstring caption = LoadStringResource(g_hInstance, IDS_CAPTION_SAVE);
+    for (;;)
+    {
+        if (! GetSaveFileNameW(&ofn))
+        {
+            return false;
+        }
+        target.path             = file;
+        const HRESULT observeHr = RedSalamanderMonitor::ObserveMonitorFileExportTarget(target);
+        if (FAILED(observeHr))
+        {
+            const auto message = LoadStringResource(g_hInstance, IDS_MSG_SAVE_FAILED);
+            ShowModalMessageDialog(g_hInstance, owner, caption.c_str(), message.c_str());
+            return false;
+        }
+        if (! target.acceptedVersion)
+        {
+            break;
+        }
+        const auto message = FormatStringResource(g_hInstance, IDS_MSG_SAVE_OVERWRITE_FMT, target.path.native());
+        if (ShowModalConfirmDialog(g_hInstance, owner, caption.c_str(), message.c_str()))
+        {
+            break;
+        }
+    }
 
     const auto uiStarted                               = std::chrono::steady_clock::now();
     const auto snapshotStarted                         = std::chrono::steady_clock::now();
     RedSalamanderMonitor::MonitorTextSnapshot snapshot = g_colorView.CaptureTextSnapshot();
     EmitMonitorFileSaveSnapshotMetrics(snapshot, Debug::Perf::ElapsedUs(snapshotStarted), S_OK);
 
-    const HRESULT startHr = StartMonitorFileSaveWorker(owner, std::filesystem::path(file), std::move(snapshot));
+    const HRESULT startHr = StartMonitorFileSaveWorker(owner, std::move(target), std::move(snapshot));
     Debug::Perf::EmitDurationUs(L"monitor.file_save.ui_return_us",
                                 Debug::Perf::ElapsedUs(uiStarted),
                                 static_cast<uint64_t>(g_colorView.GetTotalLineCount()),
@@ -3066,7 +3094,6 @@ bool DoFileSaveAs(HWND owner)
                                 startHr);
     if (FAILED(startHr))
     {
-        const std::wstring caption = LoadStringResource(g_hInstance, IDS_CAPTION_SAVE);
         const std::wstring message = LoadStringResource(g_hInstance, IDS_MSG_FILE_WORKER_START_FAILED);
         ShowModalMessageDialog(g_hInstance, owner, caption.c_str(), message.c_str());
         UpdateStatusBar();
@@ -3305,8 +3332,8 @@ bool RunMonitorSnapshotScalingSelfTest()
 
             const std::filesystem::path outputPath = g_monitorChromeSelfTest.runRoot / std::format(L"snapshot_scale_{}_{}.txt", lineCount, repeat);
             const auto saveStarted                 = std::chrono::steady_clock::now();
-            const RedSalamanderMonitor::MonitorFileExportResult result = RedSalamanderMonitor::WriteMonitorTextSnapshot(outputPath, snapshot, {});
-            const uint64_t saveUs                                      = Debug::Perf::ElapsedUs(saveStarted);
+            const auto result                      = RedSalamanderMonitor::WriteMonitorTextSnapshot({.path = outputPath}, snapshot, {});
+            const uint64_t saveUs                  = Debug::Perf::ElapsedUs(saveStarted);
             Debug::Perf::EmitDurationUs(L"monitor.file_save.total_us", saveUs, result.bytesWritten, static_cast<uint64_t>(result.lineCount), result.hr);
             const uint64_t throughput = saveUs == 0u ? result.bytesWritten : (result.bytesWritten * 1'000'000u) / saveUs;
             Debug::Perf::EmitValue(L"monitor.file_save.throughput_bytes_per_sec", throughput, result.hr);
@@ -3397,7 +3424,7 @@ MonitorRetainedStateIoSelfTestResult RunMonitorRetainedStateIoSelfTest()
     const auto saveStarted     = std::chrono::steady_clock::now();
     const auto uiReturnStarted = std::chrono::steady_clock::now();
     std::thread saveThread([outputPath, snapshot = std::move(saveSnapshot), saveResult]()
-    { *saveResult = RedSalamanderMonitor::WriteMonitorTextSnapshot(outputPath, snapshot, {}); });
+    { *saveResult = RedSalamanderMonitor::WriteMonitorTextSnapshot({.path = outputPath}, snapshot, {}); });
     Debug::Perf::EmitDurationUs(L"monitor.file_save.ui_return_us",
                                 Debug::Perf::ElapsedUs(uiReturnStarted),
                                 static_cast<uint64_t>(selfTest.openedLineCount),
@@ -3429,10 +3456,10 @@ MonitorRetainedStateIoSelfTestResult RunMonitorRetainedStateIoSelfTest()
     RedSalamanderMonitor::MonitorTextSnapshot failedSaveSnapshot = g_colorView.CaptureTextSnapshot();
     const uint64_t savePostsBeforeFailure                        = g_monitorFileSaveCompletionPostCount.load(std::memory_order_acquire);
     g_failNextMonitorFileSaveThreadStart.store(true, std::memory_order_release);
-    const HRESULT failedSaveStart = StartMonitorFileSaveWorker(g_hMainWindow, failedSavePath, failedSaveSnapshot);
+    const HRESULT failedSaveStart = StartMonitorFileSaveWorker(g_hMainWindow, {.path = failedSavePath}, failedSaveSnapshot);
     const bool saveRolledBack = FAILED(failedSaveStart) && ! g_monitorFileSaveState && ! g_monitorFileSaveThread.joinable() && ! PathExists(failedSavePath) &&
                                 g_monitorFileSaveCompletionPostCount.load(std::memory_order_acquire) == savePostsBeforeFailure;
-    const HRESULT retrySaveStart = StartMonitorFileSaveWorker(g_hMainWindow, failedSavePath, std::move(failedSaveSnapshot));
+    const HRESULT retrySaveStart = StartMonitorFileSaveWorker(g_hMainWindow, {.path = failedSavePath}, std::move(failedSaveSnapshot));
     const bool saveRetryStarted  = SUCCEEDED(retrySaveStart) && g_monitorFileSaveThread.joinable();
     if (saveRetryStarted)
     {

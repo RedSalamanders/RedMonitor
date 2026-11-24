@@ -124,6 +124,8 @@ BEGIN
     IDS_MSG_OPEN_CANCEL_REQUESTED "Annulation de l’ouverture du fichier..."
     IDS_STATUS_OPEN_PROGRESS_FMT "Ouverture : {0:L} / {1:L} octets"
     IDS_MSG_SAVE_FAILED "Échec de l’enregistrement du fichier."
+    IDS_MSG_SAVE_OVERWRITE_FMT "Remplacer le fichier existant ?\n{0}"
+    IDS_MSG_SAVE_CONFLICT "Le fichier de destination a changé ou est ouvert en écriture. Vérifiez-le avant de réessayer."
     IDS_MSG_FILE_WORKER_START_FAILED "Impossible de démarrer l’opération de fichier en arrière-plan."
     IDS_MSG_SAVE_CANCEL_REQUESTED "Annulation de l’enregistrement du fichier..."
     IDS_STATUS_SAVE_PROGRESS_FMT "Enregistrement : {0:L} octets / {1:L} lignes"

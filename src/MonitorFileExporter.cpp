@@ -1,6 +1,7 @@
 #include "MonitorFileExporter.h"
 
 #include "LocalFileTransaction.h"
+#include "PathUtils.h"
 
 #include <array>
 #include <cstddef>
@@ -15,6 +16,56 @@ namespace
 constexpr HRESULT kCancelled       = HRESULT_FROM_WIN32(ERROR_CANCELLED);
 constexpr HRESULT kEncodingError   = HRESULT_FROM_WIN32(ERROR_NO_UNICODE_TRANSLATION);
 constexpr size_t kOutputChunkBytes = 64u * 1024u;
+
+[[nodiscard]] HRESULT ReadExportVersion(HANDLE file, MonitorFileExportVersion& version) noexcept
+{
+    BY_HANDLE_FILE_INFORMATION identity{};
+    FILE_BASIC_INFO timestamps{};
+    if (! GetFileInformationByHandle(file, &identity) || ! GetFileInformationByHandleEx(file, FileBasicInfo, &timestamps, sizeof(timestamps)))
+    {
+        const DWORD error = GetLastError();
+        return HRESULT_FROM_WIN32(error == ERROR_SUCCESS ? ERROR_READ_FAULT : error);
+    }
+    if ((identity.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) != 0u ||
+        (identity.nFileIndexHigh == 0u && identity.nFileIndexLow == 0u))
+    {
+        return HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED);
+    }
+    version = {
+        .fileIndex          = (static_cast<uint64_t>(identity.nFileIndexHigh) << 32u) | identity.nFileIndexLow,
+        .fileSize           = (static_cast<uint64_t>(identity.nFileSizeHigh) << 32u) | identity.nFileSizeLow,
+        .lastWriteTime      = timestamps.LastWriteTime.QuadPart,
+        .changeTime         = timestamps.ChangeTime.QuadPart,
+        .volumeSerialNumber = identity.dwVolumeSerialNumber,
+    };
+    return S_OK;
+}
+
+[[nodiscard]] HRESULT ReadExportVersionAtPath(const std::filesystem::path& path, std::optional<MonitorFileExportVersion>& version) noexcept
+{
+    version.reset();
+    const auto native = Common::Paths::ToExtendedWin32Path(path.native());
+    const wil::unique_hfile file(CreateFileW(native.c_str(),
+                                             FILE_READ_ATTRIBUTES,
+                                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                             nullptr,
+                                             OPEN_EXISTING,
+                                             FILE_FLAG_OPEN_REPARSE_POINT,
+                                             nullptr));
+    if (! file)
+    {
+        const DWORD error = GetLastError();
+        return error == ERROR_FILE_NOT_FOUND ? S_OK : HRESULT_FROM_WIN32(error == ERROR_SUCCESS ? ERROR_READ_FAULT : error);
+    }
+
+    MonitorFileExportVersion observed{};
+    const HRESULT hr = ReadExportVersion(file.get(), observed);
+    if (SUCCEEDED(hr))
+    {
+        version = observed;
+    }
+    return hr;
+}
 
 [[nodiscard]] MonitorFileExportResult Failed(HRESULT hr, uint64_t bytesWritten, size_t completedLines) noexcept
 {
@@ -48,7 +99,12 @@ void AppendUtf8Scalar(std::string& output, uint32_t scalar)
 }
 } // namespace
 
-MonitorFileExportResult WriteMonitorTextSnapshot(const std::filesystem::path& path,
+HRESULT ObserveMonitorFileExportTarget(MonitorFileExportTarget& target) noexcept
+{
+    return ReadExportVersionAtPath(target.path, target.acceptedVersion);
+}
+
+MonitorFileExportResult WriteMonitorTextSnapshot(const MonitorFileExportTarget& target,
                                                  const MonitorTextSnapshot& snapshot,
                                                  std::stop_token stopToken,
                                                  const MonitorFileExportProgress& progress)
@@ -59,9 +115,14 @@ MonitorFileExportResult WriteMonitorTextSnapshot(const std::filesystem::path& pa
     }
 
     Common::Files::LocalFileTransaction transaction;
-    const HRESULT createHr = Common::Files::LocalFileTransaction::Create(path, Common::Files::ExistingTargetPolicy::Replace, false, transaction);
+    const auto policy      = target.acceptedVersion ? Common::Files::ExistingTargetPolicy::Replace : Common::Files::ExistingTargetPolicy::FailIfExists;
+    const HRESULT createHr = Common::Files::LocalFileTransaction::Create(target.path, policy, false, transaction);
     if (FAILED(createHr))
     {
+        if (createHr == HRESULT_FROM_WIN32(ERROR_FILE_EXISTS))
+        {
+            return Failed(kMonitorFileExportConflict, 0u, 0u);
+        }
         return Failed(createHr, 0u, 0u);
     }
 
@@ -164,7 +225,51 @@ MonitorFileExportResult WriteMonitorTextSnapshot(const std::filesystem::path& pa
         return Failed(kCancelled, bytesWritten, completedLines);
     }
 
-    hr = transaction.Commit(bytesWritten);
+    wil::unique_hfile guard;
+    if (target.acceptedVersion)
+    {
+        // Retain delete sharing for replacement and deny other writers until publication finishes.
+        guard.reset(CreateFileW(transaction.TargetPath().c_str(),
+                                FILE_READ_ATTRIBUTES | DELETE,
+                                FILE_SHARE_READ | FILE_SHARE_DELETE,
+                                nullptr,
+                                OPEN_EXISTING,
+                                FILE_FLAG_OPEN_REPARSE_POINT,
+                                nullptr));
+        MonitorFileExportVersion guarded{};
+        if (! guard || FAILED(ReadExportVersion(guard.get(), guarded)) || guarded != *target.acceptedVersion)
+        {
+            return Failed(kMonitorFileExportConflict, bytesWritten, completedLines);
+        }
+    }
+    struct PublishState
+    {
+        const std::filesystem::path* path;
+        const std::optional<MonitorFileExportVersion>* acceptedVersion;
+        std::stop_token stopToken;
+    } publish{&transaction.TargetPath(), &target.acceptedVersion, stopToken};
+    hr = transaction.Commit(bytesWritten,
+                            nullptr,
+                            {&publish,
+                             [](void* raw) noexcept -> HRESULT
+    {
+        const auto& state = *static_cast<const PublishState*>(raw);
+        if (state.stopToken.stop_requested())
+        {
+            return kCancelled;
+        }
+        std::optional<MonitorFileExportVersion> current;
+        const HRESULT status = ReadExportVersionAtPath(*state.path, current);
+        if (FAILED(status) || current != *state.acceptedVersion)
+        {
+            return kMonitorFileExportConflict;
+        }
+        return S_OK;
+    }});
+    if (hr == HRESULT_FROM_WIN32(ERROR_FILE_EXISTS) || hr == HRESULT_FROM_WIN32(ERROR_ALREADY_EXISTS))
+    {
+        hr = kMonitorFileExportConflict;
+    }
     return MonitorFileExportResult{.hr = hr, .bytesWritten = bytesWritten, .lineCount = completedLines};
 }
 } // namespace RedSalamanderMonitor

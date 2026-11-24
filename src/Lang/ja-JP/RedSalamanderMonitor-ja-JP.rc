@@ -124,6 +124,8 @@ BEGIN
     IDS_MSG_OPEN_CANCEL_REQUESTED "ファイルを開く処理をキャンセルしています..."
     IDS_STATUS_OPEN_PROGRESS_FMT "開いています: {0:L} / {1:L} バイト"
     IDS_MSG_SAVE_FAILED "ファイルを保存できませんでした。"
+    IDS_MSG_SAVE_OVERWRITE_FMT "既存のファイルを置き換えますか？\n{0}"
+    IDS_MSG_SAVE_CONFLICT "保存先が変更されたか、書き込み用に開かれています。ファイルを確認してから保存し直してください。"
     IDS_MSG_FILE_WORKER_START_FAILED "バックグラウンドのファイル操作を開始できませんでした。"
     IDS_MSG_SAVE_CANCEL_REQUESTED "ファイルの保存をキャンセルしています..."
     IDS_STATUS_SAVE_PROGRESS_FMT "保存中: {0:L} バイト / {1:L} 行"
