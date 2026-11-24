@@ -2,7 +2,9 @@
 
 RedMonitor is an independent EXE. Only this repository builds, tests and packages it.
 Build with PowerShell 7 and discovered Visual Studio 2026 C++ tools, x64/ARM64 and
-Debug/Release/ASan Debug, Unicode stdcpplatest and /W4 /WX /permissive- /sdl.
+Debug/Release/ASan Debug, Unicode stdcpplatest and /Wall /permissive- /sdl.
+The build gate requires zero warnings and errors with /WX disabled. The shared warning exclusions cover
+optimizer notices C4514, C4710 and C4711, ABI padding C4820 and the optional Spectre notice C5045.
 Pinned vcpkg and DxUi restores, outputs and exact source/profile receipts remain local under .build.
 No RedSalamander Common.dll or sibling build is required.
 The pinned CI engine provides Visual Studio discovery, default-MSVC selection and
