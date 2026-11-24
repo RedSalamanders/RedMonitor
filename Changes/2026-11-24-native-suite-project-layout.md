@@ -1,1 +1,0 @@
-- Put native test projects and suite sources in per-suite folders while preserving the test commands and executable names.

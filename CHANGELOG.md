@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Put native test projects and suite sources in per-suite folders while preserving the test commands and executable names.
 - Move RedMonitor to the shared engine that manages the Dependabot file and contains the portable WinGet manifest metadata support.
 - Add `--warp` to force software rendering in the log view, toolbar and status bar.
 - Run affected suites by default from the root test command and select the complete profile with `-Full`.
