@@ -137,4 +137,17 @@ function Enter-RedMonitorOperation {
     return $mutex
 }
 
-Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOrdinaryGuidancePath,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceSnapshot,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation
+function Invoke-RedMonitorDependencyRestore {
+    param([Parameter(Mandatory)][ValidateSet('x64','ARM64')][string]$Platform,[switch]$Asan)
+    $root=Split-Path -Parent $PSScriptRoot
+    $lease=Enter-RedMonitorOperation 'dependency-restore'
+    try {
+        & (Join-Path $root 'vcpkg-install.ps1') -Platform $Platform -Asan:$Asan
+        & (Join-Path $root 'restore-dxui.ps1') -Platform $Platform
+    } finally {
+        $lease.ReleaseMutex()
+        $lease.Dispose()
+    }
+}
+
+Export-ModuleMember -Function Get-RedMonitorMSBuild,Assert-RedMonitorOrdinaryGuidancePath,Assert-RedMonitorOutputPath,Assert-RedMonitorOutputNotRunning,Get-RedMonitorSourceSnapshot,Get-RedMonitorSourceIdentity,Enter-RedMonitorOperation,Invoke-RedMonitorDependencyRestore
