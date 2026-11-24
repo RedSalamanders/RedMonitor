@@ -32,6 +32,10 @@ Open `RedMonitor.sln` in Visual Studio for the six profiles after restoring the 
 The root `build.ps1` builds through `RedMonitor.proj` and records the native build receipt. Every native project
 checks the selected MSVC toolset against `RequiredMsvcToolsVersion` before preparing its build.
 
+`build.ps1 -Clean` cleans the selected profile's first-party outputs under `.build/` without restoring dependencies.
+`-Rebuild` cleans those outputs before the normal build. Both commands honor the running-output preflight.
+`-MaxCpuCount` sets the MSBuild worker limit. The default remains four workers.
+
 `build.ps1 -Analyze` rebuilds with MSVC code analysis. The selected profile's binaries, intermediates and log
 stay below `.build/analysis/`. The normal warning policy applies. Diagnostic output has no ordinary build or
 packaging receipt.
