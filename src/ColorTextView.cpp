@@ -75,8 +75,8 @@ constexpr uint64_t kMonitorScrollBackModeValue = 2u;
 
 [[nodiscard]] constexpr bool IsDeviceLoss(HRESULT result) noexcept
 {
-    return result == D2DERR_RECREATE_TARGET || result == DXGI_ERROR_DEVICE_REMOVED || result == DXGI_ERROR_DEVICE_RESET ||
-           result == DXGI_ERROR_DEVICE_HUNG || result == DXGI_ERROR_DRIVER_INTERNAL_ERROR;
+    return result == D2DERR_RECREATE_TARGET || result == DXGI_ERROR_DEVICE_REMOVED || result == DXGI_ERROR_DEVICE_RESET || result == DXGI_ERROR_DEVICE_HUNG ||
+           result == DXGI_ERROR_DRIVER_INTERNAL_ERROR;
 }
 
 static_assert(IsDeviceLoss(DXGI_ERROR_DEVICE_HUNG) && IsDeviceLoss(DXGI_ERROR_DRIVER_INTERNAL_ERROR));
