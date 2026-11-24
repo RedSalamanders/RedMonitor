@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Use the shared changelog header while preserving the existing release history.
 - Use the pinned engine to prepare vcpkg checkouts and validate native manifest install paths.
 - Use the pinned shared Visual Studio and vcpkg triplet helpers for product builds and restores.
 - Publish the canonical RedMonitor client update and verification commands with exact hashes and preserve the tooling pin during client refresh.
