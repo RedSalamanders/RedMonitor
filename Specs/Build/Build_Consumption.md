@@ -5,6 +5,9 @@ Build with PowerShell 7 and discovered Visual Studio 2026 C++ tools, x64/ARM64 a
 Debug/Release/ASan Debug, Unicode stdcpplatest and /W4 /WX /permissive- /sdl.
 Pinned vcpkg and DxUi restores, outputs and exact source/profile receipts remain local under .build.
 No RedSalamander Common.dll or sibling build is required.
+The pinned CI engine provides Visual Studio discovery, default-MSVC selection and
+vcpkg overlay generation. The repository's existing tool entry points retain the
+caller parameters and the product's generated triplet comment.
 
 Both vcpkg restores use a complete clone of the pinned vcpkg repository. vcpkg extracts versioned ports
 with `git read-tree` and `git checkout-index` in an environment that holds only `GIT_INDEX_FILE`, so it
