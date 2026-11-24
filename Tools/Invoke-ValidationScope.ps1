@@ -7,9 +7,9 @@ $root = Split-Path -Parent $PSScriptRoot
 Import-Module (Join-Path $root 'Build/Toolchain.psm1')
 Import-Module (Join-Path $root 'Build/IndependentValidation.psm1')
 $commands = @{
-    Validation=@{ path='validate.ps1'; arguments=@() }
-    Format=@{ path='format.ps1'; arguments=@('-Check') }
-    Tooling=@{ path='Tests/Tooling.Tests.ps1'; arguments=@() }
+    Validation=@{ path='validate.ps1'; arguments=@{} }
+    Format=@{ path='format.ps1'; arguments=@{ Check=$true } }
+    Tooling=@{ path='Tests/Tooling.Tests.ps1'; arguments=@{} }
 }
 $command = $commands[$Scope]
 $lease = Enter-RedMonitorOperation -Scope 'independent-validation'

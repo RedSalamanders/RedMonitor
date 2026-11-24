@@ -17,7 +17,7 @@ includes both live imported support test seams.
 
 The owning contracts are [validation](../../Testing/Testing_Validation.md) and
 [run evidence](../../Testing/Testing_RunEvidence.md). Retain the direct local SDK route,
-the hosted six-scenario receipt and production barrier, the explicitly requested live
+the hosted regression receipt and production barrier, the explicitly requested live
 ETW check and the contained Release installation controls.
 
 ## Accepted integration boundary — 2026-10-23

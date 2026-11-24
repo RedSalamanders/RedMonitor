@@ -26,7 +26,7 @@ Use `./Test-Changes.ps1 -Explain` to review the plan. `-Mode Full` covers one pr
 cross-builds. Full and PrePush select LiveEtw for each runnable profile. Release also selects
 ContainedInstallation after the ordinary regression and live transport checks. Direct
 `test.ps1 -IncludeLiveEtw` continues to require that roundtrip explicitly. Native ARM64
-runtime requires its own matching host. The hosted six-scenario regression and both production
+runtime requires its own matching host. The hosted regression and both production
 lanes retain their own evidence and authorization.
 
 The product test command retains the exact direct build receipt and output checks. The
@@ -108,6 +108,10 @@ assembly, in-place search/colorize helpers, immutable snapshots, strict/bounded 
 export/fault/cancel, clipboard rejection without opening the clipboard, and bounded ETW consumer lifetime.
 test.ps1 supplies a unique repository-local test root and never cleans existing data. A failed native process
 must produce a failed receipt.
+
+The [crash contract](../Core/Core_CrashHandling.md) adds a console store case to every profile and
+isolated main-thread, worker and headless checks when the viewer has ENABLE_TESTS. The ASan Debug
+crash probes use a dedicated fatal status so the ordinary ASan detection case remains independent.
 
 The standalone project owns the former consumer's viewer coverage obligations: ETW provider
 compatibility, self-originated event suppression, runtime diagnostic gating, bounded ingestion/display

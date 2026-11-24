@@ -18,8 +18,10 @@ a changed source or a corrupt shared receipt cannot grant reuse.
 Scoped native test calls keep their ordinary scenario output under `.build/test-runs` and
 record a run through the pinned evidence module. Canonical per-scope reports appear in
 `.build/reports` only after the requested work passes. Failed scoped runs retain their
-failure state. Direct hosted regression retains its six-scenario receipt and assertion
+failure state. Direct hosted regression retains its named scenario receipt and assertion
 probe. The shared profile lease protects builds and tests across child processes.
+Crash-probe dumps and markers stay in the corresponding local ".build/crash-probe-artifacts" run folder
+outside the uploaded evidence. The ordinary scenario receipt records the dump hash.
 
 Local SDK runtime results have role `LocalUnpinnedApplicationRuntimeResult`, bind the original build digest,
 dependency and complete runtime-byte digest, and live only under `.build/local-sdk-test-runs`, outside hosted

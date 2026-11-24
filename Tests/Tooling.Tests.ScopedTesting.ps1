@@ -56,7 +56,7 @@ function Snapshot-Attempts {
 
 $manifest=Read-ScopedTestManifest -Root $root -SkipProjectRules
 Case 'product scope data preserves the affected lanes and the active native inventory' {
-    Require ((Assert-ScopedTestNames -Root $root -Manifest $manifest) -eq 9) 'Native inventory lost one of the imported test seams.'
+    Require ((Assert-ScopedTestNames -Root $root -Manifest $manifest) -eq 10) 'Native inventory must include the crash store and imported test seams.'
     Require ((Get-ScopedTestPlan -Manifest $manifest -ChangedPaths @()).scopes.Count -eq 0) 'An empty change selected work.'
     foreach ($path in @('Tests/Fixtures/README.md','Tests/Data/日本語.md','src/unknown.md','Specs/runtime.schema.json')) {
         $plan = Get-ScopedTestPlan -Manifest $manifest -ChangedPaths @($path) -Configuration Debug
@@ -86,6 +86,7 @@ param([switch]$Check,[string]$Configuration,[string]$Platform,[switch]$PassThru,
 $root=$PSScriptRoot
 if((Split-Path $root -Leaf) -eq 'Tests'){$root=Split-Path -Parent $root}
 $name=[IO.Path]::GetRelativePath($root,$PSCommandPath).Replace('\','/')
+if($name -ceq 'format.ps1' -and -not $Check.IsPresent){throw 'The formatter must run in read-only check mode.'}
 [IO.File]::AppendAllText((Join-Path $root '.build/calls.txt'),("$name|$Configuration|$Platform"+[Environment]::NewLine))
 if((Test-Path (Join-Path $root '.build/fail')) -and [IO.File]::ReadAllText((Join-Path $root '.build/fail')) -ceq $name){exit 19}
 if($name -ceq 'validate.ps1' -and (Test-Path (Join-Path $root '.build/mutate'))){
