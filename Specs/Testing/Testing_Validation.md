@@ -36,6 +36,11 @@ shared profile lease coordinates scoped builds and tests, and individual artifac
 operations keep their existing lock. Details of the attempt records are in the
 [run-evidence contract](Testing_RunEvidence.md).
 
+Every native test program answers `--failure-report-self-test` before initializing its normal test state.
+The root runner checks each program, including the test-enabled viewer and the ASan probe when built.
+Debug and ASan Debug emit the deliberate CRT diagnostic to stderr and exit 3. Release returns 0.
+The production viewer rejects the test switch before accessing user settings.
+
 Use `RedMonitor.exe --warp --chrome-selftest` on a test-enabled profile to verify the non-activating
 chrome scenario and assert that the log view created a WARP device. The probe uses in-memory
 settings defaults and writes its results under the selected repository evidence directory.
