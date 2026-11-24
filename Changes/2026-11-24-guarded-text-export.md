@@ -1,1 +1,0 @@
-- Protect text exports against intervening edits, replacements, and competing file creation.
