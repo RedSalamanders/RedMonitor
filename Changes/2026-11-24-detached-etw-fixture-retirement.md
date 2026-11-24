@@ -1,1 +1,0 @@
-- Make the ETW shutdown fixture wait for actual worker retirement while keeping its callback context alive through detach.
