@@ -45,6 +45,9 @@ launch command. Supported terminals receive local file hyperlinks; ARM64 outputs
 for execution on ARM64. Printing a command or hyperlink never launches an application.
 The independent helper's [import provenance](../SourceImport/build-console-origin.json) records its source.
 
+Native object and tracking files live in `.build/Intermediate/<Platform>/<Configuration>/<Project>`.
+Executables and receipts use the corresponding `.build/<Platform>/<Configuration>` output directory.
+
 Success requires a successful MSBuild exit, a log with zero warnings and errors and no structured tool process exception dump,
 matching viewer version/test metadata, an unchanged source snapshot, and a written receipt.
 The Git checkout is required even with `-SkipRestore`. Source identity uses NUL-delimited UTF-8

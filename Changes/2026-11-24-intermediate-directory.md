@@ -1,0 +1,1 @@
+- Use the common Intermediate directory for native build intermediates.
