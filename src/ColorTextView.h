@@ -88,7 +88,7 @@ public:
 
     // Creation & config
     static ATOM RegisterWndClass(HINSTANCE hinst);
-    HWND Create(HWND parent, int x, int y, int w, int h);
+    HWND Create(HWND parent, int x, int y, int w, int h, bool forceWarp = false);
 
     void SetTheme(const Theme& t);
 
@@ -192,6 +192,10 @@ public:
     [[nodiscard]] HRESULT DebugGetLastDeviceCreateHr() const noexcept
     {
         return _debugLastDeviceCreateHr;
+    }
+    [[nodiscard]] bool DebugUsesWarp() const noexcept
+    {
+        return _d3dDevice && _debugUsesWarp;
     }
 #endif
 
@@ -346,6 +350,7 @@ private:
     wil::com_ptr<ID2D1Factory1> _d2d1Factory;
     wil::com_ptr<IDWriteFactory> _dwriteFactory;
     // D3D/DXGI device stack
+    bool _forceWarp = false;
     wil::com_ptr<ID3D11Device> _d3dDevice;
     wil::com_ptr<ID3D11DeviceContext> _d3dContext;
     wil::com_ptr<IDXGISwapChain1> _swapChain;
@@ -355,6 +360,7 @@ private:
     wil::com_ptr<ID2D1Bitmap1> _d2dTargetBitmap; // backbuffer as D2D target
 #if defined(ENABLE_TESTS)
     HRESULT _debugLastDeviceCreateHr = S_OK;
+    bool _debugUsesWarp              = false;
 #endif
     // Offscreen slice cache bitmap
     wil::com_ptr<ID2D1Bitmap1> _sliceBitmap;

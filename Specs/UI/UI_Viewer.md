@@ -9,6 +9,10 @@ hit-tests lines, and how ETW batches and worker results reach it. The document i
 
 ## Rendering and filtering
 
+Launch with `--warp` to use software rendering for the log view, the toolbar and the status bar.
+The log view keeps that choice when it recreates its device. Ordinary launches try the hardware device
+first and use WARP if hardware device creation fails.
+
 Severity filter changes update the visible-line index table without marking retained source
 lines dirty for width remeasurement; background width measurement samples at most 32 dirty candidate
 lines per pass and never falls back to synchronous UI-thread DirectWrite layout when threadpool
