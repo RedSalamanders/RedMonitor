@@ -1,0 +1,1 @@
+- Rebuild the viewer after a device hang or driver internal error and use the same device-loss handling for full draws, partial draws and presentation.
