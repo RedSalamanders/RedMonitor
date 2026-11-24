@@ -11,6 +11,12 @@ x64 or ARM64 target architecture.
 Debug, Release or ASan Debug.
 .PARAMETER SkipRestore
 Use already restored exact dependencies.
+.PARAMETER Clean
+Clean the selected profile's first-party build outputs and invalidate its build receipt.
+.PARAMETER Rebuild
+Clean the selected profile's first-party build outputs before building them.
+.PARAMETER MaxCpuCount
+Maximum number of MSBuild workers. Zero uses the default of four.
 .PARAMETER ViewerTests
 Auto enables viewer test hooks in Debug/ASan and disables them in Release. Explicit true/false is receipt-bound.
 .PARAMETER ProductionOnly
@@ -36,12 +42,15 @@ param([ValidateSet('x64','ARM64')][string] $Platform='x64',
       [ValidateSet('Debug','Release','ASan Debug')][string] $Configuration='Debug', [switch] $SkipRestore,
       [ValidateSet('Auto','true','false')][string]$ViewerTests='Auto',
       [switch]$ProductionOnly, [ValidateRange(0,65535)][int]$BuildNumber=0,
-      [string]$DxUiSdkInputDescriptor='', [switch]$Analyze)
+      [string]$DxUiSdkInputDescriptor='', [switch]$Analyze, [switch]$Clean, [switch]$Rebuild,
+      [ValidateRange(0,256)][int]$MaxCpuCount=0)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $nativeEntryElapsed=[Diagnostics.Stopwatch]::StartNew()
 if ($env:CI_NATIVE_BUILDS_DISABLED -eq 'true') { throw 'Native builds are forbidden in compiler-free PR checks.' }
-if ($Analyze -and ($ProductionOnly -or $DxUiSdkInputDescriptor)) {
+if ($Clean -and $Rebuild) { throw 'Use one of -Clean and -Rebuild.' }
+if ($Clean -and $DxUiSdkInputDescriptor) { throw 'Clean uses the selected local profile without an SDK input descriptor.' }
+if ($Analyze -and ($ProductionOnly -or $DxUiSdkInputDescriptor -or $Clean -or $Rebuild)) {
     throw '-Analyze requires the ordinary source build targets.'
 }
 if($ProductionOnly -and ($Configuration -ne 'Release' -or $ViewerTests -eq 'true')){
@@ -62,15 +71,16 @@ try {
 $outputRoot = Join-Path $PSScriptRoot '.build'
 if ($Analyze) {
     $outputRoot = Assert-RedMonitorOutputPath (Join-Path $outputRoot 'analysis')
-} else {
+}
+$lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
+$output=Assert-RedMonitorOutputPath (Join-Path $outputRoot "$Platform/$Configuration")
+Assert-RedMonitorOutputNotRunning $output
+if (-not $Analyze) {
     $reports = Get-ScopedReportRoot -Root $PSScriptRoot -Platform $Platform -Configuration $Configuration
     foreach ($name in @('build.json', 'iteration.json')) {
         Remove-ScopedIteration -Root $PSScriptRoot -Path (Join-Path $reports $name)
     }
 }
-$lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
-$output=Assert-RedMonitorOutputPath (Join-Path $outputRoot "$Platform/$Configuration")
-Assert-RedMonitorOutputNotRunning $output
 $msbuild=Get-RedMonitorMSBuild
 $sdkProperties=@();$dependencyRecipe=[ordered]@{recipe='PinnedSource'}
 if($DxUiSdkInputDescriptor){
@@ -85,7 +95,7 @@ if($DxUiSdkInputDescriptor){
         Write-Host "Using byte-verified pinned DxUi SDK input $($dependencyRecipe.inputKey)."
     }else{Write-Host 'Exact pinned SDK input unavailable; restoring the governed source recipe.'}
 }
-if (-not $SkipRestore) {
+if (-not $SkipRestore -and -not $Clean) {
     if($null -ne $sdkInput){& (Join-Path $PSScriptRoot 'vcpkg-install.ps1') -Platform $Platform}
     else{Invoke-RedMonitorDependencyRestore -Platform $Platform -Asan:($Configuration -eq 'ASan Debug')}
     if(-not $? -or $LASTEXITCODE){throw 'RedMonitor dependency restore failed.'}
@@ -102,13 +112,19 @@ if ($Analyze) {
     $analysisProperties = @('/p:RedMonitorAnalyze=true', "/p:RedMonitorOutputRoot=$outputRoot\")
     Write-Host 'MSVC code analysis' -ForegroundColor Cyan
 }
+$target = if ($Clean) { 'Clean' } elseif ($Rebuild) { 'Rebuild' } else { 'Build' }
+$workers = if ($MaxCpuCount) { $MaxCpuCount } else { 4 }
 Invoke-CiNativeCommand -FilePath $msbuild -WorkingDirectory $PSScriptRoot -Arguments (@(
-    (Join-Path $PSScriptRoot 'RedMonitor.proj'),'/nologo','/m:4','/v:minimal',"/p:Platform=$Platform",
+    (Join-Path $PSScriptRoot 'RedMonitor.proj'),"/t:$target",'/nologo',"/m:$workers",'/v:minimal',"/p:Platform=$Platform",
     "/p:Configuration=$Configuration","/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())",
     "/p:RedMonitorProductionOnly=$($ProductionOnly.IsPresent.ToString().ToLowerInvariant())",
     "/p:RedMonitorBuildNumber=$BuildNumber","/flp:LogFile=$output/build.log;Verbosity=normal")+$sdkProperties+$analysisProperties)
 if($LASTEXITCODE -ne 0){throw "RedMonitor build failed: $output/build.log"}
 Assert-NativeBuildDiagnostics -LogPath (Join-Path $output 'build.log')
+if ($Clean) {
+    Write-Host "Cleaned RedMonitor first-party outputs for $Platform $Configuration."
+    return
+}
 if ($Analyze) {
     $executable = Join-Path $output 'RedMonitor.exe'
     Write-NativeBuildResult -Project RedMonitor -Platform $Platform -Configuration $Configuration `

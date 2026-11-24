@@ -1,0 +1,1 @@
+- Support the shared `-Clean`, `-Rebuild` and `-MaxCpuCount` options on the RedMonitor build command.

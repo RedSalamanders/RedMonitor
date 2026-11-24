@@ -12,12 +12,13 @@
     <MonitorProject Include="Tests/AsanProbeTests/AsanProbeTests.vcxproj" Condition="('$(Configuration)'=='ASan Debug') and '$(RedMonitorProductionOnly)'!='true'" />
     <MonitorProject Include="Tests/SettingsContractTests/SettingsContractTests.vcxproj" Condition="'$(RedMonitorProductionOnly)'!='true'" />
   </ItemGroup>
-  <Target Name="Build">
-    <ItemGroup Condition="'$(RedMonitorAnalyze)'=='true'">
-      <MonitorAnalysisCleanProject Include="@(MonitorProject);support/RedMonitorSupport.vcxproj" />
-    </ItemGroup>
-    <MSBuild Condition="'$(RedMonitorAnalyze)'=='true'" Projects="@(MonitorAnalysisCleanProject)" Targets="Clean"
+  <Target Name="Clean">
+    <MSBuild Projects="@(MonitorProject);support/RedMonitorSupport.vcxproj" Targets="Clean"
              Properties="Platform=$(Platform);Configuration=$(Configuration);BuildProjectReferences=false" BuildInParallel="false" />
+  </Target>
+  <Target Name="PrepareAnalysis" BeforeTargets="Build" DependsOnTargets="Clean" Condition="'$(RedMonitorAnalyze)'=='true'" />
+  <Target Name="Build">
     <MSBuild Projects="@(MonitorProject)" Properties="Platform=$(Platform);Configuration=$(Configuration)" BuildInParallel="false" />
   </Target>
+  <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
 </Project>
