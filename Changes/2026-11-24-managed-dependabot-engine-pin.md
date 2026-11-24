@@ -1,1 +1,0 @@
-- Move RedMonitor to the shared engine that manages the Dependabot file and contains the portable WinGet manifest metadata support.

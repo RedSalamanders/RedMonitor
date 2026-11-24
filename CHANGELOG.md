@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Move RedMonitor to the shared engine that manages the Dependabot file and contains the portable WinGet manifest metadata support.
 - Add `--warp` to force software rendering in the log view, toolbar and status bar.
 - Run affected suites by default from the root test command and select the complete profile with `-Full`.
 - Validate analysis output paths before MSBuild clears tracking state.
