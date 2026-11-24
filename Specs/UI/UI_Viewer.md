@@ -7,6 +7,12 @@ This contract owns what the viewer window does on the UI thread: how the log vie
 hit-tests lines, and how ETW batches and worker results reach it. The document it shows is owned by
 [architecture](../Core/Core_Architecture.md), and the ETW session that feeds it by [transport](../Core/Core_Transport.md).
 
+## Top-level window ownership
+
+The UI thread owns the top-level window through a `MonitorWindow` and its `wil::unique_hwnd`. `WM_NCCREATE`
+binds the instance supplied to `CreateWindowExW` and subsequent messages dispatch through it.
+`WM_NCDESTROY` drains posted payloads and detaches the instance and window handle.
+
 ## Rendering and filtering
 
 The viewer uses one device-loss predicate for partial draws, full draws and presentation. On
