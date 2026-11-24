@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Add a native MSVC code-analysis mode with isolated build outputs.
 - Protect text exports against intervening edits, replacements, and competing file creation.
 - Restore and link instrumented RedMonitor vcpkg dependencies in ASan Debug.
 - Honor the Windows native-architecture value when choosing the RedMonitor compiler host.
