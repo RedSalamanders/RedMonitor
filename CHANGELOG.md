@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Adopt the shared hosted MSVC action and pinned formatting and repository policy checks.
 - Use Edit and Continue symbols for the RedMonitor Debug profile.
 - Adopt the shared Release compile and link optimization profile for RedMonitor.
 - Make the ETW shutdown fixture wait for actual worker retirement while keeping its callback context alive through detach.
