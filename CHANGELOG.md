@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Adopt the shared Release compile and link optimization profile for RedMonitor.
 - Make the ETW shutdown fixture wait for actual worker retirement while keeping its callback context alive through detach.
 - Apply the shared first-party compiler warning profile and retain the zero-warning build gate.
 - Add the six-profile Visual Studio solution and enforce the selected MSVC 14.52 toolset in native builds.

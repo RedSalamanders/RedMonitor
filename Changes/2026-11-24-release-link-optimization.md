@@ -1,1 +1,0 @@
-- Adopt the shared Release compile and link optimization profile for RedMonitor.
