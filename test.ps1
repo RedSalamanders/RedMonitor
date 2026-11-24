@@ -1,23 +1,25 @@
 <#
 .SYNOPSIS
-Runs non-activating standalone model, file and listener-lifetime tests.
+Runs the RedMonitor tests affected by the checkout or the complete requested profile.
 .DESCRIPTION
-Builds unless SkipBuild is selected, validates the build receipt and artifact hashes, and runs owned
-console processes with timeouts. Receipts stay under a fresh .build/test-runs directory. Probe dumps stay in a
-separate local .build/crash-probe-artifacts directory outside the CI artifact uploads.
+Calls Test-Changes.ps1 for ordinary and Full runs. Explicit suites, live ETW and local SDK requests
+use the direct runner. The direct runner validates receipts and artifact hashes and runs owned console
+processes with timeouts. Probe dumps stay in .build/crash-probe-artifacts outside CI artifact uploads.
 .PARAMETER Platform
 x64 runtime target. ARM64 requires a native ARM64 host.
 .PARAMETER Configuration
 Debug, Release or ASan Debug.
 .PARAMETER SkipBuild
 Reuse only a source-compatible successful build receipt.
+.PARAMETER Full
+Run every scope for the selected platform and configuration, including applicable independent checks.
 .PARAMETER IncludeLiveEtw
 Require a real ETW producer/listener roundtrip for a direct invocation; permission denial fails this requested gate.
 .PARAMETER Suites
 Shared runner suites: Regression, LiveEtw and ContainedInstallation. LiveEtw includes the regression prerequisite.
 ContainedInstallation is available in Release.
 .PARAMETER SkipTooling
-Accepted by the shared runner, which owns independent validation. This entry point runs native tests.
+Run direct native tests after independent validation. The shared runner passes this switch for scoped native calls.
 .PARAMETER ParallelSuites
 Upper limit for concurrent suites. RedMonitor runs its dependent native and installation gates serially.
 .PARAMETER LocalSdkBuildReceipt
@@ -30,9 +32,18 @@ Independently retained SHA-256 of the original local candidate build record.
 param([ValidateSet('x64','ARM64')][string]$Platform='x64',
       [ValidateSet('Debug','Release','ASan Debug')][string]$Configuration='Debug',[switch]$SkipBuild,[switch]$IncludeLiveEtw,
       [string]$LocalSdkBuildReceipt='', [string]$LocalSdkBuildSha256='',
-      [string[]]$Suites=@(), [switch]$SkipTooling, [ValidateRange(1,8)][int]$ParallelSuites=1)
+      [string[]]$Suites=@(), [switch]$SkipTooling, [ValidateRange(1,8)][int]$ParallelSuites=1, [switch]$Full)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
+$profileOptions = @('Platform', 'Configuration', 'SkipBuild', 'ParallelSuites', 'Full')
+$directOptions = @($PSBoundParameters.Keys | Where-Object { $_ -notin $profileOptions })
+if ($Full -and $directOptions.Count) { throw 'Use -Full with profile options. For a specific check, use the direct test options.' }
+if (-not $directOptions.Count) {
+    $mode = if ($Full) { 'Full' } else { 'Affected' }
+    $global:LASTEXITCODE = 0
+    & (Join-Path $PSScriptRoot 'Test-Changes.ps1') -Mode $mode -Platform $Platform -Configuration $Configuration -SkipBuild:$SkipBuild -ParallelSuites $ParallelSuites
+    exit $LASTEXITCODE
+}
 $localSdkMode=[bool]($LocalSdkBuildReceipt -or $LocalSdkBuildSha256)
 if($localSdkMode -and (-not $IsWindows -or $env:GITHUB_ACTIONS -ceq 'true' -or $env:CI_NATIVE_BUILDS_DISABLED -ceq 'true')){
     throw 'Local SDK runtime requires local Windows native execution.'

@@ -1,0 +1,1 @@
+- Run affected suites by default from the root test command and select the complete profile with `-Full`.

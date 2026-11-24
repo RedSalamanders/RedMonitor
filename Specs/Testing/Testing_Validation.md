@@ -21,11 +21,13 @@ verifies the actual formatter, tools, source and environment. The shared runner 
 exact completed independent receipts and owns the per-profile build and iteration receipts.
 An empty plan reports `NOTHING_SELECTED`. Scoped success reports `repository NOT_EVALUATED`.
 
-Use `./Test-Changes.ps1 -Explain` to review the plan. `-Mode Full` covers one profile.
+Use `./test.ps1` or `./Test-Changes.ps1` to run affected scopes. `./test.ps1 -Full` and
+`./Test-Changes.ps1 -Mode Full` cover one profile. Use `./Test-Changes.ps1 -Explain` to review the plan.
 `-Mode PrePush` covers x64 Debug, Release and ASan Debug runtime plus three ARM64
 cross-builds. Full and PrePush select LiveEtw for each runnable profile. Release also selects
 ContainedInstallation after the ordinary regression and live transport checks. Direct
-`test.ps1 -IncludeLiveEtw` continues to require that roundtrip explicitly. Native ARM64
+`test.ps1 -IncludeLiveEtw` continues to require that roundtrip explicitly. Use `-SkipTooling`
+for the direct standalone regression after running independent checks, as the hosted adapter does. Native ARM64
 runtime requires its own matching host. The hosted regression and both production
 lanes retain their own evidence and authorization.
 
