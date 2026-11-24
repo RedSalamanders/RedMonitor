@@ -52,7 +52,8 @@ RedSalamander Preferences that it inherited with the private `support/` snapshot
   atomically replacing the previous file (see [architecture](Core_Architecture.md)). A failed save leaves it as it
   was.
 - A save compares the file's identity stamp (volume, file index, last write time, size) with the one recorded at
-  load or at the last save. A file changed by another program in between is not overwritten
-  (`ERROR_REVISION_MISMATCH`).
+  load or at the last save. For an existing file, a delete-access guard denies writes while the transaction
+  rechecks and replaces the accepted name. A different version or an unavailable guard returns a revision
+  conflict. A new settings file uses non-replacing publication so a competing creation is preserved.
 - A test-enabled build running under an authorized test root uses a settings folder below that root, so harness runs
   never touch the user's file.

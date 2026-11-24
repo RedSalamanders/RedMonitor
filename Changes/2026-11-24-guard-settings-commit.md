@@ -1,0 +1,1 @@
+- Guard the accepted settings version through the final name check and replacement. Preserve a concurrent edit or creation.
