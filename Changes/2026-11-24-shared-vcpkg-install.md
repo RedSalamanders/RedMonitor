@@ -1,0 +1,1 @@
+- Use the pinned engine to prepare vcpkg checkouts and validate native manifest install paths.
