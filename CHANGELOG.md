@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Use the common Intermediate directory for native build intermediates.
 - Pin the reviewed shared MSVC setup and regenerate its reusable workflow callers.
 - Guard the accepted settings version through the final name check and replacement. Preserve a concurrent edit or creation.
 - Save a local minidump after a RedMonitor crash and show its path once on the next ordinary launch.
