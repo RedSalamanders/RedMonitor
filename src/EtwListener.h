@@ -60,8 +60,13 @@ public:
     using DebugProcessTraceFunction = ULONG (*)(void* context, TRACEHANDLE traceHandle) noexcept;
     using DebugCloseTraceFunction   = void (*)(void* context, TRACEHANDLE traceHandle) noexcept;
 
-    void DebugStartConsumerForTesting(
-        TRACEHANDLE traceHandle, DebugProcessTraceFunction processTrace, DebugCloseTraceFunction closeTrace, void* context, DWORD shutdownTimeoutMs);
+    // The fixture owns the returned worker handle and can wait through a bounded detach.
+    [[nodiscard]] bool DebugStartConsumerForTesting(TRACEHANDLE traceHandle,
+                                                    DebugProcessTraceFunction processTrace,
+                                                    DebugCloseTraceFunction closeTrace,
+                                                    std::shared_ptr<void> context,
+                                                    DWORD shutdownTimeoutMs,
+                                                    HANDLE* workerHandle);
 #endif
 
     // Get last error message (if Start failed)
@@ -108,7 +113,6 @@ private:
     ULONG _lastErrorCode = ERROR_SUCCESS;
 #if defined(ENABLE_TESTS)
     DebugCloseTraceFunction _debugCloseTrace = nullptr;
-    void* _debugTraceContext                 = nullptr;
     DWORD _shutdownTimeoutMs                 = 5'000u;
 #endif
 

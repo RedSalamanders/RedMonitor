@@ -28,6 +28,9 @@ struct EtwListener::CallbackState final
     std::atomic<ULONG> buffersProcessed{0};
     std::atomic<ULONG> eventsProcessed{0};
     std::atomic<ULONG> eventsLost{0};
+#if defined(ENABLE_TESTS)
+    std::shared_ptr<void> debugTraceContext;
+#endif
 };
 
 EtwListener::EtwListener() : _sessionHandle(INVALID_PROCESSTRACE_HANDLE), _traceHandle(INVALID_PROCESSTRACE_HANDLE)
@@ -177,21 +180,27 @@ void EtwListener::StartConsumerWorker(TRACEHANDLE traceHandle,
 }
 
 #if defined(ENABLE_TESTS)
-void EtwListener::DebugStartConsumerForTesting(
-    TRACEHANDLE traceHandle, DebugProcessTraceFunction processTrace, DebugCloseTraceFunction closeTrace, void* context, DWORD shutdownTimeoutMs)
+bool EtwListener::DebugStartConsumerForTesting(TRACEHANDLE traceHandle,
+                                               DebugProcessTraceFunction processTrace,
+                                               DebugCloseTraceFunction closeTrace,
+                                               std::shared_ptr<void> context,
+                                               DWORD shutdownTimeoutMs,
+                                               HANDLE* workerHandle)
 {
-    if (_workerThread.joinable() || ! processTrace || ! closeTrace || traceHandle == INVALID_PROCESSTRACE_HANDLE)
+    if (_workerThread.joinable() || ! processTrace || ! closeTrace || ! context || ! workerHandle || traceHandle == INVALID_PROCESSTRACE_HANDLE)
     {
-        return;
+        return false;
     }
 
-    auto callbackState = std::make_shared<CallbackState>([](const Debug::InfoParam&, const std::wstring&) {});
-    _callbackState     = callbackState;
-    _traceHandle       = traceHandle;
-    _debugCloseTrace   = closeTrace;
-    _debugTraceContext = context;
-    _shutdownTimeoutMs = shutdownTimeoutMs;
-    StartConsumerWorker(traceHandle, callbackState, processTrace, context);
+    auto callbackState               = std::make_shared<CallbackState>([](const Debug::InfoParam&, const std::wstring&) {});
+    callbackState->debugTraceContext = std::move(context);
+    _callbackState                   = callbackState;
+    _traceHandle                     = traceHandle;
+    _debugCloseTrace                 = closeTrace;
+    _shutdownTimeoutMs               = shutdownTimeoutMs;
+    StartConsumerWorker(traceHandle, callbackState, processTrace, callbackState->debugTraceContext.get());
+    const HANDLE process = GetCurrentProcess();
+    return DuplicateHandle(process, _workerThread.native_handle(), process, workerHandle, SYNCHRONIZE, FALSE, 0) != FALSE;
 }
 #endif
 
@@ -211,7 +220,7 @@ void EtwListener::Stop()
 #if defined(ENABLE_TESTS)
         if (_debugCloseTrace)
         {
-            _debugCloseTrace(_debugTraceContext, traceHandle);
+            _debugCloseTrace(callbackState->debugTraceContext.get(), traceHandle);
         }
         else
 #endif
@@ -254,7 +263,6 @@ void EtwListener::Stop()
 
 #if defined(ENABLE_TESTS)
     _debugCloseTrace   = nullptr;
-    _debugTraceContext = nullptr;
     _shutdownTimeoutMs = 5'000u;
 #endif
 }

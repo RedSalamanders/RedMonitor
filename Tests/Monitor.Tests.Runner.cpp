@@ -637,7 +637,6 @@ struct EtwConsumerShutdownTestContext final
 
     wil::unique_event started;
     wil::unique_event release;
-    wil::unique_event completed;
     std::atomic<TRACEHANDLE> processHandle{INVALID_PROCESSTRACE_HANDLE};
     std::atomic<TRACEHANDLE> closeHandle{INVALID_PROCESSTRACE_HANDLE};
     bool releaseOnClose = true;
@@ -647,8 +646,7 @@ struct EtwConsumerShutdownTestContext final
 {
     context.started.create();
     context.release.create();
-    context.completed.create();
-    return context.started && context.release && context.completed;
+    return context.started && context.release;
 }
 
 ULONG ProcessEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
@@ -662,7 +660,6 @@ ULONG ProcessEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexc
     context->processHandle.store(traceHandle, std::memory_order_release);
     static_cast<void>(SetEvent(context->started.get()));
     const DWORD waitResult = WaitForSingleObject(context->release.get(), 2'000u);
-    static_cast<void>(SetEvent(context->completed.get()));
     return waitResult == WAIT_OBJECT_0 ? ERROR_CANCELLED : ERROR_TIMEOUT;
 }
 
@@ -686,36 +683,38 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
     constexpr TRACEHANDLE kJoinedHandle   = 0x1020u;
     constexpr TRACEHANDLE kDetachedHandle = 0x3040u;
 
-    EtwConsumerShutdownTestContext joinedContext;
-    if (! InitializeEtwConsumerShutdownTestContext(joinedContext))
+    const auto joinedContext = std::make_shared<EtwConsumerShutdownTestContext>();
+    if (! InitializeEtwConsumerShutdownTestContext(*joinedContext))
     {
         return false;
     }
     {
         EtwListener listener;
-        listener.DebugStartConsumerForTesting(kJoinedHandle, ProcessEtwConsumerForTest, CloseEtwConsumerForTest, &joinedContext, 1'000u);
-        if (WaitForSingleObject(joinedContext.started.get(), 1'000u) != WAIT_OBJECT_0)
+        wil::unique_handle worker;
+        if (! listener.DebugStartConsumerForTesting(kJoinedHandle, ProcessEtwConsumerForTest, CloseEtwConsumerForTest, joinedContext, 1'000u, worker.put()) ||
+            WaitForSingleObject(joinedContext->started.get(), 1'000u) != WAIT_OBJECT_0)
         {
             return false;
         }
         listener.Stop();
-        if (listener.IsRunning() || joinedContext.processHandle.load(std::memory_order_acquire) != kJoinedHandle ||
-            joinedContext.closeHandle.load(std::memory_order_acquire) != kJoinedHandle ||
-            WaitForSingleObject(joinedContext.completed.get(), 0u) != WAIT_OBJECT_0)
+        if (listener.IsRunning() || joinedContext->processHandle.load(std::memory_order_acquire) != kJoinedHandle ||
+            joinedContext->closeHandle.load(std::memory_order_acquire) != kJoinedHandle || WaitForSingleObject(worker.get(), 0u) != WAIT_OBJECT_0)
         {
             return false;
         }
     }
 
-    EtwConsumerShutdownTestContext detachedContext;
-    detachedContext.releaseOnClose = false;
-    if (! InitializeEtwConsumerShutdownTestContext(detachedContext))
+    const auto detachedContext      = std::make_shared<EtwConsumerShutdownTestContext>();
+    detachedContext->releaseOnClose = false;
+    if (! InitializeEtwConsumerShutdownTestContext(*detachedContext))
     {
         return false;
     }
     EtwListener listener;
-    listener.DebugStartConsumerForTesting(kDetachedHandle, ProcessEtwConsumerForTest, CloseEtwConsumerForTest, &detachedContext, 20u);
-    if (WaitForSingleObject(detachedContext.started.get(), 1'000u) != WAIT_OBJECT_0)
+    wil::unique_handle worker;
+    const auto releaseWorker = wil::scope_exit([&] { static_cast<void>(SetEvent(detachedContext->release.get())); });
+    if (! listener.DebugStartConsumerForTesting(kDetachedHandle, ProcessEtwConsumerForTest, CloseEtwConsumerForTest, detachedContext, 20u, worker.put()) ||
+        WaitForSingleObject(detachedContext->started.get(), 1'000u) != WAIT_OBJECT_0)
     {
         return false;
     }
@@ -723,21 +722,15 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
     const auto stopStarted = std::chrono::steady_clock::now();
     listener.Stop();
     const auto stopElapsed = std::chrono::steady_clock::now() - stopStarted;
-    if (stopElapsed >= std::chrono::milliseconds(500) || detachedContext.closeHandle.load(std::memory_order_acquire) != kDetachedHandle)
+    if (stopElapsed >= std::chrono::milliseconds(500) || detachedContext->closeHandle.load(std::memory_order_acquire) != kDetachedHandle ||
+        WaitForSingleObject(worker.get(), 0u) != WAIT_TIMEOUT)
     {
         return false;
     }
 
-    static_cast<void>(SetEvent(detachedContext.release.get()));
-    if (WaitForSingleObject(detachedContext.completed.get(), 1'000u) != WAIT_OBJECT_0)
-    {
-        return false;
-    }
-    for (size_t attempt = 0u; attempt < 100u && listener.IsRunning(); ++attempt)
-    {
-        std::this_thread::yield();
-    }
-    return ! listener.IsRunning() && detachedContext.processHandle.load(std::memory_order_acquire) == kDetachedHandle;
+    // Thread retirement occurs after the worker publishes running=false.
+    return SetEvent(detachedContext->release.get()) && WaitForSingleObject(worker.get(), 1'000u) == WAIT_OBJECT_0 && ! listener.IsRunning() &&
+           detachedContext->processHandle.load(std::memory_order_acquire) == kDetachedHandle;
 }
 
 [[nodiscard]] std::string ReadMonitorTestFile(const std::filesystem::path& path)
