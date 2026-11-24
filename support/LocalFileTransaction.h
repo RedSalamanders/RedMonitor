@@ -33,6 +33,12 @@ enum class ExistingTargetPolicy : uint8_t
     Replace,
 };
 
+struct TransactionPublishCheck
+{
+    void* context                     = nullptr;
+    HRESULT (*verify)(void*) noexcept = nullptr;
+};
+
 #ifdef ENABLE_TESTS
 namespace Testing
 {
@@ -41,6 +47,12 @@ namespace Testing
 inline std::atomic<HRESULT> g_nextWriteFailure{S_OK};
 inline std::atomic<HRESULT> g_nextFlushFailure{S_OK};
 inline std::atomic<HRESULT> g_nextPublishFailure{S_OK};
+inline std::atomic<bool> g_nextClassicReplace{};
+
+inline void ForceNextClassicReplaceForTest() noexcept
+{
+    g_nextClassicReplace.store(true, std::memory_order_relaxed);
+}
 
 inline void FailNextLocalFileTransactionWrite(HRESULT hr) noexcept
 {
@@ -226,7 +238,9 @@ public:
         return Write(bytes.data(), bytes.size());
     }
 
-    [[nodiscard]] HRESULT Commit(std::optional<uint64_t> expectedSize = std::nullopt, BY_HANDLE_FILE_INFORMATION* committedFileInformation = nullptr) noexcept
+    [[nodiscard]] HRESULT Commit(std::optional<uint64_t> expectedSize                 = std::nullopt,
+                                 BY_HANDLE_FILE_INFORMATION* committedFileInformation = nullptr,
+                                 TransactionPublishCheck check                        = {}) noexcept
     {
         if (! _file || _temporaryPath.empty() || _targetPath.empty() || _committed)
         {
@@ -279,6 +293,10 @@ public:
         DWORD handleRenameError = ERROR_SUCCESS;
         if (_policy == ExistingTargetPolicy::Replace)
         {
+            bool forceClassic = false;
+#ifdef ENABLE_TESTS
+            forceClassic = Testing::g_nextClassicReplace.exchange(false, std::memory_order_relaxed);
+#endif
             const std::wstring& targetNative = _targetPath.native();
             if (targetNative.size() > (std::numeric_limits<size_t>::max)() / sizeof(wchar_t))
             {
@@ -297,7 +315,13 @@ public:
             rename->RootDirectory  = nullptr;
             rename->FileNameLength = static_cast<DWORD>(fileNameBytes);
             std::memcpy(rename->FileName, targetNative.data(), fileNameBytes);
-            if (SetFileInformationByHandle(_file.get(), FileRenameInfoEx, rename, static_cast<DWORD>(renameStorage.size())) != FALSE)
+            if (check.verify)
+            {
+                const HRESULT verified = check.verify(check.context);
+                if (FAILED(verified))
+                    return verified;
+            }
+            if (! forceClassic && SetFileInformationByHandle(_file.get(), FileRenameInfoEx, rename, static_cast<DWORD>(renameStorage.size())) != FALSE)
             {
                 _file.reset();
                 _temporaryPath.clear();
@@ -308,7 +332,7 @@ public:
                 }
                 return S_OK;
             }
-            handleRenameError = GetLastError();
+            handleRenameError = forceClassic ? ERROR_NOT_SUPPORTED : GetLastError();
             if (handleRenameError != ERROR_INVALID_PARAMETER && handleRenameError != ERROR_INVALID_FUNCTION && handleRenameError != ERROR_NOT_SUPPORTED &&
                 handleRenameError != ERROR_CALL_NOT_IMPLEMENTED && handleRenameError != ERROR_ACCESS_DENIED)
             {
@@ -317,8 +341,17 @@ public:
         }
 
         _file.reset();
+        if (check.verify)
+        {
+            const HRESULT verified = check.verify(check.context);
+            if (FAILED(verified))
+                return verified;
+        }
         const DWORD moveFlags = MOVEFILE_WRITE_THROUGH | (_policy == ExistingTargetPolicy::Replace ? static_cast<DWORD>(MOVEFILE_REPLACE_EXISTING) : 0u);
-        if (MoveFileExW(_temporaryPath.c_str(), _targetPath.c_str(), moveFlags) == FALSE)
+        const BOOL published  = check.verify && _policy == ExistingTargetPolicy::Replace
+                                    ? ReplaceFileW(_targetPath.c_str(), _temporaryPath.c_str(), nullptr, 0, nullptr, nullptr)
+                                    : MoveFileExW(_temporaryPath.c_str(), _targetPath.c_str(), moveFlags);
+        if (published == FALSE)
         {
             const DWORD error = GetLastError();
             return HRESULT_FROM_WIN32(error != ERROR_SUCCESS ? error : (handleRenameError != ERROR_SUCCESS ? handleRenameError : ERROR_WRITE_FAULT));

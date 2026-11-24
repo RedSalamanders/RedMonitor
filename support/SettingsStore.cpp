@@ -781,11 +781,19 @@ HRESULT WriteFileBytesAtomic(const std::filesystem::path& path,
         *writtenStamp = Common::Settings::SettingsFileStamp{};
     }
 
+    constexpr HRESULT kVersionConflict = HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH);
+    const bool createOnly              = expectedStamp && ! expectedStamp->has_value();
+    const auto mapCreateCollision      = [createOnly](HRESULT result) noexcept
+    {
+        return createOnly && (result == HRESULT_FROM_WIN32(ERROR_FILE_EXISTS) || result == HRESULT_FROM_WIN32(ERROR_ALREADY_EXISTS)) ? kVersionConflict
+                                                                                                                                     : result;
+    };
+    const auto policy = createOnly ? Common::Files::ExistingTargetPolicy::FailIfExists : Common::Files::ExistingTargetPolicy::Replace;
     Common::Files::LocalFileTransaction transaction;
-    HRESULT hr = Common::Files::LocalFileTransaction::Create(path, Common::Files::ExistingTargetPolicy::Replace, true, transaction);
+    HRESULT hr = Common::Files::LocalFileTransaction::Create(path, policy, true, transaction);
     if (FAILED(hr))
     {
-        return hr;
+        return mapCreateCollision(hr);
     }
     hr = transaction.Write(bytes);
     if (FAILED(hr))
@@ -794,6 +802,13 @@ HRESULT WriteFileBytesAtomic(const std::filesystem::path& path,
     }
 
     SettingsCommitLock commitLock;
+    wil::unique_hfile guard;
+    struct AcceptedVersion
+    {
+        const std::filesystem::path* path;
+        const std::optional<Common::Settings::SettingsFileStamp>* expected;
+    } version{&path, expectedStamp};
+    Common::Files::TransactionPublishCheck check{};
     if (expectedStamp)
     {
         hr = SettingsCommitLock::Acquire(path, commitLock);
@@ -802,23 +817,40 @@ HRESULT WriteFileBytesAtomic(const std::filesystem::path& path,
             return hr;
         }
 
-        std::optional<Common::Settings::SettingsFileStamp> currentStamp;
-        const HRESULT stampHr = TryGetFileStampForPath(path, currentStamp);
-        if (FAILED(stampHr))
+        if (expectedStamp->has_value())
         {
-            return stampHr;
+            const auto& accepted = expectedStamp->value();
+            if (accepted.fileIndexHigh == 0 && accepted.fileIndexLow == 0)
+                return kVersionConflict;
+            const auto native = Common::Paths::ToExtendedWin32Path(path.native());
+            guard.reset(CreateFileW(
+                native.c_str(), FILE_READ_ATTRIBUTES | DELETE, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+            if (! guard)
+                return kVersionConflict;
+            Common::Settings::SettingsFileStamp guarded;
+            hr = GetFileStampByHandle(guard.get(), guarded);
+            if (FAILED(hr))
+                return hr;
+            if (guarded != accepted)
+                return kVersionConflict;
         }
-        if (currentStamp != *expectedStamp)
+        check = {&version,
+                 [](void* raw) noexcept
         {
-            return HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH);
-        }
+            const auto& accepted = *static_cast<const AcceptedVersion*>(raw);
+            std::optional<Common::Settings::SettingsFileStamp> selected;
+            const HRESULT status = TryGetFileStampForPath(*accepted.path, selected);
+            if (FAILED(status))
+                return status;
+            return selected == *accepted.expected ? S_OK : HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH);
+        }};
     }
 
     BY_HANDLE_FILE_INFORMATION committedInformation{};
-    hr = transaction.Commit(bytes.size(), writtenStamp ? &committedInformation : nullptr);
+    hr = transaction.Commit(bytes.size(), writtenStamp ? &committedInformation : nullptr, check);
     if (FAILED(hr))
     {
-        return hr;
+        return mapCreateCollision(hr);
     }
     if (writtenStamp)
     {

@@ -966,7 +966,64 @@ void CloseEtwConsumerForTest(void* rawContext, TRACEHANDLE traceHandle) noexcept
             return false;
         }
     }
-    return targetIsPreservedAndTempIsGone();
+    if (! targetIsPreservedAndTempIsGone())
+        return false;
+
+    constexpr std::string_view acceptedReplacement = "replacement";
+    wil::unique_hfile guard(CreateFileW(
+        target.c_str(), FILE_READ_ATTRIBUTES | DELETE, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+    if (! guard)
+        return false;
+    wil::unique_hfile writer(CreateFileW(
+        target.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+    if (writer || GetLastError() != ERROR_SHARING_VIOLATION)
+        return false;
+
+    unsigned checks{};
+    const Common::Files::TransactionPublishCheck verify{&checks,
+                                                        [](void* raw) noexcept
+    {
+        ++*static_cast<unsigned*>(raw);
+        return S_OK;
+    }};
+    Common::Files::LocalFileTransaction classic;
+    if (FAILED(Common::Files::LocalFileTransaction::Create(target, Common::Files::ExistingTargetPolicy::Replace, false, classic)) ||
+        FAILED(classic.Write(acceptedReplacement)))
+        return false;
+    Common::Files::Testing::ForceNextClassicReplaceForTest();
+    if (FAILED(classic.Commit(acceptedReplacement.size(), nullptr, verify)) || checks != 2)
+        return false;
+    guard.reset();
+    if (ReadMonitorTestFile(target) != acceptedReplacement)
+        return false;
+
+    checks                 = 0;
+    const HRESULT conflict = HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH);
+    const Common::Files::TransactionPublishCheck changed{
+        &checks, [](void* raw) noexcept -> HRESULT { return ++*static_cast<unsigned*>(raw) == 1 ? S_OK : HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH); }};
+    {
+        Common::Files::LocalFileTransaction refused;
+        if (FAILED(Common::Files::LocalFileTransaction::Create(target, Common::Files::ExistingTargetPolicy::Replace, false, refused)) ||
+            FAILED(refused.Write(std::string_view("superseded save"))))
+            return false;
+        Common::Files::Testing::ForceNextClassicReplaceForTest();
+        if (refused.Commit(std::nullopt, nullptr, changed) != conflict || checks != 2 || ReadMonitorTestFile(target) != acceptedReplacement)
+            return false;
+    }
+
+    const auto newPath = root / L"new-target.txt";
+    Common::Files::LocalFileTransaction create;
+    if (FAILED(Common::Files::LocalFileTransaction::Create(newPath, Common::Files::ExistingTargetPolicy::FailIfExists, false, create)) ||
+        FAILED(create.Write(acceptedReplacement)))
+        return false;
+    {
+        std::ofstream competitor(newPath, std::ios::binary);
+        competitor << "competing creation";
+        competitor.close();
+        if (! competitor)
+            return false;
+    }
+    return FAILED(create.Commit(acceptedReplacement.size())) && ReadMonitorTestFile(newPath) == "competing creation";
 }
 } // namespace
 
