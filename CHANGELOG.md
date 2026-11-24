@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Use the pinned engine to prepare vcpkg checkouts and validate native manifest install paths.
 - Use the pinned shared Visual Studio and vcpkg triplet helpers for product builds and restores.
 - Publish the canonical RedMonitor client update and verification commands with exact hashes and preserve the tooling pin during client refresh.
 - Validate RedMonitor skills and guidance with the pinned shared CI engine and retain the product documentation and source checks.
