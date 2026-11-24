@@ -1,8 +1,8 @@
 #define REDSAL_DEFINE_TRACE_PROVIDER
-#include "../Support/TestSupport.Tests.Runner.h"
 #include "Helpers.h"
 #include "SettingsStore.h"
 #include "SettingsWatcher.h"
+#include "TestSupport.Tests.Runner.h"
 #include "TestSupport/TestSupport.Tests.FailureReports.h"
 
 #include <cstdio>
