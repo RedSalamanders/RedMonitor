@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Add `--warp` to force software rendering in the log view, toolbar and status bar.
 - Run affected suites by default from the root test command and select the complete profile with `-Full`.
 - Validate analysis output paths before MSBuild clears tracking state.
 - Add a native MSVC code-analysis mode with isolated build outputs.
