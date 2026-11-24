@@ -1,1 +1,0 @@
-- Publish the canonical RedMonitor client update and verification commands with exact hashes and preserve the tooling pin during client refresh.
