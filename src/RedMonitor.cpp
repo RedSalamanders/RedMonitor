@@ -88,10 +88,9 @@
 // All globals below are accessed exclusively from the UI thread (message loop).
 // The only cross-thread interaction is EtwListener's worker thread calling
 // g_colorView.QueueEtwEvent(), which is thread-safe via atomic HWND + critical section.
-HINSTANCE g_hInstance = NULL;    // current instance
-HWND g_hMainWindow    = nullptr; // monitor top-level window
-ColorTextView g_colorView;       // ColorTextView instance for the right panel
-wil::unique_hwnd g_hColorView;   // ColorTextView window handle
+HINSTANCE g_hInstance = NULL;  // current instance
+ColorTextView g_colorView;     // ColorTextView instance for the right panel
+wil::unique_hwnd g_hColorView; // ColorTextView window handle
 bool g_forceWarpRendering = false;
 wil::unique_hwnd g_hToolbar;   // Toolbar window handle
 wil::unique_hwnd g_hStatusBar; // Status bar window handle
@@ -2010,7 +2009,7 @@ MonitorResolvedTheme ResolveMonitorTheme() noexcept
     };
 }
 
-void ApplyMonitorTheme() noexcept
+void ApplyMonitorTheme(HWND mainWindow) noexcept
 {
     const MonitorResolvedTheme theme = ResolveMonitorTheme();
     g_colorView.SetTheme(theme.textView);
@@ -2029,16 +2028,16 @@ void ApplyMonitorTheme() noexcept
             StatusStrip::Section{.text = std::wstring(g_statusStrip->GetSectionText(4u)), .widthDip = 0.0f},
         });
     }
-    if (g_hMainWindow && IsWindow(g_hMainWindow) != FALSE)
+    if (mainWindow && IsWindow(mainWindow) != FALSE)
     {
-        Common::WindowBackdrop::ApplyResolvedWindowBackdrop(g_hMainWindow, theme.windowBackdrop, Common::WindowBackdrop::Target::Primary, theme.highContrast);
+        Common::WindowBackdrop::ApplyResolvedWindowBackdrop(mainWindow, theme.windowBackdrop, Common::WindowBackdrop::Target::Primary, theme.highContrast);
     }
     SyncToolbarState();
     UpdateStatusBar();
     LayoutToolbarControls();
-    if (g_hMainWindow && IsWindow(g_hMainWindow) != FALSE)
+    if (mainWindow && IsWindow(mainWindow) != FALSE)
     {
-        AdjustLayout(g_hMainWindow);
+        AdjustLayout(mainWindow);
     }
 }
 
@@ -3370,7 +3369,7 @@ struct MonitorRetainedStateIoSelfTestResult final
     HRESULT cancellationHr           = E_FAIL;
 };
 
-MonitorRetainedStateIoSelfTestResult RunMonitorRetainedStateIoSelfTest()
+MonitorRetainedStateIoSelfTestResult RunMonitorRetainedStateIoSelfTest(HWND hWnd)
 {
     MonitorRetainedStateIoSelfTestResult selfTest;
     const std::filesystem::path inputPath  = g_monitorChromeSelfTest.runRoot / L"retained_state_input.txt";
@@ -3449,20 +3448,20 @@ MonitorRetainedStateIoSelfTestResult RunMonitorRetainedStateIoSelfTest()
     static_cast<void>(std::filesystem::remove(failedSavePath, cleanupError));
     const uint64_t openPostsBeforeFailure = g_monitorFileOpenCompletionPostCount.load(std::memory_order_acquire);
     g_failNextMonitorFileOpenThreadStart.store(true, std::memory_order_release);
-    const HRESULT failedOpenStart = StartMonitorFileOpenWorker(g_hMainWindow, inputPath, limits);
+    const HRESULT failedOpenStart = StartMonitorFileOpenWorker(hWnd, inputPath, limits);
     const bool openRolledBack = FAILED(failedOpenStart) && ! g_monitorFileOpenActive.load(std::memory_order_acquire) && ! g_monitorFileOpenThread.joinable() &&
                                 g_monitorFileOpenCompletionPostCount.load(std::memory_order_acquire) == openPostsBeforeFailure;
-    const HRESULT retryOpenStart = StartMonitorFileOpenWorker(g_hMainWindow, inputPath, limits);
+    const HRESULT retryOpenStart = StartMonitorFileOpenWorker(hWnd, inputPath, limits);
     const bool openRetryStarted  = SUCCEEDED(retryOpenStart) && g_monitorFileOpenThread.joinable();
     CloseMonitorFileOpenWorker();
 
     RedSalamanderMonitor::MonitorTextSnapshot failedSaveSnapshot = g_colorView.CaptureTextSnapshot();
     const uint64_t savePostsBeforeFailure                        = g_monitorFileSaveCompletionPostCount.load(std::memory_order_acquire);
     g_failNextMonitorFileSaveThreadStart.store(true, std::memory_order_release);
-    const HRESULT failedSaveStart = StartMonitorFileSaveWorker(g_hMainWindow, {.path = failedSavePath}, failedSaveSnapshot);
+    const HRESULT failedSaveStart = StartMonitorFileSaveWorker(hWnd, {.path = failedSavePath}, failedSaveSnapshot);
     const bool saveRolledBack = FAILED(failedSaveStart) && ! g_monitorFileSaveState && ! g_monitorFileSaveThread.joinable() && ! PathExists(failedSavePath) &&
                                 g_monitorFileSaveCompletionPostCount.load(std::memory_order_acquire) == savePostsBeforeFailure;
-    const HRESULT retrySaveStart = StartMonitorFileSaveWorker(g_hMainWindow, {.path = failedSavePath}, std::move(failedSaveSnapshot));
+    const HRESULT retrySaveStart = StartMonitorFileSaveWorker(hWnd, {.path = failedSavePath}, std::move(failedSaveSnapshot));
     const bool saveRetryStarted  = SUCCEEDED(retrySaveStart) && g_monitorFileSaveThread.joinable();
     if (saveRetryStarted)
     {
@@ -3525,7 +3524,7 @@ LRESULT RunMonitorChromeSelfTest(HWND hWnd)
     baselineUi.compactMode                  = false;
     baselineUi.reducedMotion                = Common::Settings::ReducedMotionMode::Off;
     g_settings.ui                           = baselineUi;
-    ApplyMonitorTheme();
+    ApplyMonitorTheme(hWnd);
 
     AdjustLayout(hWnd);
     SyncToolbarState();
@@ -3680,7 +3679,7 @@ LRESULT RunMonitorChromeSelfTest(HWND hWnd)
         .maxSearchMatches     = configuredRetention.maxSearchMatches,
     });
 
-    const MonitorRetainedStateIoSelfTestResult retainedStateIo = RunMonitorRetainedStateIoSelfTest();
+    const MonitorRetainedStateIoSelfTestResult retainedStateIo = RunMonitorRetainedStateIoSelfTest(hWnd);
     passed &= require(L"streaming file-open workload",
                       retainedStateIo.inputWritten && retainedStateIo.openSucceeded,
                       std::format(L"hr=0x{:08X} lines={} retainedBytes={}",
@@ -3716,7 +3715,7 @@ LRESULT RunMonitorChromeSelfTest(HWND hWnd)
         compactUi.reducedMotion                = Common::Settings::ReducedMotionMode::On;
         compactUi.windowBackdrop               = Common::Settings::WindowBackdropMode::MicaAlt;
         g_settings.ui                          = compactUi;
-        ApplyMonitorTheme();
+        ApplyMonitorTheme(hWnd);
         RedrawMonitorChrome(hWnd);
 
         RECT compactToolbarRect{};
@@ -3915,9 +3914,33 @@ LRESULT RunMonitorChromeSelfTest(HWND hWnd)
 }
 } // namespace
 
-// Forward declarations of functions included in this code module:
-std::optional<HWND> InitInstance(HINSTANCE, int);
-LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+namespace
+{
+class MonitorWindow final
+{
+public:
+    MonitorWindow()                                = default;
+    MonitorWindow(const MonitorWindow&)            = delete;
+    MonitorWindow& operator=(const MonitorWindow&) = delete;
+    MonitorWindow(MonitorWindow&&)                 = delete;
+    MonitorWindow& operator=(MonitorWindow&&)      = delete;
+
+    ~MonitorWindow() noexcept
+    {
+        // Clear our handle before DestroyWindow dispatches the last messages back here.
+        const auto window = std::move(_window);
+    }
+
+    [[nodiscard]] HWND Create(HINSTANCE instance, int showCommand);
+
+private:
+    static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+    LRESULT HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+    wil::unique_hwnd _window;
+};
+} // namespace
+
 INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 // Ensure the process runs Per-Monitor (V2 if available) so GetDpiForWindow returns actual DPI
@@ -4368,13 +4391,13 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
         }
     }
 
-    // Perform application initialization:
-    auto hWnd = InitInstance(hInstance, nCmdShow);
+    MonitorWindow mainWindow;
+    const HWND hWnd = mainWindow.Create(hInstance, nCmdShow);
     if (! hWnd)
     {
         if (g_monitorChromeSelfTest.enabled)
         {
-            FinalizeMonitorChromeSelfTest(false, L"InitInstance failed before selftest window creation.");
+            FinalizeMonitorChromeSelfTest(false, L"Main window creation failed before selftest.");
         }
         return g_monitorChromeSelfTest.enabled ? 1 : FALSE;
     }
@@ -4388,7 +4411,7 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
             Localization::LoadString(hInstance, IDS_APP_TITLE, caption);
             Localization::LoadString(hInstance, IDS_MSG_PREVIOUS_CRASH_FMT, pattern);
             const auto message = FormatLoadedStringResource(IDS_MSG_PREVIOUS_CRASH_FMT, pattern, previous->native());
-            ShowModalMessageDialog(hInstance, hWnd.value(), caption.c_str(), message.c_str());
+            ShowModalMessageDialog(hInstance, hWnd, caption.c_str(), message.c_str());
         }
         CrashReports::RetainRecent(crashDirectory);
     }
@@ -4400,7 +4423,7 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
-        if (! TranslateAccelerator(hWnd.value(), hAccelTable.get(), &msg))
+        if (! TranslateAccelerator(hWnd, hAccelTable.get(), &msg))
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -4433,15 +4456,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstan
     }
 }
 
-// Saves instance handle and creates main window
-std::optional<HWND> InitInstance(HINSTANCE hInstance, int nCmdShow)
+HWND MonitorWindow::Create(HINSTANCE hInstance, int nCmdShow)
 {
     g_hInstance = hInstance; // Store instance handle in our global variable
 
     WNDCLASSEXW wcex{};
     wcex.cbSize        = sizeof(WNDCLASSEX);
     wcex.style         = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc   = WndProc;
+    wcex.lpfnWndProc   = WindowProc;
     wcex.cbClsExtra    = 0;
     wcex.cbWndExtra    = 0;
     wcex.hInstance     = hInstance;
@@ -4456,39 +4478,39 @@ std::optional<HWND> InitInstance(HINSTANCE hInstance, int nCmdShow)
     if (! atom)
     {
         Debug::ErrorWithLastError(L"RedSalamanderMonitor: RegisterClassExW failed");
-        return std::nullopt;
+        return nullptr;
     }
 
     wchar_t title[256]{};
     const int titleLength = LoadStringW(hInstance, IDS_APP_TITLE, title, static_cast<int>(sizeof(title) / sizeof(title[0])));
     PCWSTR windowTitle    = titleLength > 0 ? title : g_redSalamanderMonitor;
 
-    wil::unique_hwnd hWnd(CreateWindowExW(WS_EX_NOACTIVATE,
-                                          g_redSalamanderMonitorClassName,
-                                          windowTitle,
-                                          WS_OVERLAPPEDWINDOW,
-                                          CW_USEDEFAULT,
-                                          CW_USEDEFAULT,
-                                          640,
-                                          480,
-                                          nullptr,
-                                          nullptr,
-                                          hInstance,
-                                          nullptr));
+    _window.reset(CreateWindowExW(WS_EX_NOACTIVATE,
+                                  g_redSalamanderMonitorClassName,
+                                  windowTitle,
+                                  WS_OVERLAPPEDWINDOW,
+                                  CW_USEDEFAULT,
+                                  CW_USEDEFAULT,
+                                  640,
+                                  480,
+                                  nullptr,
+                                  nullptr,
+                                  hInstance,
+                                  this));
+    const HWND hWnd = _window.get();
     if (! hWnd)
     {
         Debug::ErrorWithLastError(L"RedSalamanderMonitor: CreateWindowExW failed");
-        return std::nullopt;
+        return nullptr;
     }
 
     if (! g_monitorChromeSelfTest.enabled)
     {
-        SetWindowLongPtrW(hWnd.get(), GWL_EXSTYLE, GetWindowLongPtrW(hWnd.get(), GWL_EXSTYLE) & ~WS_EX_NOACTIVATE);
+        SetWindowLongPtrW(hWnd, GWL_EXSTYLE, GetWindowLongPtrW(hWnd, GWL_EXSTYLE) & ~WS_EX_NOACTIVATE);
     }
-    g_hMainWindow = hWnd.get();
 
     wil::unique_hmenu menu(Localization::LoadMenuResource(hInstance, IDC_REDSALAMANDERMONITOR));
-    if (menu && SetMenu(hWnd.get(), menu.get()) != FALSE)
+    if (menu && SetMenu(hWnd, menu.get()) != FALSE)
     {
         menu.release();
     }
@@ -4497,19 +4519,18 @@ std::optional<HWND> InitInstance(HINSTANCE hInstance, int nCmdShow)
     const auto it = g_settings.windows.find(kWindowId);
     if (it != g_settings.windows.end())
     {
-        const UINT dpi                                     = GetDpiForWindow(hWnd.get());
+        const UINT dpi                                     = GetDpiForWindow(hWnd);
         const Common::Settings::WindowPlacement normalized = Common::Settings::NormalizeWindowPlacement(it->second, dpi);
 
-        SetWindowPos(
-            hWnd.get(), nullptr, normalized.bounds.x, normalized.bounds.y, normalized.bounds.width, normalized.bounds.height, SWP_NOZORDER | SWP_NOACTIVATE);
+        SetWindowPos(hWnd, nullptr, normalized.bounds.x, normalized.bounds.y, normalized.bounds.width, normalized.bounds.height, SWP_NOZORDER | SWP_NOACTIVATE);
 
         showCmd = normalized.state == Common::Settings::WindowState::Maximized ? SW_MAXIMIZE : SW_SHOWNORMAL;
     }
 
-    ShowWindow(hWnd.get(), g_monitorChromeSelfTest.enabled ? SW_SHOWNOACTIVATE : showCmd);
-    UpdateWindow(hWnd.get());
+    ShowWindow(hWnd, g_monitorChromeSelfTest.enabled ? SW_SHOWNOACTIVATE : showCmd);
+    UpdateWindow(hWnd);
 
-    return hWnd.release();
+    return _window.get();
 }
 
 static std::wstring NormalizeLineEndings(const std::wstring& input)
@@ -4600,7 +4621,7 @@ LRESULT OnCreateMainWindow(HWND hWnd)
         .maxRetainedTextBytes = retention.maxRetainedTextBytes,
         .maxSearchMatches     = retention.maxSearchMatches,
     });
-    ApplyMonitorTheme();
+    ApplyMonitorTheme(nullptr);
 
     if (g_hToolbar)
     {
@@ -4766,10 +4787,10 @@ LRESULT OnDpiChangedMainWindow(HWND hWnd, [[maybe_unused]] UINT newDpi, const RE
     return 0;
 }
 
-LRESULT OnSystemThemeChangedMainWindow([[maybe_unused]] HWND hWnd)
+LRESULT OnSystemThemeChangedMainWindow(HWND hWnd)
 {
     LocaleFormatting::InvalidateFormatLocaleCache();
-    ApplyMonitorTheme();
+    ApplyMonitorTheme(hWnd);
     UpdateThemeMenuChecks();
     return 0;
 }
@@ -4814,27 +4835,27 @@ LRESULT OnCommandMainWindow(HWND hWnd, UINT id, UINT codeNotify, HWND hwndCtl)
             break;
         case IDM_VIEW_THEME_SYSTEM:
             g_settings.theme.currentThemeId = L"builtin/system";
-            ApplyMonitorTheme();
+            ApplyMonitorTheme(hWnd);
             UpdateThemeMenuChecks();
             break;
         case IDM_VIEW_THEME_LIGHT:
             g_settings.theme.currentThemeId = L"builtin/light";
-            ApplyMonitorTheme();
+            ApplyMonitorTheme(hWnd);
             UpdateThemeMenuChecks();
             break;
         case IDM_VIEW_THEME_DARK:
             g_settings.theme.currentThemeId = L"builtin/dark";
-            ApplyMonitorTheme();
+            ApplyMonitorTheme(hWnd);
             UpdateThemeMenuChecks();
             break;
         case IDM_VIEW_THEME_RAINBOW:
             g_settings.theme.currentThemeId = L"builtin/rainbow";
-            ApplyMonitorTheme();
+            ApplyMonitorTheme(hWnd);
             UpdateThemeMenuChecks();
             break;
         case IDM_VIEW_THEME_HIGH_CONTRAST_APP:
             g_settings.theme.currentThemeId = L"builtin/highContrast";
-            ApplyMonitorTheme();
+            ApplyMonitorTheme(hWnd);
             UpdateThemeMenuChecks();
             break;
         case IDM_OPTION_TOP:
@@ -4970,7 +4991,7 @@ LRESULT OnCommandMainWindow(HWND hWnd, UINT id, UINT codeNotify, HWND hwndCtl)
             if (it != g_customThemeMenuIdToThemeId.end())
             {
                 g_settings.theme.currentThemeId = it->second;
-                ApplyMonitorTheme();
+                ApplyMonitorTheme(hWnd);
                 UpdateThemeMenuChecks();
                 break;
             }
@@ -5035,15 +5056,41 @@ LRESULT OnDestroyMainWindow(HWND hWnd)
     g_toolbarCopyButton    = nullptr;
     g_toolbarShowIdsToggle = nullptr;
     g_statusStrip          = nullptr;
-    g_hMainWindow          = nullptr;
 
     PostQuitMessage(g_monitorChromeSelfTest.enabled ? g_monitorChromeSelfTest.exitCode : 0);
     return 0;
 }
 } // namespace
 
-// Processes messages for the main window.
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK MonitorWindow::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    if (message == WM_GETMINMAXINFO)
+    {
+        if (auto* info = reinterpret_cast<MINMAXINFO*>(lParam))
+        {
+            Common::WindowSizing::ApplyMinimumClientTrackSizeForDips(hWnd, *info, 640, 360);
+        }
+        return 0;
+    }
+    auto* window = reinterpret_cast<MonitorWindow*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
+    if (message == WM_NCCREATE)
+    {
+        const auto* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
+        if (! create || ! create->lpCreateParams)
+        {
+            return FALSE;
+        }
+        window = static_cast<MonitorWindow*>(create->lpCreateParams);
+        SetLastError(ERROR_SUCCESS);
+        if (SetWindowLongPtrW(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window)) == 0 && GetLastError() != ERROR_SUCCESS)
+        {
+            return FALSE;
+        }
+    }
+    return window ? window->HandleMessage(hWnd, message, wParam, lParam) : DefWindowProcW(hWnd, message, wParam, lParam);
+}
+
+LRESULT MonitorWindow::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
@@ -5051,12 +5098,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_TIMER: return OnTimerMainWindow(hWnd, static_cast<UINT_PTR>(wParam));
         case WM_SIZE: return OnSizeMainWindow(hWnd, LOWORD(lParam), HIWORD(lParam));
         case WM_DPICHANGED: return OnDpiChangedMainWindow(hWnd, static_cast<UINT>(HIWORD(wParam)), reinterpret_cast<const RECT*>(lParam));
-        case WM_GETMINMAXINFO:
-            if (auto* info = reinterpret_cast<MINMAXINFO*>(lParam))
-            {
-                Common::WindowSizing::ApplyMinimumClientTrackSizeForDips(hWnd, *info, 640, 360);
-            }
-            return 0;
         case WM_SETTINGCHANGE:
         case WM_THEMECHANGED:
         case WM_DWMCOLORIZATIONCOLORCHANGED:
@@ -5069,8 +5110,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_COMMAND: return OnCommandMainWindow(hWnd, LOWORD(wParam), HIWORD(wParam), reinterpret_cast<HWND>(lParam));
         case WM_PAINT: return OnPaintMainWindow(hWnd);
         case WM_DESTROY: return OnDestroyMainWindow(hWnd);
-        case WM_NCDESTROY: static_cast<void>(DrainPostedPayloadsForWindow(hWnd)); return DefWindowProc(hWnd, message, wParam, lParam);
-        default: return DefWindowProc(hWnd, message, wParam, lParam);
+        case WM_NCDESTROY:
+            static_cast<void>(DrainPostedPayloadsForWindow(hWnd));
+            SetWindowLongPtrW(hWnd, GWLP_USERDATA, 0);
+            if (_window.get() == hWnd)
+            {
+                static_cast<void>(_window.release());
+            }
+            return DefWindowProcW(hWnd, message, wParam, lParam);
+        default: return DefWindowProcW(hWnd, message, wParam, lParam);
     }
 }
 

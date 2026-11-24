@@ -1,0 +1,1 @@
+- Give the monitor's top-level window an explicit owner from creation through destruction.
