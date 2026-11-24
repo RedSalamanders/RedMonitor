@@ -1,1 +1,0 @@
-- Enforce shared member naming with clang-tidy and replace the reserved RedMonitor version header guard.
