@@ -4784,6 +4784,7 @@ LRESULT OnDpiChangedMainWindow(HWND hWnd, [[maybe_unused]] UINT newDpi, const RE
     }
 
     AdjustLayout(hWnd);
+    g_colorView.RefreshMonitorAdapter();
     return 0;
 }
 
@@ -5098,6 +5099,8 @@ LRESULT MonitorWindow::HandleMessage(HWND hWnd, UINT message, WPARAM wParam, LPA
         case WM_TIMER: return OnTimerMainWindow(hWnd, static_cast<UINT_PTR>(wParam));
         case WM_SIZE: return OnSizeMainWindow(hWnd, LOWORD(lParam), HIWORD(lParam));
         case WM_DPICHANGED: return OnDpiChangedMainWindow(hWnd, static_cast<UINT>(HIWORD(wParam)), reinterpret_cast<const RECT*>(lParam));
+        case WM_MOVE: g_colorView.RefreshMonitorAdapter(); return DefWindowProcW(hWnd, message, wParam, lParam);
+        case WM_DISPLAYCHANGE: g_colorView.RefreshMonitorAdapter(true); return DefWindowProcW(hWnd, message, wParam, lParam);
         case WM_SETTINGCHANGE:
         case WM_THEMECHANGED:
         case WM_DWMCOLORIZATIONCOLORCHANGED:

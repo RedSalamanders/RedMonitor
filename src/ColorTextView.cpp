@@ -1610,6 +1610,51 @@ void ColorTextView::CreateDeviceIndependentResources()
     _avgCharWidthValid = false;
 }
 
+namespace
+{
+[[nodiscard]] wil::com_ptr_nothrow<IDXGIAdapter1> FindAdapterForMonitor(HMONITOR monitor, LUID& luid) noexcept
+{
+    wil::com_ptr_nothrow<IDXGIFactory1> factory;
+    if (! monitor || FAILED(CreateDXGIFactory1(IID_PPV_ARGS(factory.put()))))
+        return {};
+
+    wil::com_ptr_nothrow<IDXGIAdapter1> adapter;
+    for (UINT adapterIndex = 0; SUCCEEDED(factory->EnumAdapters1(adapterIndex, adapter.put())); ++adapterIndex)
+    {
+        DXGI_ADAPTER_DESC1 adapterDesc{};
+        if (FAILED(adapter->GetDesc1(&adapterDesc)) || (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0)
+            continue;
+        wil::com_ptr_nothrow<IDXGIOutput> output;
+        for (UINT outputIndex = 0; SUCCEEDED(adapter->EnumOutputs(outputIndex, output.put())); ++outputIndex)
+        {
+            DXGI_OUTPUT_DESC outputDesc{};
+            if (SUCCEEDED(output->GetDesc(&outputDesc)) && outputDesc.AttachedToDesktop && outputDesc.Monitor == monitor)
+            {
+                luid = adapterDesc.AdapterLuid;
+                return adapter;
+            }
+        }
+    }
+    return {};
+}
+} // namespace
+
+void ColorTextView::RefreshMonitorAdapter(bool topologyChanged)
+{
+    if (! _hWnd || ! _d3dDevice || _forceWarp)
+        return;
+    const HMONITOR monitor = MonitorFromWindow(GetAncestor(_hWnd, GA_ROOT), MONITOR_DEFAULTTONEAREST);
+    if (! topologyChanged && monitor == _deviceMonitor)
+        return;
+    _deviceMonitor = monitor;
+    LUID selected{};
+    if (FindAdapterForMonitor(monitor, selected) && (selected.LowPart != _deviceAdapter.LowPart || selected.HighPart != _deviceAdapter.HighPart))
+    {
+        DiscardDeviceResources();
+        InvalidateRect(_hWnd, nullptr, FALSE);
+    }
+}
+
 void ColorTextView::CreateDeviceResources()
 {
     // Ensure D2D/DWrite factories exist
@@ -1618,8 +1663,6 @@ void ColorTextView::CreateDeviceResources()
     // Do nothing only if both the D2D context and the swap chain already exist
     if (_d2dCtx && _swapChain)
         return;
-
-    HRESULT hr = S_OK;
 
     // Create D3D11 device
     UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
@@ -1630,8 +1673,31 @@ void ColorTextView::CreateDeviceResources()
     D3D_FEATURE_LEVEL chosen                = D3D_FEATURE_LEVEL_11_0;
     D3D_DRIVER_TYPE driverType              = D3D_DRIVER_TYPE_UNKNOWN;
 
-    // DxUi honors the selected backend and retries without the optional SDK debug layer if needed.
-    hr = DxUi::CreateD3D11DeviceWithWarpFallback(flags, levels, _forceWarp, _d3dDevice.put(), &chosen, _d3dContext.put(), &driverType);
+    HRESULT hr     = E_FAIL;
+    _deviceMonitor = _forceWarp ? nullptr : MonitorFromWindow(GetAncestor(_hWnd, GA_ROOT), MONITOR_DEFAULTTONEAREST);
+    if (const auto adapter = FindAdapterForMonitor(_deviceMonitor, _deviceAdapter))
+    {
+        const auto create = [&](UINT selectedFlags)
+        {
+            return D3D11CreateDevice(adapter.get(),
+                                     D3D_DRIVER_TYPE_UNKNOWN,
+                                     nullptr,
+                                     selectedFlags,
+                                     levels,
+                                     static_cast<UINT>(std::size(levels)),
+                                     D3D11_SDK_VERSION,
+                                     _d3dDevice.put(),
+                                     &chosen,
+                                     _d3dContext.put());
+        };
+        hr = create(flags);
+        if (hr == DXGI_ERROR_SDK_COMPONENT_MISSING && (flags & D3D11_CREATE_DEVICE_DEBUG) != 0)
+            hr = create(flags & ~static_cast<UINT>(D3D11_CREATE_DEVICE_DEBUG));
+    }
+    if (FAILED(hr))
+    {
+        hr = DxUi::CreateD3D11DeviceWithWarpFallback(flags, levels, _forceWarp, _d3dDevice.put(), &chosen, _d3dContext.put(), &driverType);
+    }
 #if defined(ENABLE_TESTS)
     _debugLastDeviceCreateHr = hr;
     _debugUsesWarp           = SUCCEEDED(hr) && driverType == D3D_DRIVER_TYPE_WARP;
@@ -1684,6 +1750,8 @@ void ColorTextView::CreateDeviceResources()
 #endif
         return;
     }
+    DXGI_ADAPTER_DESC deviceAdapter{};
+    _deviceAdapter = SUCCEEDED(dxgiAdapter->GetDesc(&deviceAdapter)) ? deviceAdapter.AdapterLuid : LUID{};
 
     wil::com_ptr_nothrow<IDXGIFactory2> dxgiFactory2;
     hr = dxgiAdapter->GetParent(IID_PPV_ARGS(dxgiFactory2.addressof()));
@@ -1787,17 +1855,20 @@ void ColorTextView::DiscardDeviceResources()
     }
     _d2dTargetBitmap.reset();
 
-    // Force D3D context to release any deferred references
     if (_d3dContext)
     {
         _d3dContext->ClearState();
-        _d3dContext->Flush();
     }
 
     // Release in proper order: D2D resources first, then D3D/DXGI
     _d2dCtx.reset();
     _d2dDevice.reset();
     _swapChain.reset();
+    // The released flip-model swap chain is destroyed on the next context flush.
+    if (_d3dContext)
+    {
+        _d3dContext->Flush();
+    }
     _d3dContext.reset();
     _d3dDevice.reset();
 }
