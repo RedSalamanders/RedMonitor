@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Apply the shared first-party compiler warning profile and retain the zero-warning build gate.
 - Add the six-profile Visual Studio solution and enforce the selected MSVC 14.52 toolset in native builds.
 - Exercise the pinned shared vcpkg checkout in the offline restore fixture.
 - Include the full Unicode and WHATWG notices from the pinned DxUi source in portable packages.

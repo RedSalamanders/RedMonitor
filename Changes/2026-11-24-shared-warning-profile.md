@@ -1,1 +1,0 @@
-- Apply the shared first-party compiler warning profile and retain the zero-warning build gate.
