@@ -212,6 +212,7 @@ public:
 
     // Request bottom-follow: immediate scroll and ensure after async layout
     void RequestScrollToBottom();
+    void RefreshMonitorAdapter(bool topologyChanged = false);
 
 private:
     void MaybeRefreshVirtualSliceOnScroll();
@@ -350,7 +351,9 @@ private:
     wil::com_ptr_nothrow<ID2D1Factory1> _d2d1Factory;
     wil::com_ptr_nothrow<IDWriteFactory> _dwriteFactory;
     // D3D/DXGI device stack
-    bool _forceWarp = false;
+    bool _forceWarp         = false;
+    HMONITOR _deviceMonitor = nullptr;
+    LUID _deviceAdapter{};
     wil::com_ptr_nothrow<ID3D11Device> _d3dDevice;
     wil::com_ptr_nothrow<ID3D11DeviceContext> _d3dContext;
     wil::com_ptr_nothrow<IDXGISwapChain1> _swapChain;

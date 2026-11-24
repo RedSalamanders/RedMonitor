@@ -24,8 +24,9 @@ The viewer owns its Direct3D, DXGI, Direct2D and DirectWrite interfaces through
 `wil::com_ptr_nothrow`. COM queries use checked results and follow the viewer's existing recovery paths.
 
 Launch with `--warp` to use software rendering for the log view, the toolbar and the status bar.
-The log view keeps that choice when it recreates its device. Ordinary launches try the hardware device
-first and use WARP if hardware device creation fails.
+The log view keeps that choice when it recreates its device. Ordinary launches try the hardware adapter
+that owns the top-level window's monitor, then the default hardware adapter, then WARP. Moving to a monitor
+owned by another adapter discards the device resources and schedules a full repaint on that adapter.
 
 Severity filter changes update the visible-line index table without marking retained source
 lines dirty for width remeasurement; background width measurement samples at most 32 dirty candidate
