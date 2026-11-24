@@ -32,3 +32,6 @@
 *.gif binary
 *.zip binary
 # End of the common block.
+# Client tooling pins use the same bytes as the published Git blobs.
+Tools/ClientSdk/Update-RedMonitorClient.ps1 text eol=lf
+Tools/ClientSdk/Verify-RedMonitorClient.ps1 text eol=lf

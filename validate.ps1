@@ -48,5 +48,7 @@ foreach($file in $files|Where-Object Extension -in '.vcxproj','.props','.targets
 }
 try { & (Join-Path $PSScriptRoot 'validate-skills.ps1') }
 catch [System.Management.Automation.RuntimeException] { $failures.Add($_.Exception.Message) }
+try { & (Join-Path $PSScriptRoot 'Tools/ClientSdk/Test-ToolingManifest.ps1') }
+catch [System.Management.Automation.RuntimeException] { $failures.Add($_.Exception.Message) }
 if($failures.Count){foreach($failure in $failures){Write-Host $failure -ForegroundColor Red};throw "$($failures.Count) validation failures"}
 Write-Host "Validated $($files.Count) source/documentation/tool files."

@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 Import-Module (Join-Path $root 'Build/Toolchain.psm1') -Force
-$run = Assert-RedMonitorOutputPath (Join-Path $root ('.build/documentation-validation-tests/'+[guid]::NewGuid().ToString('N')))
+$run = Assert-RedMonitorOutputPath (Join-Path $root ('.build/docs-tests/'+[guid]::NewGuid().ToString('N')))
 $public = Join-Path $run 'public-entrypoint'
 $publicChecks = 0
 
@@ -23,7 +23,9 @@ function Snapshot {
 }
 
 foreach ($name in 'validate.ps1','validate-skills.ps1','Build/DocumentationValidation.psm1','Build/Toolchain.psm1',
-    'Tools/Test-AgentGuidance.ps1','.ci/project.json','.agents/guidance.json') {
+    'Tools/Test-AgentGuidance.ps1','.ci/project.json','.agents/guidance.json',
+    'Tools/ClientSdk/Test-ToolingManifest.ps1','Tools/ClientSdk/manifest.json',
+    'Tools/ClientSdk/Update-RedMonitorClient.ps1','Tools/ClientSdk/Verify-RedMonitorClient.ps1') {
     Put ('public-entrypoint/'+$name) ([IO.File]::ReadAllText((Join-Path $root $name)))
 }
 foreach ($name in 'LICENSE.txt','README.md','capabilities.json','Specs/README.md','Specs/Plans/WIP/README.md',
@@ -38,10 +40,12 @@ Put 'public-entrypoint/CLAUDE.md' '[AGENTS.md](AGENTS.md)'
 Put 'public-entrypoint/.github/copilot-instructions.md' '[AGENTS.md](../AGENTS.md)'
 
 $engine = Join-Path $public '.ci-engine'
-$clone = & git clone --quiet --no-hardlinks (Join-Path $root '.ci-engine') $engine 2>&1
+$clone = & git -c core.longpaths=true clone --quiet --no-hardlinks (Join-Path $root '.ci-engine') $engine 2>&1
 if ($LASTEXITCODE -ne 0) { throw "Owned engine checkout failed: $clone" }
+& git -C $engine -c core.longpaths=true config --local core.longpaths true
+if ($LASTEXITCODE -ne 0) { throw "Could not configure the owned engine fixture." }
 $pin = (Get-Content (Join-Path $public '.ci/project.json') -Raw | ConvertFrom-Json).engine.ref
-$checkout = & git -C $engine checkout --quiet --detach $pin 2>&1
+$checkout = & git -C $engine -c core.longpaths=true checkout --quiet --detach $pin 2>&1
 if ($LASTEXITCODE -ne 0) { throw "Owned engine pin failed: $checkout" }
 
 function Expect-Public([string]$Name,[bool]$Accepted,[string]$ExpectedProblem='') {
