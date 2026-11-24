@@ -7,7 +7,7 @@ GIT_INDEX_FILE, so it can never fetch an object a partial clone left on the serv
 stands in for microsoft/vcpkg. Build/VcpkgToolCheckout.psm1, which prepares the pinned DxUi installer's checkout,
 runs for real: fresh, repeated, completing the partial shallow checkout earlier installers left, and refusing a
 foreign origin. Each prepared checkout then extracts an older tree in that stripped environment with lazy fetch
-disabled, as vcpkg does. vcpkg-install.ps1 and restore-dxui.ps1 are checked statically. The run is retained below
+disabled, as vcpkg does. The engine checkout runs against the same offline registry. Both installer call paths are checked. The run is retained below
 .build/vcpkg-tooling-tests.
 #>
 [CmdletBinding()]param()
@@ -110,16 +110,21 @@ $plain=Join-Path $run 'plain/vcpkg-tool'
 [void][IO.Directory]::CreateDirectory($plain)
 Refuses {Initialize-VcpkgToolCheckout -ToolIdentityPath $identity -ToolRoot $plain} 'not a Git checkout'
 
-# The repository's own installer and the pinned DxUi restore.
+# Run the application installer's pinned shared checkout against the same offline registry.
+Import-Module (Join-Path $root '.ci-engine/Tools/Modules/Ci.EngineBinding.psm1') -ErrorAction Stop
+Import-Module (Resolve-CiPinnedEngineModule -ProjectRoot $root -Name 'VcpkgCheckout.psm1') -Scope Local -ErrorAction Stop
+$shared=Join-Path $run 'shared/vcpkg-tool'
+Initialize-CiVcpkgCheckout -ProjectRoot $root -Path $shared -Repository $url -Commit $pinned
+Require (Test-Prepared $shared) 'The shared checkout did not prepare the clean, complete pinned source.'
+Initialize-CiVcpkgCheckout -ProjectRoot $root -Path $shared -Repository $url -Commit $pinned
+Require (Test-Prepared $shared) 'The shared warm checkout changed the pinned source.'
+Require (Test-StrippedExtraction $shared $olderTree 'shared') 'The shared checkout cannot extract an older tree offline.'
+
 $installer=[IO.File]::ReadAllText((Join-Path $root 'vcpkg-install.ps1'))
-$clones=@($installer -split "`n"|Where-Object{$_ -match '^\s*&\s*git\.exe\s+clone\s'})
-Require ($clones.Count -eq 1 -and -not $clones[0].Contains('--filter')) 'vcpkg-install.ps1 must make one complete clone.'
-Require (-not ($installer -match '\bfetch\s+--depth\b')) 'vcpkg-install.ps1 must never fetch the pinned commit shallow.'
-Require $installer.Contains('rev-parse --verify --quiet "$commit^{commit}"') 'vcpkg-install.ps1 must fetch the pinned commit only when it is missing.'
-$completion=$installer.IndexOf('config --get remote.origin.partialclonefilter',[StringComparison]::Ordinal)
-$refetch=$installer.IndexOf('fetch --refetch --no-filter origin',[StringComparison]::Ordinal)
-$unset=$installer.IndexOf('config --unset-all remote.origin.partialclonefilter',[StringComparison]::Ordinal)
-Require ($completion -ge 0 -and $refetch -gt $completion -and $unset -gt $refetch) 'vcpkg-install.ps1 must complete a partial clone and drop its filter only afterwards.'
+$checkout=$installer.IndexOf('Initialize-CiVcpkgCheckout -ProjectRoot $repoRoot -Path $toolRoot -Repository $repository -Commit $commit',[StringComparison]::Ordinal)
+$bootstrap=$installer.IndexOf('Initialize-CiVcpkgExecutable -ProjectRoot $repoRoot -ToolRoot $toolRoot',[StringComparison]::Ordinal)
+$install=$installer.IndexOf('Get-CiVcpkgManifestInstallArguments -ProjectRoot $repoRoot',[StringComparison]::Ordinal)
+Require ($checkout -ge 0 -and $bootstrap -gt $checkout -and $install -gt $bootstrap) 'The application installer must use pinned checkout, bootstrap and manifest helpers in order.'
 $restore=[IO.File]::ReadAllText((Join-Path $root 'restore-dxui.ps1'))
 $prepare=$restore.IndexOf("Initialize-VcpkgToolCheckout -ToolIdentityPath (Join-Path `$source 'vcpkg-tool.json') -ToolRoot (Join-Path `$output 'vcpkg-tool')",[StringComparison]::Ordinal)
 $pinnedInstaller=$restore.IndexOf("& (Join-Path `$source 'vcpkg-install.ps1') -Platform `$Platform -OutputRoot `$output",[StringComparison]::Ordinal)
