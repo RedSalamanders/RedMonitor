@@ -1,0 +1,1 @@
+- Use the conforming C++ preprocessor in RedMonitor's native profiles.
