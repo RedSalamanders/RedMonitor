@@ -6,6 +6,10 @@ while severity filters are active), themes, always-on-top and transactional Save
 queued traffic are bounded with incremental oldest-first eviction; dropped events are shown. The initial
 extraction keeps the legacy monitor settings identity for RedSalamander integration.
 
+Save an edit to the [active settings profile](../Specs/Core/Core_Settings.md) to update viewer preferences while
+RedMonitor runs. An unreadable edit leaves the current preferences in effect. Saved window placement and
+language changes apply on the next launch.
+
 Real-time ETW needs appropriate Windows session permissions. A failed session does not prevent file
 viewing. Self diagnostics are opt-in with `--etw`. Printing remains unsupported.
 

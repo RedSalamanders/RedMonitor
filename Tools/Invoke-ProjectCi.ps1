@@ -96,7 +96,7 @@ if ($receipts.Count -ne 1) { throw 'Expected one fresh scenario receipt.' }
 $receipt = Get-Content $receipts[0].FullName -Raw | ConvertFrom-Json -AsHashtable
 $requiredScenarios = @(
     'diagnostics-gate', 'scrollbar-model', 'document-model', 'local-crash-store',
-    'client-contract', 'settings-contract', 'installed-production-metadata',
+    'client-contract', 'settings-contract', 'settings-watcher', 'installed-production-metadata',
     'crash-probe-main', 'crash-probe-worker', 'headless-crash-markers',
     'failure-report-monitor', 'failure-report-client', 'failure-report-settings', 'failure-report-transport',
     'failure-report-viewer'
