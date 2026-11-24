@@ -116,7 +116,7 @@ struct PresentPlan final
 
 ## 4. Ordered implementation slices
 
-1. **Slice S0 — Drift check & deterministic state-transition unit tests (`Tests/MonitorTest.vcxproj`)**:
+1. **Slice S0 — Drift check & deterministic state-transition unit tests (`Tests/MonitorTests/MonitorTests.vcxproj`)**:
    - Run Section 1 drift checks.
    - Add headless deterministic tests in `Tests/` covering:
      1. Coalesced multi-step `InvalidateExposedArea` scroll deltas preserving total pixel delta, and `FullRedraw` + `InvalidateExposedArea` never downgrading to `PartialScroll` (`ISM-08a`).

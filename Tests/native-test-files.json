@@ -1,12 +1,12 @@
 [
-  "Tests/Asan.Tests.Probe.cpp",
-  "Tests/Client.Tests.Runner.cpp",
-  "Tests/Monitor.Tests.CrashReports.h",
-  "Tests/Monitor.Tests.Runner.cpp",
-  "Tests/Settings.Tests.Contract.cpp",
+  "Tests/AsanProbeTests/Asan.Tests.Probe.cpp",
+  "Tests/ClientContractTests/Client.Tests.Runner.cpp",
+  "Tests/MonitorTests/Monitor.Tests.CrashReports.h",
+  "Tests/MonitorTests/Monitor.Tests.Runner.cpp",
+  "Tests/SettingsContractTests/Settings.Tests.Contract.cpp",
   "Tests/Support/TestSupport.Tests.Runner.h",
   "Tests/TestSupport/TestSupport.Tests.FailureReports.h",
-  "Tests/Transport.Tests.Roundtrip.cpp",
+  "Tests/TransportRoundtripTests/Transport.Tests.Roundtrip.cpp",
   "support/Common.Tests.PerfJsonl.h",
   "support/Common.Tests.SandboxPath.h"
 ]

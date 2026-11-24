@@ -32,7 +32,7 @@ foreach ($name in 'LICENSE.txt','README.md','capabilities.json','Specs/README.md
     'Specs/Plans/Done/README.md','Specs/SourceImport/source-origin.json','vcpkg.json') {
     Put ('public-entrypoint/'+$name) $(if ($name.EndsWith('.json')) { '{}' } else { 'Fixture' })
 }
-foreach ($name in 'src/RedMonitor.vcxproj','Tests/MonitorTest.vcxproj') { Put ('public-entrypoint/'+$name) '<Project />' }
+foreach ($name in 'src/RedMonitor.vcxproj','Tests/MonitorTests/MonitorTests.vcxproj') { Put ('public-entrypoint/'+$name) '<Project />' }
 foreach ($name in 'Dependencies/DxUi.lock.json','vcpkg-tool.json') { Put ('public-entrypoint/'+$name) ('{"commit":"'+('0'*40)+'"}') }
 Put 'public-entrypoint/AGENTS.md' '[example](.agents/skills/example/SKILL.md)'
 Put 'public-entrypoint/.agents/skills/example/SKILL.md' "---`nname: example`ndescription: Use when validating a fixture.`n---`nRead the fixture."
