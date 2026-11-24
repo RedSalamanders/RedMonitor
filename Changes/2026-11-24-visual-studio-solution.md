@@ -1,1 +1,0 @@
-- Add the six-profile Visual Studio solution and enforce the selected MSVC 14.52 toolset in native builds.
