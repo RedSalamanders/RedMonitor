@@ -1,1 +1,0 @@
-- Use the pinned shared Visual Studio and vcpkg triplet helpers for product builds and restores.
