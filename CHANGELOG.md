@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Restore and link instrumented RedMonitor vcpkg dependencies in ASan Debug.
 - Honor the Windows native-architecture value when choosing the RedMonitor compiler host.
 - Use the common Intermediate directory for native build intermediates.
 - Pin the reviewed shared MSVC setup and regenerate its reusable workflow callers.
