@@ -4114,12 +4114,20 @@ Localization::LanguagePreference GetLanguagePreferenceFromSettings(const Common:
 // Separate function with C++ objects (cannot use __try/__except)
 static int RunApplication(HINSTANCE hInstance, int nCmdShow)
 {
-    namespace CrashReports      = RedSalamanderMonitor::CrashReports;
-    const bool crashProbe       = HasCommandLineArg(L"--crash-probe");
-    const bool crashWorkerProbe = HasCommandLineArg(L"--crash-probe-worker");
+    namespace CrashReports           = RedSalamanderMonitor::CrashReports;
+    const bool crashProbe            = HasCommandLineArg(L"--crash-probe");
+    const bool crashWorkerProbe      = HasCommandLineArg(L"--crash-probe-worker");
+    const bool failureReportSelfTest = HasCommandLineArg(L"--failure-report-self-test");
 #if ! defined(ENABLE_TESTS)
-    if (crashProbe || crashWorkerProbe || HasCommandLineArg(kMonitorChromeSelfTestArg) || HasCommandLineArg(kMonitorScrollbackSelfTestArg))
+    if (crashProbe || crashWorkerProbe || failureReportSelfTest || HasCommandLineArg(kMonitorChromeSelfTestArg) ||
+        HasCommandLineArg(kMonitorScrollbackSelfTestArg))
         return ERROR_NOT_SUPPORTED;
+#else
+    if (failureReportSelfTest)
+    {
+        RedSalamander::TestSupport::RouteFailureReportsAwayFromDialogs();
+        return RedSalamander::TestSupport::RunFailureReportRoutingSelfTest();
+    }
 #endif
     // Distribution contract only: runs before settings, registry, mutex, ETW or HWND creation.
     // The consumer/package harness can verify the real executable without touching user state.

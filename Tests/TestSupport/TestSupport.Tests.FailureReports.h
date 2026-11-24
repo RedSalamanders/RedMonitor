@@ -3,6 +3,7 @@
 #include <crtdbg.h>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <cwchar>
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -18,9 +19,8 @@
 // attended one interrupts the person at the desktop. The report goes to stderr, which the suite log keeps, and the check
 // ends the process with exit code 3 (the dialog's Abort), with no Windows Error Reporting dialog either.
 //
-// Modeled on DxUi's Tests/Support/TestSupport.Tests.FailureReports.h. Every native test entry point calls it first
-// (Tools/Tests/FailureReportRouting.Tests.ps1 enforces that), and the product executables call it only on their
-// ENABLE_TESTS self-test paths, so an interactive Debug run keeps the dialogs a developer can attach a debugger to.
+// Modeled on DxUi's Tests/Support/TestSupport.Tests.FailureReports.h. Every native test entry point calls it first.
+// The root runner probes each executable. The viewer uses it on ENABLE_TESTS self-test paths.
 namespace RedSalamander::TestSupport
 {
 #if defined(_DEBUG)
@@ -44,6 +44,16 @@ inline void RouteFailureReportsAwayFromDialogs() noexcept
     static_cast<void>(SetErrorMode(GetErrorMode() | SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX));
 #if defined(_DEBUG)
     static_cast<void>(_CrtSetReportHookW2(_CRT_RPTHOOK_INSTALL, &EndOnFailureReport));
+#endif
+}
+
+[[nodiscard]] inline int RunFailureReportRoutingSelfTest() noexcept
+{
+#if defined(_DEBUG)
+    static_cast<void>(_CrtDbgReportW(_CRT_ASSERT, nullptr, 0, nullptr, L"FailureReportRoutingSelfTest"));
+    return 1;
+#else
+    return 0;
 #endif
 }
 } // namespace RedSalamander::TestSupport

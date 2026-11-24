@@ -14,6 +14,8 @@
 int wmain(int argc, wchar_t** argv)
 {
     RedSalamander::TestSupport::RouteFailureReportsAwayFromDialogs();
+    if (argc == 2 && std::wcscmp(argv[1], L"--failure-report-self-test") == 0)
+        return RedSalamander::TestSupport::RunFailureReportRoutingSelfTest();
     RedMonitor::Application provider(L"RedPrism");
     if (provider.Status() != ERROR_SUCCESS)
     {

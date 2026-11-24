@@ -5,9 +5,11 @@
 
 #include <cstdio>
 
-int main()
+int main(int argc, char** argv)
 {
     RedSalamander::TestSupport::RouteFailureReportsAwayFromDialogs();
+    if (argc == 2 && std::strcmp(argv[1], "--failure-report-self-test") == 0)
+        return RedSalamander::TestSupport::RunFailureReportRoutingSelfTest();
     const auto path = Common::Settings::GetSettingsPath(L"RedSalamanderMonitor");
 #if defined(_DEBUG)
     constexpr auto expected = L"RedSalamanderMonitor-debug.settings.json";

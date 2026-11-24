@@ -146,6 +146,7 @@ $run=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ($runBase+[DateTime]::
 New-Item -ItemType Directory -Path $run|Out-Null
 $previousRoot=[Environment]::GetEnvironmentVariable('REDMONITOR_TEST_ROOT','Process')
 $rows=[Collections.Generic.List[object]]::new()
+$scenarios=@()
 $started=[DateTime]::UtcNow
 $primaryFailure=$null
 try{
@@ -172,6 +173,24 @@ try{
             @{name='headless-crash-markers';exe='RedMonitor.exe';argument='--runtime-contract';preserveMarkers=$true})
     }
     if($asanProbe){$scenarios+=@{name='asan-detection';exe='AsanProbe.exe';argument='--detect';expectedAsan=$true}}
+    $failureReportPrograms=[ordered]@{
+        monitor='MonitorTest.exe'
+        client='ClientContractTests.exe'
+        settings='SettingsContractTests.exe'
+        transport='TransportRoundtripTests.exe'
+    }
+    if($build.viewerTestsEnabled){$failureReportPrograms['viewer']='RedMonitor.exe'}
+    if($asanProbe){$failureReportPrograms['asan']='AsanProbe.exe'}
+    $failureReportExit=if($Configuration -ceq 'Release'){0}else{3}
+    foreach($program in $failureReportPrograms.GetEnumerator()){
+        $scenarios+=@{
+            name='failure-report-'+$program.Key
+            exe=$program.Value
+            argument='--failure-report-self-test'
+            expectedExit=$failureReportExit
+            expectedFailureReport=($failureReportExit -ne 0)
+        }
+    }
     foreach($entry in $scenarios){
         $scenario=$entry.name
         $start=[Diagnostics.ProcessStartInfo]::new((Join-Path $output $entry.exe))
@@ -188,11 +207,15 @@ try{
             if(-not $process.Start()){throw "Could not start $scenario"}
             $stdout=$process.StandardOutput.ReadToEndAsync();$stderr=$process.StandardError.ReadToEndAsync()
             if(-not $process.WaitForExit(180000)){$process.Kill($true);$process.WaitForExit();throw "Owned test process timed out: $scenario"}
-            $text=$stdout.GetAwaiter().GetResult()+$stderr.GetAwaiter().GetResult()
+            $errorText=$stderr.GetAwaiter().GetResult()
+            $text=$stdout.GetAwaiter().GetResult()+$errorText
             [IO.File]::WriteAllText((Join-Path $run "$scenario.log"),$text)
             $expectedAsan=$entry.ContainsKey('expectedAsan') -and $entry.expectedAsan
             $expectedExit=if($entry.ContainsKey('expectedExit')){$entry.expectedExit}else{0}
             $scenarioPassed=if($expectedAsan){$process.ExitCode -ne 0 -and $text -match 'AddressSanitizer: heap-buffer-overflow'}else{$process.ExitCode -eq $expectedExit}
+            if($entry.ContainsKey('expectedFailureReport') -and $entry.expectedFailureReport){
+                $scenarioPassed=$scenarioPassed -and $errorText.Contains('FailureReportRoutingSelfTest', [StringComparison]::Ordinal)
+            }
             $row=[ordered]@{scenario=$scenario;exitCode=$process.ExitCode;passed=$scenarioPassed;expectedAsanDetection=[bool]$expectedAsan;elapsedMs=$timer.Elapsed.TotalMilliseconds}
             if($entry.ContainsKey('crashRoot')){
                 $directory=Assert-RedMonitorOutputPath (Join-Path $crashArtifactRoot "crash-probes/$($entry.crashRoot)")
@@ -227,10 +250,8 @@ try{
     if($null -ne $runtimeInput -and -not $runtimeInput.Closed){
         try{Close-CiLocalSdkApplicationRuntimeInput $runtimeInput}catch{$closeFailure=$_}
     }
-    $expected=if($IncludeLiveEtw){8}else{7}
-    if($build.viewerTestsEnabled){$expected+=3}
-    if($Configuration -eq 'ASan Debug'){$expected++}
-    $passed=$null -eq $primaryFailure -and $null -eq $closeFailure -and $rows.Count -eq $expected -and @($rows|Where-Object passed -eq $false).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
+    $passed=$null -eq $primaryFailure -and $null -eq $closeFailure -and $scenarios.Count -gt 0 -and
+        $rows.Count -eq $scenarios.Count -and @($rows|Where-Object passed -eq $false).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
     $record=[ordered]@{schemaVersion=1;passed=$passed;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;
         buildReceiptSha256=$buildReceiptHash;
         scenarios=@($rows.ToArray());liveEtwRequested=[bool]$IncludeLiveEtw;startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');interactive=$false}

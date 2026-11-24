@@ -22,6 +22,8 @@ namespace
 int wmain(int argc, wchar_t** argv)
 {
     RedSalamander::TestSupport::RouteFailureReportsAwayFromDialogs();
+    if (argc == 2 && std::wcscmp(argv[1], L"--failure-report-self-test") == 0)
+        return RedSalamander::TestSupport::RunFailureReportRoutingSelfTest();
     if (argc == 2 && std::wstring_view(argv[1]) == L"--ci-assertion-probe")
     {
         return CheckClientCondition(false, "CI_ASSERTION_PROBE") ? 0 : 21;

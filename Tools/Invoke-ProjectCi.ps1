@@ -97,7 +97,9 @@ $receipt = Get-Content $receipts[0].FullName -Raw | ConvertFrom-Json -AsHashtabl
 $requiredScenarios = @(
     'diagnostics-gate', 'scrollbar-model', 'document-model', 'local-crash-store',
     'client-contract', 'settings-contract', 'installed-production-metadata',
-    'crash-probe-main', 'crash-probe-worker', 'headless-crash-markers'
+    'crash-probe-main', 'crash-probe-worker', 'headless-crash-markers',
+    'failure-report-monitor', 'failure-report-client', 'failure-report-settings', 'failure-report-transport',
+    'failure-report-viewer'
 )
 $actualScenarios = @($receipt.scenarios | ForEach-Object scenario)
 if (-not $receipt.passed -or $actualScenarios.Count -ne $requiredScenarios.Count -or

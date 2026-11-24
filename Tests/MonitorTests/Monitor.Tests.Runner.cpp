@@ -1468,6 +1468,8 @@ static int RunMonitorTest()
 int main(int argc, char** argv)
 {
     RedSalamander::TestSupport::RouteFailureReportsAwayFromDialogs();
+    if (argc == 2 && std::strcmp(argv[1], "--failure-report-self-test") == 0)
+        return RedSalamander::TestSupport::RunFailureReportRoutingSelfTest();
 
     if (argc > 1 && argv[1] != nullptr && lstrcmpA(argv[1], "--crash-store-selftest") == 0)
     {

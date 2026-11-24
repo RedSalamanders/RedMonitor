@@ -1,0 +1,1 @@
+- Verify dialog-free failure-report routing for every RedMonitor native test executable.
