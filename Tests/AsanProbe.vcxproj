@@ -11,7 +11,12 @@
  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
 
  <ItemDefinitionGroup><ClCompile><AdditionalIncludeDirectories>$(RedMonitorRoot)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><PreprocessorDefinitions>ENABLE_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile><Link><SubSystem>Console</SubSystem><AdditionalDependencies>yyjson.lib;%(AdditionalDependencies)</AdditionalDependencies></Link></ItemDefinitionGroup>
- <ItemGroup><ClCompile Include="Asan.Tests.Probe.cpp"/></ItemGroup>
+ <ItemGroup>
+  <ClCompile Include="Asan.Tests.Probe.cpp">
+   <!-- The sanitizer probe deliberately uses volatile memory accesses. ARM64 reports C4746 for those accesses. -->
+   <DisableSpecificWarnings Condition="'$(Platform)'=='ARM64' and '$(Configuration)'=='ASan Debug'">4746;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+  </ClCompile>
+ </ItemGroup>
  <ItemGroup><ProjectReference Include="..\support\RedMonitorSupport.vcxproj"/></ItemGroup>
  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

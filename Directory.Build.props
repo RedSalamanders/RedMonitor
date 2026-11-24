@@ -29,8 +29,10 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <WarningLevel>Level4</WarningLevel>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <!-- RedSalamanders warning profile: optional optimizer, ABI padding and Spectre notices. -->
+      <DisableSpecificWarnings>4514;4710;4711;4820;5045;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -38,6 +40,7 @@
       <PreprocessorDefinitions>UNICODE;_UNICODE;COMMON_API=;WINVER=0x0A00;_WIN32_WINNT=0x0A00;NTDDI_VERSION=NTDDI_WIN11_GE;RS_DIAGNOSTICS_RUNTIME_OPT_IN;VERSINFO_BUILDNUMBER=$(RedMonitorBuildNumber);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(RedMonitorRoot)support;$(RedMonitorRoot)include;$(RedMonitorRoot)Tests;$(RedMonitorRoot)Tests\Support;$(RedMonitorPackages)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+      <ExternalDirectoriesEnv>EXTERNAL_INCLUDE;%(ExternalDirectoriesEnv)</ExternalDirectoriesEnv>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreadedDLL</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)'!='Release'">MultiThreadedDebugDLL</RuntimeLibrary>

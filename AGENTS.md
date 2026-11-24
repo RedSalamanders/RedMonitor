@@ -12,7 +12,7 @@ Use focused `ej/` branches after the initial import.
   it to clients or link RedSalamander's Common.dll. Narrow broad settings/theme types under S4.
 - DxUi is one exact pinned archive consumed through its supported imports. No enumerated DxUi sources,
   sibling fallback or dirty managed pin. Keep app policy here and shared controls in canonical DxUi.
-- Use Unicode, `stdcpplatest`, `/W4 /WX /permissive- /sdl`, matching MD CRT, discovered VS and all six profiles.
+- Use Unicode, `stdcpplatest`, `/Wall /permissive- /sdl`, matching MD CRT, discovered VS and all six profiles. Keep `/WX` disabled and require zero warnings in the build gate.
   WIL owns Windows/COM resources. No manual destruction/release of an owned resource.
 - No exception escapes Win32/COM/ETW callbacks. Catch named exceptions only with a documented fallback;
   allocation failure is fatal. Preserve bounded shutdown, callback state and stale-message draining.
