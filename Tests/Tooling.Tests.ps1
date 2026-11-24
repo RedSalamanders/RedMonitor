@@ -19,6 +19,7 @@ $scratch=Assert-RedMonitorOutputPath (Join-Path $valid ([guid]::NewGuid().ToStri
 New-Item -ItemType Directory -Path $scratch -Force|Out-Null
 & (Join-Path $root 'Tools/Test-ChangelogWorkflow.ps1') -ScratchRoot $scratch
 & (Join-Path $PSScriptRoot 'Tooling.Tests.Formatter.ps1')
+& (Join-Path $PSScriptRoot 'Tooling.Tests.ClientTooling.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.DocumentationValidation.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.Build.ps1')
 & (Join-Path $PSScriptRoot 'Tooling.Tests.ResourceStrings.ps1')

@@ -125,8 +125,15 @@ Consumers vendor only `include/RedMonitor/Client.h` and `LICENSE.txt` in ThirdPa
 Their lock records the immutable upstream commit, API revision and SHA-256 of each Git blob.
 The vendored subtree uses `-text` to preserve exact Git bytes on Windows. Ordinary builds verify
 local files without Git, network, a RedMonitor checkout, library or executable. Only the explicit
-Update-RedMonitorClient tool fetches a newly reviewed header/license. ClientSdk/ tools are the
-canonical source of the consumer update/verify adapters.
+Update-RedMonitorClient command fetches a newly reviewed header and license. The canonical consumer commands are
+published with their SHA-256 values in the [client tooling manifest](../../Tools/ClientSdk/manifest.json).
+The manifest and its two commands come from the same reviewed producer commit. The compiler-free CI check compares the
+manifest with the exact command bytes. The verifier supports Windows PowerShell 5.1 for direct MSBuild and PowerShell 7.
+
+A consumer adopting this package can record the separate tooling commit and two command hashes in the optional
+`tooling` member of `Dependencies/RedMonitor.lock.json`. The header and license retain their existing `commit` and
+`files` fields. Updating the header and license preserves the selected tooling pin. A consumer verifies its local
+command bytes before invoking the pinned commands and can verify the native files offline.
 
 The single header owns normalized counted UTF-16/strict UTF-8 messages, app labels, severity and
 PID/TID/FILETIME metadata. Disabled writes return before conversion, formatting or heap work.
