@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Support the shared `-Clean`, `-Rebuild` and `-MaxCpuCount` options on the RedMonitor build command.
 - Add a read-only root `validate-specs.ps1` command for the specification indexes and local documentation links.
 - Put native test projects and suite sources in per-suite folders while preserving the test commands and executable names.
 - Move RedMonitor to the shared engine that manages the Dependabot file and contains the portable WinGet manifest metadata support.
