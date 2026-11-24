@@ -56,7 +56,7 @@ function Snapshot-Attempts {
 
 $manifest=Read-ScopedTestManifest -Root $root -SkipProjectRules
 Case 'product scope data preserves the affected lanes and the active native inventory' {
-    Require ((Assert-ScopedTestNames -Root $root -Manifest $manifest) -eq 9) 'Native inventory lost one of the imported test seams.'
+    Require ((Assert-ScopedTestNames -Root $root -Manifest $manifest) -eq 10) 'Native inventory must include the crash store and imported test seams.'
     Require ((Get-ScopedTestPlan -Manifest $manifest -ChangedPaths @()).scopes.Count -eq 0) 'An empty change selected work.'
     foreach ($path in @('Tests/Fixtures/README.md','Tests/Data/日本語.md','src/unknown.md','Specs/runtime.schema.json')) {
         $plan = Get-ScopedTestPlan -Manifest $manifest -ChangedPaths @($path) -Configuration Debug
