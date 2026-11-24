@@ -11,7 +11,7 @@ Import-Module (Join-Path $PSScriptRoot 'Build/DocumentationValidation.psm1') -Fo
 $failures=[Collections.Generic.List[string]]::new()
 $required=@('AGENTS.md','LICENSE.txt','README.md','capabilities.json','Specs/README.md','Specs/Plans/WIP/README.md','Specs/Plans/Done/README.md',
  'Specs/SourceImport/source-origin.json','src/RedMonitor.vcxproj',
- 'Tests/MonitorTest.vcxproj','Build/Toolchain.psm1','Dependencies/DxUi.lock.json','vcpkg.json','vcpkg-tool.json')
+ 'Tests/MonitorTests/MonitorTests.vcxproj','Build/Toolchain.psm1','Dependencies/DxUi.lock.json','vcpkg.json','vcpkg-tool.json')
 foreach($path in $required){if(-not(Test-Path -LiteralPath (Join-Path $PSScriptRoot $path) -PathType Leaf)){$failures.Add("Missing $path")}}
 $files=[Collections.Generic.List[IO.FileInfo]]::new()
 $pending=[Collections.Generic.Stack[string]]::new()

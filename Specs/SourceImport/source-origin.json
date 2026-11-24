@@ -415,7 +415,7 @@
     },
     {
       "source": "Tests/MonitorTest/Monitor.Tests.Runner.cpp",
-      "destination": "Tests/Monitor.Tests.Runner.cpp",
+      "destination": "Tests/MonitorTests/Monitor.Tests.Runner.cpp",
       "sha256": "ec276dbbcf90eaa2f7b0db7d46844ba8b0f0bd37d077af8907028af7039c170c",
       "disposition": "native test/support moved with original MIT attribution"
     },

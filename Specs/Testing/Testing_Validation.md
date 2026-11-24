@@ -107,6 +107,10 @@ changes; drift fails the check and retains the patch. The manual `Commit PR form
 that formatting to an open same-repository pull request with an ordinary push and requests fresh checks for
 the new head.
 
+Each native test project and its suite sources live under `Tests/<Suite>Tests/`. The root solution and
+`RedMonitor.proj` build those projects with the same executable names used by `test.ps1`. The native test inventory
+tracks suite sources and shared test headers. PowerShell tooling checks retain their existing paths.
+
 The imported MonitorTest flags cover diagnostics opt-in, scrollbar model, document batching/filtering,
 non-dirtying filter changes, bounded visible-range queries, incremental retention eviction (offset deque,
 dirty range, visible-line shifting, and bounded width-candidate sampling), filtered and unfiltered tail-text

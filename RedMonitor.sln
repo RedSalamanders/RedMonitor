@@ -14,15 +14,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RedMonitor-sk-SK", "src\Lan
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RedMonitorSupport", "support\RedMonitorSupport.vcxproj", "{F9CF74BA-564A-4F37-8CDB-C9525DDDFAD7}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AsanProbe", "Tests\AsanProbe.vcxproj", "{322A5FB8-F07E-42F1-A404-92F7369C3FE6}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AsanProbe", "Tests\AsanProbeTests\AsanProbeTests.vcxproj", "{322A5FB8-F07E-42F1-A404-92F7369C3FE6}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ClientContractTests", "Tests\ClientContractTests.vcxproj", "{3739AD4D-7B4B-4AB6-A299-C1CF9E5ED17A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ClientContractTests", "Tests\ClientContractTests\ClientContractTests.vcxproj", "{3739AD4D-7B4B-4AB6-A299-C1CF9E5ED17A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MonitorTest", "Tests\MonitorTest.vcxproj", "{B69E8360-8D51-4F18-824B-BD972489C8D9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MonitorTest", "Tests\MonitorTests\MonitorTests.vcxproj", "{B69E8360-8D51-4F18-824B-BD972489C8D9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SettingsContractTests", "Tests\SettingsContractTests.vcxproj", "{DA537462-5619-4984-9094-2274C8016FFA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SettingsContractTests", "Tests\SettingsContractTests\SettingsContractTests.vcxproj", "{DA537462-5619-4984-9094-2274C8016FFA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TransportRoundtripTests", "Tests\TransportRoundtripTests.vcxproj", "{5DC7DAA8-4096-4C56-BC7E-02402A273C6D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TransportRoundtripTests", "Tests\TransportRoundtripTests\TransportRoundtripTests.vcxproj", "{5DC7DAA8-4096-4C56-BC7E-02402A273C6D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
