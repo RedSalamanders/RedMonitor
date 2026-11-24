@@ -36,6 +36,10 @@ shared profile lease coordinates scoped builds and tests, and individual artifac
 operations keep their existing lock. Details of the attempt records are in the
 [run-evidence contract](Testing_RunEvidence.md).
 
+Use `RedMonitor.exe --warp --chrome-selftest` on a test-enabled profile to verify the non-activating
+chrome scenario and assert that the log view created a WARP device. The probe uses in-memory
+settings defaults and writes its results under the selected repository evidence directory.
+
 `test.ps1` also accepts an explicit local SDK Release record and independently retained SHA-256 through
 `-LocalSdkBuildReceipt` and `-LocalSdkBuildSha256`, with `-SkipBuild`. The shared live runtime reader must
 accept the original complete output catalog, source/engine/dependency/API/ABI and native architecture;

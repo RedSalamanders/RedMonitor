@@ -1,0 +1,1 @@
+- Add `--warp` to force software rendering in the log view, toolbar and status bar.

@@ -92,8 +92,9 @@ HINSTANCE g_hInstance = NULL;    // current instance
 HWND g_hMainWindow    = nullptr; // monitor top-level window
 ColorTextView g_colorView;       // ColorTextView instance for the right panel
 wil::unique_hwnd g_hColorView;   // ColorTextView window handle
-wil::unique_hwnd g_hToolbar;     // Toolbar window handle
-wil::unique_hwnd g_hStatusBar;   // Status bar window handle
+bool g_forceWarpRendering = false;
+wil::unique_hwnd g_hToolbar;   // Toolbar window handle
+wil::unique_hwnd g_hStatusBar; // Status bar window handle
 DxUi::WindowHost g_toolbarDxHost;
 DxUi::WindowHost g_statusDxHost;
 bool g_showIds            = true;  // Show Process/Thread IDs in output
@@ -156,6 +157,7 @@ constexpr wchar_t kMonitorHelpText[] = L"RedSalamanderMonitor\r\n"
                                        L"\r\n"
                                        L"Options:\r\n"
                                        L"  -h, --help, /?                 Show this help.\r\n"
+                                       L"  --warp                          Use WARP software rendering.\r\n"
                                        L"  --etw                           Enable RedSalamanderMonitor self Info/Perf/Debug ETW diagnostics.\r\n"
                                        L"  --perf                          Write RedSalamanderMonitor perf metrics to the default JSONL path.\r\n"
                                        L"  --perf=PATH                     Write RedSalamanderMonitor perf metrics to a custom JSONL path.\r\n"
@@ -2374,7 +2376,8 @@ LRESULT CALLBACK DxHostWndProcThunk(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     {
         auto* cs = reinterpret_cast<CREATESTRUCTW*>(lp);
         host     = reinterpret_cast<WindowHost*>(cs->lpCreateParams);
-        if (! host || ! host->Attach(hwnd))
+        const WindowHost::AttachOptions options{.forceWarp = g_forceWarpRendering};
+        if (! host || ! host->Attach(hwnd, options))
         {
             return FALSE;
         }
@@ -3562,6 +3565,10 @@ LRESULT RunMonitorChromeSelfTest(HWND hWnd)
     passed &= require(L"color view renderer created",
                       g_colorView.DebugHasRenderer(),
                       std::format(L"deviceHr=0x{:08X}", static_cast<unsigned long>(g_colorView.DebugGetLastDeviceCreateHr())));
+    if (g_forceWarpRendering)
+    {
+        passed &= require(L"color view uses WARP", g_colorView.DebugUsesWarp());
+    }
 
     g_colorView.SetText(L"clear state regression");
     g_colorView.DebugSetSelectionState(2u, 7u, 5u);
@@ -4170,6 +4177,7 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
     }
 #endif
 
+    g_forceWarpRendering                       = HasCommandLineArg(L"--warp");
     g_monitorChromeSelfTest.enabled            = HasCommandLineArg(kMonitorChromeSelfTestArg);
     g_monitorEtwBurstOptions                   = ReadMonitorEtwBurstOptions();
     g_monitorScrollbackSelfTestOptions.enabled = HasCommandLineArg(kMonitorScrollbackSelfTestArg);
@@ -4273,7 +4281,10 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
 
     InitializeDpiAwareness();
 
-    g_config.Load();
+    if (! g_monitorChromeSelfTest.enabled)
+    {
+        g_config.Load();
+    }
 
     const std::filesystem::path themesDir = GetThemesDirectory();
     if (! themesDir.empty())
@@ -4281,7 +4292,10 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
         Common::Settings::LoadThemeDefinitionsFromDirectory(themesDir, g_fileThemes);
     }
 
-    Common::Settings::LoadSettings(kAppId, g_settings);
+    if (! g_monitorChromeSelfTest.enabled)
+    {
+        Common::Settings::LoadSettings(kAppId, g_settings);
+    }
     Localization::RegisterResourceOwner(kAppId, hInstance);
     Localization::ApplyLanguagePreference(GetLanguagePreferenceFromSettings(g_settings));
 
@@ -4555,7 +4569,7 @@ namespace
 LRESULT OnCreateMainWindow(HWND hWnd)
 {
     InitPostedPayloadWindow(hWnd);
-    g_hColorView.reset(g_colorView.Create(hWnd, 0, 0, 0, 0));
+    g_hColorView.reset(g_colorView.Create(hWnd, 0, 0, 0, 0, g_forceWarpRendering));
     if (! g_hColorView)
     {
         const std::wstring caption = LoadStringResource(g_hInstance, IDS_CAPTION_ERROR);

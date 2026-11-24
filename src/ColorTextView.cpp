@@ -198,8 +198,9 @@ ATOM ColorTextView::RegisterWndClass(HINSTANCE hinst)
     s_atom           = RegisterClass(&wc);
     return s_atom;
 }
-HWND ColorTextView::Create(HWND parent, int x, int y, int w, int h)
+HWND ColorTextView::Create(HWND parent, int x, int y, int w, int h, bool forceWarp)
 {
+    _forceWarp      = forceWarp;
     HINSTANCE hinst = reinterpret_cast<HINSTANCE>(GetWindowLongPtr(parent, GWLP_HINSTANCE));
     RegisterWndClass(hinst);
     // Add scrollbar styles
@@ -1620,16 +1621,16 @@ void ColorTextView::CreateDeviceResources()
     D3D_FEATURE_LEVEL chosen                = D3D_FEATURE_LEVEL_11_0;
     D3D_DRIVER_TYPE driverType              = D3D_DRIVER_TYPE_UNKNOWN;
 
-    // Hardware first, then WARP. The SDK debug layer is an optional Windows component (absent on native ARM64 CI
-    // runners): DxUi retries without it instead of failing the device.
-    hr = DxUi::CreateD3D11DeviceWithWarpFallback(flags, levels, false, _d3dDevice.put(), &chosen, _d3dContext.put(), &driverType);
+    // DxUi honors the selected backend and retries without the optional SDK debug layer if needed.
+    hr = DxUi::CreateD3D11DeviceWithWarpFallback(flags, levels, _forceWarp, _d3dDevice.put(), &chosen, _d3dContext.put(), &driverType);
 #if defined(ENABLE_TESTS)
     _debugLastDeviceCreateHr = hr;
+    _debugUsesWarp           = SUCCEEDED(hr) && driverType == D3D_DRIVER_TYPE_WARP;
 #endif
     if (FAILED(hr))
     {
 #ifdef _DEBUG
-        auto errorDeviceMsg = std::format(L"Failed to create D3D11 device (hardware and WARP): HRESULT = 0x{:08X}\n", hr);
+        auto errorDeviceMsg = std::format(L"Failed to create D3D11 device: HRESULT = 0x{:08X}\n", hr);
         OutputDebugStringW(errorDeviceMsg.c_str());
 #endif
         return;
@@ -1637,7 +1638,7 @@ void ColorTextView::CreateDeviceResources()
 #ifdef _DEBUG
     if (driverType == D3D_DRIVER_TYPE_WARP)
     {
-        OutputDebugStringW(L"D3D11 hardware device unavailable, rendering through WARP\n");
+        OutputDebugStringW(_forceWarp ? L"D3D11 WARP software rendering selected\n" : L"D3D11 hardware device unavailable, rendering through WARP\n");
     }
 #endif
 
