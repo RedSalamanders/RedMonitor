@@ -1,0 +1,1 @@
+- Own the viewer's graphics and text COM interfaces with nonthrowing WIL pointers and use the existing DXGI factory interface for window association.

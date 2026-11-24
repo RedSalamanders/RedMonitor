@@ -1384,7 +1384,7 @@ float ColorTextView::GetAverageCharWidth() const
 
     // Measure a representative sample string
     static constexpr wchar_t kSample[] = L"ABCDEFGHabcdefgh0123456789";
-    wil::com_ptr<IDWriteTextLayout> tl;
+    wil::com_ptr_nothrow<IDWriteTextLayout> tl;
     if (SUCCEEDED(_dwriteFactory->CreateTextLayout(kSample, static_cast<UINT32>(wcslen(kSample)), _textFormat.get(), 1000.f, 1000.f, tl.addressof())))
     {
         DWRITE_TEXT_METRICS tm{};
@@ -1664,7 +1664,7 @@ void ColorTextView::CreateDeviceResources()
 #endif
 
     // Create DXGI objects
-    wil::com_ptr<IDXGIDevice> dxgiDevice;
+    wil::com_ptr_nothrow<IDXGIDevice> dxgiDevice;
     auto res = _d3dDevice.try_query_to(dxgiDevice.put());
     if (! res)
     {
@@ -1674,7 +1674,7 @@ void ColorTextView::CreateDeviceResources()
 #endif
         return;
     }
-    wil::com_ptr<IDXGIAdapter> dxgiAdapter;
+    wil::com_ptr_nothrow<IDXGIAdapter> dxgiAdapter;
     hr = dxgiDevice->GetAdapter(dxgiAdapter.addressof());
     if (FAILED(hr))
     {
@@ -1685,7 +1685,7 @@ void ColorTextView::CreateDeviceResources()
         return;
     }
 
-    wil::com_ptr<IDXGIFactory2> dxgiFactory2;
+    wil::com_ptr_nothrow<IDXGIFactory2> dxgiFactory2;
     hr = dxgiAdapter->GetParent(IID_PPV_ARGS(dxgiFactory2.addressof()));
     if (FAILED(hr))
     {
@@ -1727,12 +1727,10 @@ void ColorTextView::CreateDeviceResources()
         }
     }
     // Disable Alt+Enter
-    wil::com_ptr<IDXGIFactory> dxgiFactory;
-    dxgiFactory2.query_to(dxgiFactory.put());
-    dxgiFactory->MakeWindowAssociation(_hWnd, DXGI_MWA_NO_ALT_ENTER);
+    (void)dxgiFactory2->MakeWindowAssociation(_hWnd, DXGI_MWA_NO_ALT_ENTER);
 
     // Create D2D device/context
-    wil::com_ptr<ID2D1Device> d2dDev;
+    wil::com_ptr_nothrow<ID2D1Device> d2dDev;
     hr = _d2d1Factory->CreateDevice(dxgiDevice.get(), d2dDev.addressof());
     if (FAILED(hr))
     {
@@ -1820,7 +1818,7 @@ void ColorTextView::CreateSwapChainResources([[maybe_unused]] UINT w, [[maybe_un
         OutputDebugStringA("!!! Cleared previous D2D target bitmap\n");
     }
 
-    wil::com_ptr<IDXGISurface> surface;
+    wil::com_ptr_nothrow<IDXGISurface> surface;
     HRESULT hr = _swapChain->GetBuffer(0, IID_PPV_ARGS(surface.addressof()));
     if (FAILED(hr))
     {
@@ -1915,13 +1913,13 @@ bool ColorTextView::RecreateSwapChain(UINT w, UINT h)
     // Release the swap chain completely before creating a new one
     _swapChain.reset();
 
-    wil::com_ptr<IDXGIDevice> dxgiDevice;
+    wil::com_ptr_nothrow<IDXGIDevice> dxgiDevice;
     if (! _d3dDevice.try_query_to(dxgiDevice.put()))
         return false;
-    wil::com_ptr<IDXGIAdapter> dxgiAdapter;
+    wil::com_ptr_nothrow<IDXGIAdapter> dxgiAdapter;
     if (FAILED(dxgiDevice->GetAdapter(dxgiAdapter.addressof())))
         return false;
-    wil::com_ptr<IDXGIFactory2> dxgiFactory2;
+    wil::com_ptr_nothrow<IDXGIFactory2> dxgiFactory2;
     if (FAILED(dxgiAdapter->GetParent(IID_PPV_ARGS(dxgiFactory2.addressof()))))
         return false;
 
@@ -1968,7 +1966,7 @@ void ColorTextView::EnsureBackbufferMatchesClient()
     const UINT clientH = std::max(1u, static_cast<UINT>(rc.bottom - rc.top));
 
     // Current backbuffer size
-    wil::com_ptr<ID3D11Texture2D> backbuffer;
+    wil::com_ptr_nothrow<ID3D11Texture2D> backbuffer;
     if (FAILED(_swapChain->GetBuffer(0, IID_PPV_ARGS(backbuffer.addressof()))))
         return;
     D3D11_TEXTURE2D_DESC td{};
@@ -2052,7 +2050,7 @@ void ColorTextView::RebuildSliceBitmap()
     }
 
     // Cache layout pointer to prevent re-entrant painting from invalidating it mid-use
-    wil::com_ptr<IDWriteTextLayout> layoutToUse = _textLayout;
+    wil::com_ptr_nothrow<IDWriteTextLayout> layoutToUse = _textLayout;
     if (! layoutToUse)
     {
         OutputDebugStringA("!!! RebuildSliceBitmap: Layout became null after check.\n");
@@ -2116,7 +2114,7 @@ void ColorTextView::RebuildSliceBitmap()
     bp.dpiY          = _dpi;
     bp.bitmapOptions = D2D1_BITMAP_OPTIONS_TARGET;
 
-    wil::com_ptr<ID2D1Bitmap1> newBmp;
+    wil::com_ptr_nothrow<ID2D1Bitmap1> newBmp;
     HRESULT hrCreate = _d2dCtx->CreateBitmap(D2D1::SizeU(pxW, pxH), nullptr, 0, &bp, newBmp.addressof());
     if (FAILED(hrCreate))
     {
@@ -2136,7 +2134,7 @@ void ColorTextView::RebuildSliceBitmap()
         return;
     }
 
-    wil::com_ptr<ID2D1Image> prevTarget;
+    wil::com_ptr_nothrow<ID2D1Image> prevTarget;
     _d2dCtx->GetTarget(prevTarget.addressof());
     D2D1_MATRIX_3X2_F prevXf{};
     _d2dCtx->GetTransform(&prevXf);
@@ -2184,7 +2182,7 @@ void ColorTextView::RebuildSliceBitmap()
             auto* brightArrowBrush = GetBrush(D2D1::ColorF(1.0f, 0.8f, 0.0f, 1.0f)); // Bright yellow-orange
             if (brightArrowBrush && _textFormat)
             {
-                wil::com_ptr<IDWriteTextLayout> indicator;
+                wil::com_ptr_nothrow<IDWriteTextLayout> indicator;
                 const wchar_t* overflowText = L" →";
                 if (SUCCEEDED(_dwriteFactory->CreateTextLayout(overflowText, 2, _textFormat.get(), 50.f, hDip, indicator.addressof())))
                 {
@@ -2289,10 +2287,10 @@ void ColorTextView::LogSystemInfo() const
     // Log adapter information
     if (_d3dDevice)
     {
-        wil::com_ptr<IDXGIDevice> dxgiDevice;
+        wil::com_ptr_nothrow<IDXGIDevice> dxgiDevice;
         if (_d3dDevice.try_query_to(dxgiDevice.put()))
         {
-            wil::com_ptr<IDXGIAdapter> adapter;
+            wil::com_ptr_nothrow<IDXGIAdapter> adapter;
             if (SUCCEEDED(dxgiDevice->GetAdapter(adapter.addressof())))
             {
                 DXGI_ADAPTER_DESC desc{};
@@ -2528,7 +2526,7 @@ void ColorTextView::CreateFallbackLayoutIfNeeded(size_t visStartLine, size_t vis
 
     if (! tailResult.text.empty())
     {
-        wil::com_ptr<IDWriteTextLayout> temp;
+        wil::com_ptr_nothrow<IDWriteTextLayout> temp;
         if (SUCCEEDED(_dwriteFactory->CreateTextLayout(
                 tailResult.text.c_str(), static_cast<UINT32>(tailResult.text.size()), _textFormat.get(), desiredWidth, 1000000.f, temp.addressof())))
         {
@@ -2603,7 +2601,7 @@ void ColorTextView::DrawScene(bool clearTarget)
 
         // HOT PATH: Simple direct rendering of tail layout
         // No slice coverage checks, no fallbacks, no complexity
-        wil::com_ptr<IDWriteTextLayout> layoutToUse = _tailLayout;
+        wil::com_ptr_nothrow<IDWriteTextLayout> layoutToUse = _tailLayout;
 
 #ifdef _DEBUG
         static int autoScrollFrameCounter = 0;
@@ -2716,8 +2714,8 @@ void ColorTextView::DrawScene(bool clearTarget)
             {
                 // CRITICAL: Cache the layout pointer BEFORE any function calls to prevent
                 // re-entrant painting (via GetLineHeight/GetBrush) from invalidating _fallbackLayout
-                wil::com_ptr<IDWriteTextLayout> layoutToUse = _fallbackLayout;
-                const size_t startLine                      = _fallbackStartLine;
+                wil::com_ptr_nothrow<IDWriteTextLayout> layoutToUse = _fallbackLayout;
+                const size_t startLine                              = _fallbackStartLine;
 
                 if (layoutToUse)
                 {
@@ -2777,7 +2775,7 @@ void ColorTextView::DrawScene(bool clearTarget)
             {
                 // TRACER_CTX(L"TextLayout");
                 //  Cache layout pointer to prevent re-entrant painting issues
-                wil::com_ptr<IDWriteTextLayout> layoutToUse = _textLayout;
+                wil::com_ptr_nothrow<IDWriteTextLayout> layoutToUse = _textLayout;
 
 #ifdef _DEBUG
                 {
@@ -2871,7 +2869,7 @@ void ColorTextView::OnPaint()
 #ifdef _DEBUG
     if (_swapChain)
     {
-        auto tex = wil::com_ptr<ID3D11Texture2D>();
+        auto tex = wil::com_ptr_nothrow<ID3D11Texture2D>();
         if (SUCCEEDED(_swapChain->GetBuffer(0, IID_PPV_ARGS(tex.addressof()))))
         {
             D3D11_TEXTURE2D_DESC td{};
@@ -3461,7 +3459,7 @@ void ColorTextView::RebuildTailLayout()
 
     // Create layout synchronously (fast - only ~100 lines)
     const float layoutWidth = ComputeLayoutWidthDip();
-    wil::com_ptr<IDWriteTextLayout> newLayout;
+    wil::com_ptr_nothrow<IDWriteTextLayout> newLayout;
     HRESULT hr = _dwriteFactory->CreateTextLayout(tailText.c_str(),
                                                   static_cast<UINT32>(tailText.size()),
                                                   _textFormat.get(),
@@ -3779,8 +3777,8 @@ void ColorTextView::StartLayoutWorker(float layoutWidth, UINT32 seq)
     struct Ctx
     {
         HWND targetWindow;
-        wil::com_ptr<IDWriteFactory> dwriteFactory;
-        wil::com_ptr<IDWriteTextFormat> textFormat;
+        wil::com_ptr_nothrow<IDWriteFactory> dwriteFactory;
+        wil::com_ptr_nothrow<IDWriteTextFormat> textFormat;
         float width;
         UINT32 seq;
         size_t firstLine;
@@ -3822,7 +3820,7 @@ void ColorTextView::StartLayoutWorker(float layoutWidth, UINT32 seq)
             FAIL_FAST_IF_FAILED(coinitHr);
         }
         [[maybe_unused]] const wil::unique_couninitialize_call coUninit;
-        wil::com_ptr<IDWriteTextLayout> lay;
+        wil::com_ptr_nothrow<IDWriteTextLayout> lay;
 
         if (ctx->dwriteFactory && ctx->textFormat && ! ctx->text.empty())
         {
@@ -4494,7 +4492,7 @@ ID2D1SolidColorBrush* ColorTextView::GetBrush(const D2D1_COLOR_F& color)
         return it->second.brush.get();
     }
 
-    wil::com_ptr<ID2D1SolidColorBrush> b;
+    wil::com_ptr_nothrow<ID2D1SolidColorBrush> b;
     if (FAILED(_d2dCtx->CreateSolidColorBrush(color, b.addressof())) || ! b)
         return nullptr;
     PruneBrushCacheIfNeeded();
@@ -4742,8 +4740,8 @@ void ColorTextView::EnsureWidthAsync()
     struct WidthCtx
     {
         HWND targetWindow{};
-        wil::com_ptr<IDWriteFactory> dwriteFactory;
-        wil::com_ptr<IDWriteTextFormat> textFormat;
+        wil::com_ptr_nothrow<IDWriteFactory> dwriteFactory;
+        wil::com_ptr_nothrow<IDWriteTextFormat> textFormat;
         std::vector<size_t> indices;
         std::vector<std::wstring> texts;
         UINT32 seq{};
@@ -4783,7 +4781,7 @@ void ColorTextView::EnsureWidthAsync()
                 const auto& text = widthCtx->texts[i];
                 if (text.empty())
                     continue;
-                wil::com_ptr<IDWriteTextLayout> tl;
+                wil::com_ptr_nothrow<IDWriteTextLayout> tl;
                 if (SUCCEEDED(widthCtx->dwriteFactory->CreateTextLayout(
                         text.c_str(), static_cast<UINT32>(text.size()), widthCtx->textFormat.get(), 1000000.f, 1000.f, tl.addressof())))
                 {
