@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Guard the accepted settings version through the final name check and replacement. Preserve a concurrent edit or creation.
 - Save a local minidump after a RedMonitor crash and show its path once on the next ordinary launch.
   Keep the ten newest reports and preserve existing diagnostic files.
   - Pass the read-only formatting switch by name in affected validation.
