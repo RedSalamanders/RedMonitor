@@ -1,1 +1,0 @@
-- Use the pinned engine as the sole owner of hosted MSVC setup.
