@@ -1,1 +1,0 @@
-- Use Edit and Continue symbols for the RedMonitor Debug profile.
