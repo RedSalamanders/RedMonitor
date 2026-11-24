@@ -1,1 +1,0 @@
-- Pin the reviewed shared MSVC setup and regenerate its reusable workflow callers.
