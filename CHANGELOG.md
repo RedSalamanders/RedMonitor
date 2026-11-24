@@ -3,6 +3,9 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Save a local minidump after a RedMonitor crash and show its path once on the next ordinary launch.
+  Keep the ten newest reports and preserve existing diagnostic files.
+  - Pass the read-only formatting switch by name in affected validation.
 - Use the pinned engine as the sole owner of hosted MSVC setup.
 - Apply the shared lean Windows header definitions to RedMonitor's C++ profiles.
 - Use the conforming C++ preprocessor in RedMonitor's native profiles.
