@@ -1,0 +1,1 @@
+- Exercise the pinned shared vcpkg checkout in the offline restore fixture.
