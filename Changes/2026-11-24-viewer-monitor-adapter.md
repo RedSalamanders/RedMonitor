@@ -1,1 +1,0 @@
-- Create the log viewer's rendering device on the adapter that drives its monitor and rebuild it after an adapter change.

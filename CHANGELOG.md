@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Create the log viewer's rendering device on the adapter that drives its monitor and rebuild it after an adapter change.
 - Give the monitor's top-level window an explicit owner from creation through destruction.
 - Own the viewer's graphics and text COM interfaces with nonthrowing WIL pointers and use the existing DXGI factory interface for window association.
 - Rebuild the viewer after a device hang or driver internal error and use the same device-loss handling for full draws, partial draws and presentation.
