@@ -15,6 +15,8 @@ Use already restored exact dependencies.
 Auto enables viewer test hooks in Debug/ASan and disables them in Release. Explicit true/false is receipt-bound.
 .PARAMETER ProductionOnly
 Build only the production viewer and satellites; excludes console test targets.
+.PARAMETER Analyze
+Rebuild with MSVC code analysis in .build/analysis.
 .PARAMETER BuildNumber
 Explicit frozen batch version component. Zero preserves the local default version.
 .PARAMETER DxUiSdkInputDescriptor
@@ -34,11 +36,14 @@ param([ValidateSet('x64','ARM64')][string] $Platform='x64',
       [ValidateSet('Debug','Release','ASan Debug')][string] $Configuration='Debug', [switch] $SkipRestore,
       [ValidateSet('Auto','true','false')][string]$ViewerTests='Auto',
       [switch]$ProductionOnly, [ValidateRange(0,65535)][int]$BuildNumber=0,
-      [string]$DxUiSdkInputDescriptor='')
+      [string]$DxUiSdkInputDescriptor='', [switch]$Analyze)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $nativeEntryElapsed=[Diagnostics.Stopwatch]::StartNew()
 if ($env:CI_NATIVE_BUILDS_DISABLED -eq 'true') { throw 'Native builds are forbidden in compiler-free PR checks.' }
+if ($Analyze -and ($ProductionOnly -or $DxUiSdkInputDescriptor)) {
+    throw '-Analyze requires the ordinary source build targets.'
+}
 if($ProductionOnly -and ($Configuration -ne 'Release' -or $ViewerTests -eq 'true')){
     throw 'ProductionOnly requires a test-disabled Release viewer.'
 }
@@ -54,12 +59,17 @@ $profileLease = Enter-ScopedProfileLease -Root $PSScriptRoot -Platform $Platform
 $lease = $null
 $sdkInput=$null;$buildFailure=$null
 try {
-$reports = Get-ScopedReportRoot -Root $PSScriptRoot -Platform $Platform -Configuration $Configuration
-foreach ($name in @('build.json', 'iteration.json')) {
-    Remove-ScopedIteration -Root $PSScriptRoot -Path (Join-Path $reports $name)
+$outputRoot = Join-Path $PSScriptRoot '.build'
+if ($Analyze) {
+    $outputRoot = Assert-RedMonitorOutputPath (Join-Path $outputRoot 'analysis')
+} else {
+    $reports = Get-ScopedReportRoot -Root $PSScriptRoot -Platform $Platform -Configuration $Configuration
+    foreach ($name in @('build.json', 'iteration.json')) {
+        Remove-ScopedIteration -Root $PSScriptRoot -Path (Join-Path $reports $name)
+    }
 }
 $lease=Enter-RedMonitorOperation "artifact-$Platform-$Configuration"
-$output=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ".build/$Platform/$Configuration")
+$output=Assert-RedMonitorOutputPath (Join-Path $outputRoot "$Platform/$Configuration")
 Assert-RedMonitorOutputNotRunning $output
 $msbuild=Get-RedMonitorMSBuild
 $sdkProperties=@();$dependencyRecipe=[ordered]@{recipe='PinnedSource'}
@@ -87,13 +97,24 @@ $sourceBefore=Get-RedMonitorSourceSnapshot
 $identity=$sourceBefore.Identity
 $started=[DateTime]::UtcNow
 $viewerTestsEnabled=if($ViewerTests -eq 'Auto'){$Configuration -ne 'Release'}else{$ViewerTests -eq 'true'}
+$analysisProperties = @()
+if ($Analyze) {
+    $analysisProperties = @('/p:RedMonitorAnalyze=true', "/p:RedMonitorOutputRoot=$outputRoot\")
+    Write-Host 'MSVC code analysis' -ForegroundColor Cyan
+}
 Invoke-CiNativeCommand -FilePath $msbuild -WorkingDirectory $PSScriptRoot -Arguments (@(
     (Join-Path $PSScriptRoot 'RedMonitor.proj'),'/nologo','/m:4','/v:minimal',"/p:Platform=$Platform",
     "/p:Configuration=$Configuration","/p:RedMonitorViewerTestsEnabled=$($viewerTestsEnabled.ToString().ToLowerInvariant())",
     "/p:RedMonitorProductionOnly=$($ProductionOnly.IsPresent.ToString().ToLowerInvariant())",
-    "/p:RedMonitorBuildNumber=$BuildNumber","/flp:LogFile=$output/build.log;Verbosity=normal")+$sdkProperties)
+    "/p:RedMonitorBuildNumber=$BuildNumber","/flp:LogFile=$output/build.log;Verbosity=normal")+$sdkProperties+$analysisProperties)
 if($LASTEXITCODE -ne 0){throw "RedMonitor build failed: $output/build.log"}
 Assert-NativeBuildDiagnostics -LogPath (Join-Path $output 'build.log')
+if ($Analyze) {
+    $executable = Join-Path $output 'RedMonitor.exe'
+    Write-NativeBuildResult -Project RedMonitor -Platform $Platform -Configuration $Configuration `
+        -LogPath (Join-Path $output 'build.log') -Artifacts @($executable) -Duration $nativeEntryElapsed.Elapsed
+    return
+}
 $version=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $output 'RedMonitor.exe'))
 if($version.ProductName -cne 'RedMonitor' -or $version.FileBuildPart -ne $BuildNumber -or
    (($version.SpecialBuild -ceq 'RedSalamander.TestSurface=ENABLE_TESTS') -ne $viewerTestsEnabled)){
