@@ -1,5 +1,6 @@
 <Project>
-  <Target Name="ValidateRedMonitorAnalysisOutput" BeforeTargets="PrepareForBuild;BeforeClean" Condition="'$(RedMonitorAnalyze)'=='true'">
+  <!-- MSVC clears tracking state in _PrepareForClean, before BeforeClean. -->
+  <Target Name="ValidateRedMonitorAnalysisOutput" BeforeTargets="PrepareForBuild;_PrepareForClean" Condition="'$(RedMonitorAnalyze)'=='true'">
     <PropertyGroup>
       <_RedMonitorAnalysisOutputRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory).build\analysis\'))</_RedMonitorAnalysisOutputRoot>
       <_RedMonitorEvaluatedOutputRoot>$([System.IO.Path]::GetFullPath('$(RedMonitorOutputRoot)'))</_RedMonitorEvaluatedOutputRoot>

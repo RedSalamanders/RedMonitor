@@ -1,0 +1,1 @@
+- Validate analysis output paths before MSBuild clears tracking state.
