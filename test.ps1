@@ -146,6 +146,7 @@ $run=Assert-RedMonitorOutputPath (Join-Path $PSScriptRoot ($runBase+[DateTime]::
 New-Item -ItemType Directory -Path $run|Out-Null
 $previousRoot=[Environment]::GetEnvironmentVariable('REDMONITOR_TEST_ROOT','Process')
 $rows=[Collections.Generic.List[object]]::new()
+$scenarios=@()
 $started=[DateTime]::UtcNow
 $primaryFailure=$null
 try{
@@ -249,10 +250,8 @@ try{
     if($null -ne $runtimeInput -and -not $runtimeInput.Closed){
         try{Close-CiLocalSdkApplicationRuntimeInput $runtimeInput}catch{$closeFailure=$_}
     }
-    $expected=if($IncludeLiveEtw){8}else{7}
-    if($build.viewerTestsEnabled){$expected+=3}
-    if($Configuration -eq 'ASan Debug'){$expected++}
-    $passed=$null -eq $primaryFailure -and $null -eq $closeFailure -and $rows.Count -eq $expected -and @($rows|Where-Object passed -eq $false).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
+    $passed=$null -eq $primaryFailure -and $null -eq $closeFailure -and $scenarios.Count -gt 0 -and
+        $rows.Count -eq $scenarios.Count -and @($rows|Where-Object passed -eq $false).Count -eq 0 -and $identity -ceq (Get-RedMonitorSourceIdentity)
     $record=[ordered]@{schemaVersion=1;passed=$passed;sourceIdentity=$identity;platform=$Platform;configuration=$Configuration;
         buildReceiptSha256=$buildReceiptHash;
         scenarios=@($rows.ToArray());liveEtwRequested=[bool]$IncludeLiveEtw;startedUtc=$started.ToString('o');finishedUtc=[DateTime]::UtcNow.ToString('o');interactive=$false}
