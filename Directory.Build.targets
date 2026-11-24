@@ -1,4 +1,17 @@
 <Project>
+  <Target Name="ValidateRedMonitorAnalysisOutput" BeforeTargets="PrepareForBuild;BeforeClean" Condition="'$(RedMonitorAnalyze)'=='true'">
+    <PropertyGroup>
+      <_RedMonitorAnalysisOutputRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory).build\analysis\'))</_RedMonitorAnalysisOutputRoot>
+      <_RedMonitorEvaluatedOutputRoot>$([System.IO.Path]::GetFullPath('$(RedMonitorOutputRoot)'))</_RedMonitorEvaluatedOutputRoot>
+    </PropertyGroup>
+    <Error Condition="'$(_RedMonitorEvaluatedOutputRoot)'!='$(_RedMonitorAnalysisOutputRoot)' or '$(CiSdkContract)'!='' or '$(RedMonitorDxUiSdkRoot)'!=''" Text="RedMonitor code analysis requires its dedicated output directory and source dependencies." />
+    <Exec Command="pwsh -NoProfile -NonInteractive -File &quot;$(MSBuildThisFileDirectory)Tools\Assert-AnalysisOutput.ps1&quot; -OutputDirectory &quot;$(OutDir)/.&quot; -IntermediateDirectory &quot;$(IntDir)/.&quot;" />
+  </Target>
+  <ItemDefinitionGroup Condition="'$(RedMonitorAnalyze)'=='true' and '$(MSBuildProjectExtension)'=='.vcxproj'">
+    <ClCompile>
+      <EnablePREfast>true</EnablePREfast>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <Target Name="RedMonitorValidateLocalSdkOutput" BeforeTargets="PrepareForBuild;ClCompile;ResourceCompile;Lib;Link"
           Condition="'$(CiSdkContract)'=='LocalUnpinnedAbiV1'">
     <!-- Every aggregate child owns outputs, including console/resource-only projects

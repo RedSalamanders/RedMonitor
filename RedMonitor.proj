@@ -13,6 +13,11 @@
     <MonitorProject Include="Tests/SettingsContractTests.vcxproj" Condition="'$(RedMonitorProductionOnly)'!='true'" />
   </ItemGroup>
   <Target Name="Build">
+    <ItemGroup Condition="'$(RedMonitorAnalyze)'=='true'">
+      <MonitorAnalysisCleanProject Include="@(MonitorProject);support/RedMonitorSupport.vcxproj" />
+    </ItemGroup>
+    <MSBuild Condition="'$(RedMonitorAnalyze)'=='true'" Projects="@(MonitorAnalysisCleanProject)" Targets="Clean"
+             Properties="Platform=$(Platform);Configuration=$(Configuration);BuildProjectReferences=false" BuildInParallel="false" />
     <MSBuild Projects="@(MonitorProject)" Properties="Platform=$(Platform);Configuration=$(Configuration)" BuildInParallel="false" />
   </Target>
 </Project>
