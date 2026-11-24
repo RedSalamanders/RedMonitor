@@ -1,7 +1,7 @@
 // WARNING: cannot be replaced by "#pragma once" because it is included from .rc files and
 // the resource compiler does not reliably support "#pragma once".
-#ifndef __REDSALAMANDER_VERSION_H
-#define __REDSALAMANDER_VERSION_H
+#ifndef REDMONITOR_SUPPORT_VERSION_H_INCLUDED
+#define REDMONITOR_SUPPORT_VERSION_H_INCLUDED
 
 #if defined(APSTUDIO_INVOKED) && ! defined(APSTUDIO_READONLY_SYMBOLS)
 #error this file is not editable by Microsoft Visual C++
@@ -121,4 +121,4 @@
 #define REQUIRE_LAST_VERSION_OF_REDSALAMANDER                                                                                                                  \
     VERSINFO_TEXT("This plugin requires RedSalamander ") VERSINFO_VERSION_BASE VERSINFO_TEXT(" (") REDSALAMANDER_VER_PLATFORM VERSINFO_TEXT(") or later.")
 
-#endif // __REDSALAMANDER_VERSION_H
+#endif // REDMONITOR_SUPPORT_VERSION_H_INCLUDED
