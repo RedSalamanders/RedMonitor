@@ -21,6 +21,21 @@
            Text="Missing vcpkg runtime dependency: %(RedMonitorRuntimeDependency.Identity). Run restore.ps1 -Platform $(Platform)." />
     <Copy SourceFiles="@(RedMonitorRuntimeDependency)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)'=='.vcxproj' and '$(Configuration)'=='Release'">
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectExtension)'=='.vcxproj' and '$(Configuration)'=='Release'">
+    <ClCompile>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+    </Link>
+    <Lib><LinkTimeCodeGeneration>true</LinkTimeCodeGeneration></Lib>
+  </ItemDefinitionGroup>
   <Target Name="RedMonitorValidateProfile" BeforeTargets="PrepareForBuild">
     <Error Condition="'$(MSBuildProjectExtension)'=='.vcxproj' and !$([System.String]::Copy('$(VCToolsVersion)').StartsWith('$(RequiredMsvcToolsVersion).'))"
            Text="RedMonitor requires MSVC build tools $(RequiredMsvcToolsVersion).x. Selected $(VCToolsVersion). Install and select the required default C++ toolset." />

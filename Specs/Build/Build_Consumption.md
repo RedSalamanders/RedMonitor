@@ -32,6 +32,9 @@ Open `RedMonitor.sln` in Visual Studio for the six profiles after restoring the 
 The root `build.ps1` builds through `RedMonitor.proj` and records the native build receipt. Every native project
 checks the selected MSVC toolset against `RequiredMsvcToolsVersion` before preparing its build.
 
+Release uses function-level linking and whole-program optimization, followed by full link-time code generation,
+unreferenced code removal and COMDAT folding. Debug and ASan Debug keep their existing compiler and linker policy.
+
 ## Command-line build output and source receipts
 
 `build.ps1` prints the RedMonitor ASCII wordmark and target profile before restore/compilation.
