@@ -196,8 +196,9 @@ Release packages include the full CRT/data/language/license closure plus Install
 RedMonitor restores vcpkg with the standard dynamic triplets (`x64-windows`, `arm64-windows`), so the
 package carries `yyjson.dll` beside `RedMonitor.exe`, and every build copies it beside each executable.
 The license closure carries RedMonitor's `LICENSE.txt` and `THIRD-PARTY-NOTICES.md`, the pinned DxUi license, its
-third-party notices and the notices of
-components compiled into DxUi.lib, beside the WIL and yyjson copyrights.
+third-party notices and the full texts for components compiled into DxUi.lib, beside the WIL and yyjson copyrights.
+Source-built packages stage Unicode and WHATWG under `DxUi-licenses/`. SDK builds preserve the verified SDK notice bundle.
+The package manifest verifies every staged notice after clean extraction.
 The installer validates every manifest entry and production metadata before atomic directory
 replacement in a standard per-user or machine folder. Running installations block replacement;
 no process is killed. Previous installations remain recoverable. Harness installation is confined

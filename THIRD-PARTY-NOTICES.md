@@ -13,9 +13,8 @@ notice, before it is distributed.
   17.0.0, copyright Unicode, Inc., Unicode License V3; and an HTML named-character table from the WHATWG snapshot of
   18 October 2026, copyright WHATWG (Apple, Google, Mozilla, Microsoft), BSD 3-Clause for code and CC BY 4.0. The
   package carries DxUi's license and notices as `DxUi-LICENSE.txt`, `DxUi-THIRD-PARTY-NOTICES.md` and
-  `DxUi-licenses\`. The full Unicode and WHATWG texts are in DxUi at that commit
-  (`ThirdParty/Unicode/17.0.0/LICENSE.txt`, `ThirdParty/Markdown/whatwg-2026-10-18/LICENSE.txt`); the package does
-  not stage them yet.
+  `DxUi-licenses\`. The source-built package carries the full Unicode and WHATWG texts from the
+  locked DxUi revision in `DxUi-licenses/unicode.txt` and `DxUi-licenses/whatwg.txt`.
 - **WIL** (Windows Implementation Libraries) 1.0.260126.7 or later, Microsoft Corporation, MIT, header-only. Its
   vcpkg copyright file ships as `wil-LICENSE.txt`.
 - **yyjson** 0.13.0 or later, YaoYuan, MIT, shipped as `yyjson.dll`. Its vcpkg copyright file ships as

@@ -63,14 +63,30 @@ if($usedSdk){
         try{Close-CiPinnedSdkInput $sdk}catch{if($null -eq $noticeFailure){throw}else{Write-Warning ('SDK notice close also failed: '+$_.Exception.Message)}}
     }
 }else{
-$dxuiSource=Join-Path $PSScriptRoot ".build/dependencies/DxUi/source/$($dxuiPin.commit)"
-Copy-Item -LiteralPath (Join-Path $dxuiSource 'LICENSE.txt') -Destination (Join-Path $stage 'DxUi-LICENSE.txt')
-Copy-Item -LiteralPath (Join-Path $dxuiSource 'THIRD-PARTY-NOTICES.md') -Destination (Join-Path $stage 'DxUi-THIRD-PARTY-NOTICES.md')
-# DxUi.lib compiles these in; WIL's notice ships below from vcpkg and test-corpus licenses are not redistributed.
-New-Item -ItemType Directory -Path (Join-Path $stage 'DxUi-licenses')|Out-Null
-foreach($notice in 'katex.txt','rapidyaml.txt','rapidyaml-bundled.txt','tomlplusplus.txt'){
-    Copy-Item -LiteralPath (Join-Path $dxuiSource "docs/licenses/$notice") -Destination (Join-Path $stage "DxUi-licenses/$notice")
-}
+    $dxuiSource = Join-Path $PSScriptRoot ".build/dependencies/DxUi/source/$($dxuiPin.commit)"
+    $noticeFiles = [ordered]@{
+        'DxUi-LICENSE.txt'                    = 'LICENSE.txt'
+        'DxUi-THIRD-PARTY-NOTICES.md'          = 'THIRD-PARTY-NOTICES.md'
+        'DxUi-licenses/katex.txt'             = 'docs/licenses/katex.txt'
+        'DxUi-licenses/rapidyaml.txt'         = 'docs/licenses/rapidyaml.txt'
+        'DxUi-licenses/rapidyaml-bundled.txt' = 'docs/licenses/rapidyaml-bundled.txt'
+        'DxUi-licenses/tomlplusplus.txt'      = 'docs/licenses/tomlplusplus.txt'
+        'DxUi-licenses/unicode.txt'           = 'ThirdParty/Unicode/17.0.0/LICENSE.txt'
+        'DxUi-licenses/whatwg.txt'             = 'ThirdParty/Markdown/whatwg-2026-10-18/LICENSE.txt'
+    }
+    $sourceCommit = & git -C $dxuiSource rev-parse HEAD
+    if ($LASTEXITCODE -ne 0 -or $sourceCommit -cne $dxuiPin.commit) {
+        throw "The DxUi notice checkout does not match the production pin $($dxuiPin.commit)."
+    }
+    $noticeChanges = & git -C $dxuiSource status --porcelain --untracked-files=no -- @($noticeFiles.Values)
+    if ($LASTEXITCODE -ne 0 -or $noticeChanges) {
+        throw "The pinned DxUi notices contain local changes under $dxuiSource."
+    }
+    # The package receipt verifies the staged bytes after clean extraction.
+    New-Item -ItemType Directory -Path (Join-Path $stage 'DxUi-licenses') | Out-Null
+    foreach ($name in $noticeFiles.Keys) {
+        Copy-Item -LiteralPath (Join-Path $dxuiSource $noticeFiles[$name]) -Destination (Join-Path $stage $name) -ErrorAction Stop
+    }
 }
 if($Configuration -eq 'Release'){
     Import-Module (Join-Path $PSScriptRoot 'Tools/VisualStudio.psm1') -Force
