@@ -33,7 +33,7 @@ The root `build.ps1` builds through `RedMonitor.proj` and records the native bui
 checks the selected MSVC toolset against `RequiredMsvcToolsVersion` before preparing its build.
 
 Release uses function-level linking and whole-program optimization, followed by full link-time code generation,
-unreferenced code removal and COMDAT folding. Debug and ASan Debug keep their existing compiler and linker policy.
+unreferenced code removal and COMDAT folding. Debug produces Edit and Continue symbols. Release and ASan Debug use regular program databases.
 
 ## Command-line build output and source receipts
 

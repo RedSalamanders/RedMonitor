@@ -41,7 +41,8 @@
       <AdditionalIncludeDirectories>$(RedMonitorRoot)support;$(RedMonitorRoot)include;$(RedMonitorRoot)Tests;$(RedMonitorRoot)Tests\Support;$(RedMonitorPackages)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <ExternalDirectoriesEnv>EXTERNAL_INCLUDE;%(ExternalDirectoriesEnv)</ExternalDirectoriesEnv>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat Condition="'$(Configuration)'=='Debug'">EditAndContinue</DebugInformationFormat>
+      <DebugInformationFormat Condition="'$(Configuration)'!='Debug'">ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreadedDLL</RuntimeLibrary>
       <RuntimeLibrary Condition="'$(Configuration)'!='Release'">MultiThreadedDebugDLL</RuntimeLibrary>
       <Optimization Condition="'$(Configuration)'=='Release'">MaxSpeed</Optimization>
