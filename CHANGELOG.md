@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Apply accepted settings edits while RedMonitor runs, and preserve the authored file when a live edit cannot be read.
 - Verify dialog-free failure-report routing for every RedMonitor native test executable.
 - Create the log viewer's rendering device on the adapter that drives its monitor and rebuild it after an adapter change.
 - Give the monitor's top-level window an explicit owner from creation through destruction.
