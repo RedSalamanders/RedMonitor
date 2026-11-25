@@ -12,6 +12,7 @@ BEGIN
         MENUITEM "&Nové\tCtrl+N",                IDM_FILE_NEW
         MENUITEM "&Otvoriť...\tCtrl+O",            IDM_FILE_OPEN
         MENUITEM "&Uložiť ako...",                 IDM_FILE_SAVE_AS
+        MENUITEM "Otvoriť súbor nasta&vení", IDM_FILE_OPEN_SETTINGS
         MENUITEM SEPARATOR
         MENUITEM "&Koniec",                       IDM_EXIT
     END
@@ -103,6 +104,7 @@ BEGIN
     IDS_NOT_RUNNING         "RedSalamander Bug Reporter (RedSalamanderMonitor.exe) nie je spustený. RedSalamander nebude schopný zvládnuť potenciálne havárie. Reštartujte RedSalamander."
     IDS_CAPTION_ERROR "Chyba"
     IDS_CAPTION_OPEN "Otvoriť"
+    IDS_MSG_OPEN_SETTINGS_FAILED_FMT "Súbor nastavení sa nepodarilo otvoriť.\r\n\r\n{0}\r\n\r\nChyba systému Windows 0x{1:08X}."
     IDS_CAPTION_SAVE "Uložiť"
     IDS_CAPTION_PRINT "Tlačiť"
     IDS_CAPTION_ETW_WARNING "Upozornenie pre poslucháča ETW"

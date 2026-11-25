@@ -3,12 +3,12 @@
 Launch RedMonitor.exe to receive compatible diagnostic events or open a UTF-8/UTF-16LE log. The viewer
 supports severity filters, find, colored metadata, selection/copy, line numbers, auto-scroll (including
 while severity filters are active), themes, always-on-top and transactional Save As. Log retention and
-queued traffic are bounded with incremental oldest-first eviction; dropped events are shown. The initial
-extraction keeps the legacy monitor settings identity for RedSalamander integration.
+queued traffic are bounded with incremental oldest-first eviction and the viewer shows dropped events.
 
-Save an edit to the [active settings profile](../Specs/Core/Core_Settings.md) to update viewer preferences while
-RedMonitor runs. An unreadable edit leaves the current preferences in effect. Saved window placement and
-language changes apply on the next launch.
+Select **File > Open Settings File** to edit RedMonitor's own profile. Saving an edit updates viewer preferences
+while RedMonitor runs. An unreadable edit leaves the current preferences in effect. Saved window placement and
+language changes apply on the next launch. On first start, RedMonitor can import viewer preferences from an
+existing legacy profile and keeps the original file. [Settings locations and migration](../Specs/Core/Core_Settings.md)
 
 Real-time ETW needs appropriate Windows session permissions. A failed session does not prevent file
 viewing. Self diagnostics are opt-in with `--etw`. Printing remains unsupported.

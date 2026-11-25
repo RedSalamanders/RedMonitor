@@ -13,6 +13,9 @@ The UI thread owns the top-level window through a `MonitorWindow` and its `wil::
 binds the instance supplied to `CreateWindowExW` and subsequent messages dispatch through it.
 `WM_NCDESTROY` drains posted payloads and detaches the instance and window handle.
 
+**File > Open Settings File** opens the current viewer profile with the Windows file association. The viewer reports
+an open failure with the resolved path. Hidden harness runs verify the command label without opening an editor.
+
 ## Rendering and filtering
 
 The viewer uses one device-loss predicate for partial draws, full draws and presentation. On

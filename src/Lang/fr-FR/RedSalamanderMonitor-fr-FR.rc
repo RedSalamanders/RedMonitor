@@ -12,6 +12,7 @@ BEGIN
         MENUITEM "&Nouveau\tCtrl+N",                IDM_FILE_NEW
         MENUITEM "&Ouvrir...\tCtrl+O",            IDM_FILE_OPEN
         MENUITEM "Enregistrer &sous...",                 IDM_FILE_SAVE_AS
+        MENUITEM "Ouvrir le fichier de paramè&tres", IDM_FILE_OPEN_SETTINGS
         MENUITEM SEPARATOR
         MENUITEM "&Quitter",                       IDM_EXIT
     END
@@ -103,6 +104,7 @@ BEGIN
     IDS_NOT_RUNNING         "RedSalamander Bug Reporter (RedSalamanderMonitor.exe) n’est pas en cours d’exécution. RedSalamander ne pourra pas gérer les crashs éventuels. Veuillez redémarrer RedSalamander."
     IDS_CAPTION_ERROR "Erreur"
     IDS_CAPTION_OPEN "Ouvrir"
+    IDS_MSG_OPEN_SETTINGS_FAILED_FMT "Impossible d’ouvrir le fichier de paramètres.\r\n\r\n{0}\r\n\r\nErreur Windows 0x{1:08X}."
     IDS_CAPTION_SAVE "Enregistrer"
     IDS_CAPTION_PRINT "Imprimer"
     IDS_CAPTION_ETW_WARNING "Avertissement de l’écouteur ETW"

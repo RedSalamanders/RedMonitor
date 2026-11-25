@@ -8,7 +8,7 @@
     "DirectX viewer",
     "legacy ETW schema",
     "Unicode file import/export",
-    "legacy settings compatibility",
+    "independent viewer settings with read-only legacy import and File menu access",
     "header-only producer client API 1",
     "static independent support and yyjson",
     "source-bound noninteractive tests",

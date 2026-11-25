@@ -210,8 +210,10 @@ The standalone import and original digests preserve recovery without keeping a s
 2. Migrate legacy monitor settings by read-once import when the new profile does not exist. Write
    atomically to a new RedMonitor path; preserve the old file for rollback. Never copy application
    credentials or unrelated settings. Test corrupt, missing, read-only and simultaneous migration.
-3. Replace RedSalamander Preferences' direct storage coupling with a documented owned settings
-   adapter or command. Choose one canonical writer and notification/version policy before coding.
+3. RedHome D26 assigns the independent profile and **File > Open Settings File** to RedMonitor.
+   The canonical profile keeps the existing watcher and guarded version checks. RedSalamander owns
+   the follow-up that moves Monitor settings editing out of its Preferences. Land the viewer first
+   and validate profile ownership across the two products.
 4. Adopt `RedMonitor` resource/mutex/registry/class/perf identities with explicit compatibility
    aliases/removal conditions. Ensure old and new launches cannot consume/stop each other's sessions.
 5. Replace private broad helper/settings snapshots with small RedMonitor-owned services. Shared
