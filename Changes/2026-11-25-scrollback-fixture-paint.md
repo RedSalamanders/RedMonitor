@@ -1,1 +1,0 @@
-- Tests: request and verify a scrollback paint in the non-activating Monitor performance fixture.
