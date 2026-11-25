@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Settings: Preserve readable incompatible profiles. Recover malformed JSON with a guarded backup and install defaults at the vacant canonical path.
 - Reconcile RedMonitor's delivered convergence work and record the remaining DxUi API 6 and settings migration owners.
 - CI: use the pinned engine MSVC setup action for the manual paired benchmark.
 - Tooling: collect paired Release WARP timing for RedMonitor chrome, burst and scrollback.

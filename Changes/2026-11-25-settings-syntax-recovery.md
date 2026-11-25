@@ -1,1 +1,0 @@
-- Settings: Preserve readable incompatible profiles. Recover malformed JSON with a guarded backup and install defaults at the vacant canonical path.
