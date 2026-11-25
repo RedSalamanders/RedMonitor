@@ -1,1 +1,0 @@
-- CI: use the pinned engine MSVC setup action for the manual paired benchmark.

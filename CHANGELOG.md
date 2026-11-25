@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- CI: use the pinned engine MSVC setup action for the manual paired benchmark.
 - Tooling: collect paired Release WARP timing for RedMonitor chrome, burst and scrollback.
 - Tests: request and verify a scrollback paint in the non-activating Monitor performance fixture.
 - Enforce shared member naming with clang-tidy and replace the reserved RedMonitor version header guard.
