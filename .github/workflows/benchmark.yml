@@ -38,7 +38,7 @@ jobs:
           ref: ${{ steps.engine.outputs.ref }}
           path: .ci-engine
           persist-credentials: false
-      - uses: ./.github/actions/setup-msvc
+      - uses: ./.ci-engine/.github/actions/setup-msvc
         with:
           platform: x64
       - name: Collect paired WARP monitor evidence
