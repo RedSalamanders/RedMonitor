@@ -1,6 +1,7 @@
 # Code conventions convergence (RedHome CV-6-08)
 
-Status: ACTIVE — plan written; each row lands in its own pull request.
+Status: ACTIVE — the viewer changes have merged. API 6 adoption, the settings name migration and
+source-bound replays remain with their owning plans.
 Owner: RedMonitor maintainers.
 Prepared: 2026-11-19.
 Planned-at commit: `0fbe8a7` (`RedSalamanders/RedMonitor` `main`).
@@ -29,33 +30,28 @@ Planned-at commit: `0fbe8a7` (`RedSalamanders/RedMonitor` `main`).
 
 ## Rows
 
-- [ ] **H-19 Device-loss results.** `ColorTextView` treats `D2DERR_RECREATE_TARGET`, `DXGI_ERROR_DEVICE_REMOVED` and
-  `DXGI_ERROR_DEVICE_RESET` as device loss (three sites). Target: the union `DXGI_ERROR_DEVICE_REMOVED`,
-  `DXGI_ERROR_DEVICE_RESET`, `DXGI_ERROR_DEVICE_HUNG`, `DXGI_ERROR_DRIVER_INTERNAL_ERROR`, and
-  `D2DERR_RECREATE_TARGET` where Direct2D draws to the swap chain, through one predicate.
-- [ ] **H-03 COM smart pointer.** `ColorTextView` holds its Direct3D, DXGI, Direct2D and DirectWrite interfaces in
-  `wil::com_ptr<T>` (about 50 uses), and RedMonitor has no `wil::com_ptr_nothrow<T>`. Target:
-  `wil::com_ptr_nothrow<T>` in `noexcept` and `HRESULT` code; every throwing `query` or `query_to` becomes a checked
-  `try_query` or `query_to` result.
-- [ ] **H-21 Top-level window ownership.** The main window is created without `lpCreateParams`, its
-  `wil::unique_hwnd` is released into the global `g_hMainWindow`, and the window procedure reads globals. Target:
-  one owner object bound in `WM_NCCREATE`, holding the `wil::unique_hwnd`. The other process-wide state moves with
-  the explicit state-machine plan, which owns it.
-- [ ] **H-17 Direct3D adapter selection.** `ColorTextView` creates its device on the default adapter through
-  `DxUi::CreateD3D11DeviceWithWarpFallback`. Target: the adapter whose output owns the window's monitor, then the
-  default hardware adapter, then WARP, and a device rebuilt when the window moves to a monitor of another adapter.
-- [ ] **H-22 Test-process failure reports.** Every native test entry point already routes failure reports away
-  from dialogs (`Tests/TestSupport/TestSupport.Tests.FailureReports.h`). Target: each also answers
-  `--failure-report-self-test`, and a tooling test runs that switch for every native suite.
-- [ ] **H-25 Replace sequence of a file save.** `support/LocalFileTransaction.h` publishes with a handle rename
-  (`FileRenameInfoEx`, POSIX semantics), then `MoveFileExW`. Target: `ReplaceFileW` over an existing destination
-  after its identity check, `MoveFileExW(MOVEFILE_WRITE_THROUGH)` for a new one, with one fault-injection hook per
-  step (the hooks already exist for write, flush and publish).
-- [ ] **H-15 Settings reload.** The viewer uses a coalesced directory watcher and applies accepted edits on the UI
-  thread. Verify the watcher and no-recovery read, then record source-bound viewer and test evidence. The
-  [settings contract](../../Core/Core_Settings.md) owns the profile identity and legacy startup fallback.
-- [x] **H-08 Resource-string gate.** `src/RedMonitor.rc` and the four satellites have a `STRINGTABLE` and no gate.
-  Target: a gate that fails on bare `{}`, printf tokens and unresolved ids.
+- [x] **H-19 Device-loss results.** `ColorTextView` uses the common device-loss predicate at its draw and present
+  boundaries. [#153](https://github.com/RedSalamanders/RedMonitor/pull/153)
+- [x] **H-03 COM smart pointer.** The viewer's graphics owners use `wil::com_ptr_nothrow<T>` and propagate query
+  failures through their existing result boundary. [#155](https://github.com/RedSalamanders/RedMonitor/pull/155)
+- [x] **H-21 Top-level window ownership.** `MonitorWindow` owns its HWND and binds and detaches the window owner
+  in `WM_NCCREATE` and `WM_NCDESTROY`. [#157](https://github.com/RedSalamanders/RedMonitor/pull/157)
+- [x] **H-17 Direct3D adapter selection.** The viewer follows the adapter driving its monitor and retains the
+  default hardware and WARP fallbacks. [#159](https://github.com/RedSalamanders/RedMonitor/pull/159)
+- [x] **H-22 Test-process failure reports.** The selected test runner exercises the native suites'
+  `--failure-report-self-test` entry points. [#161](https://github.com/RedSalamanders/RedMonitor/pull/161)
+- [x] **H-25 Guarded saves.** Settings writes and confirmed text exports preserve a competing destination change
+  under D23. [#125](https://github.com/RedSalamanders/RedMonitor/pull/125) · [#135](https://github.com/RedSalamanders/RedMonitor/pull/135)
+- [x] **H-15 Settings reload.** The worker coalesces canonical profile changes and posts them to the UI thread.
+  The [settings contract](../../Core/Core_Settings.md) owns the profile identity and legacy startup fallback.
+  [#163](https://github.com/RedSalamanders/RedMonitor/pull/163)
+- [x] **H-08 Resource-string gate.** The base and satellite resource files use the product's resource validation
+  for identifiers and positional formatting.
+- [x] **H-16 and H-24 Crash handling.** The viewer installs the five fault routes, owns a local pending report
+  and one interactive restart notice, and retains ten new report pairs under D24.
+  [Crash contract](../../Core/Core_CrashHandling.md) · [#123](https://github.com/RedSalamanders/RedMonitor/pull/123)
+- [x] **H-27 Member naming.** The root `.clang-tidy` enforces the common member names. The published source
+  passed six builds and 17 Clang Release translation units. [#166](https://github.com/RedSalamanders/RedMonitor/pull/166)
 - [x] **H-26 Settings contract name.** The settings contract was a paragraph of
   [architecture](../../Core/Core_Architecture.md); it is now [Core_Settings.md](../../Core/Core_Settings.md), which
   owns the file names, location, schema, recovery and save. The Debug file already is
@@ -69,9 +65,13 @@ Planned-at commit: `0fbe8a7` (`RedSalamanders/RedMonitor` `main`).
   `PostedPayload.h`. Both live in `DxUi`'s private `src/Support/`, not in `include/DxUi/`, so a consumer cannot use
   them at any pinned commit. They wait until `DxUi` publishes them and RedMonitor adopts that `DxUi` revision, which
   under RedHome decision D20 is the API 6 adoption.
-- **H-24 Crash handler and contract.** RedMonitor has no crash handler. The handler's artifacts, retention and
-  next-start prompt are register row H-16, which has no chosen shape yet; the handler and
-  `Specs/Core/Core_CrashHandling.md` wait for it.
+- **H-18 and H-19 library-owned HWND behavior.** The log viewer owns its device and swap chain. The toolbar
+  and status bar use the pinned DxUi `ControlHost`. Apply and verify its Alt+Enter association and device
+  recovery changes at the qualified API 6 consumer lock. [DxUi #331](https://github.com/RedSalamanders/DxUi/pull/331)
 - **H-23 Keyboard state under hidden self-tests.** No RedMonitor self-test drives keyboard input
   (`ColorTextView` reads `GetKeyState` only for real input), so the row does not apply until one does.
-- **H-01, H-02** wait for API 6 (D20).
+- **H-01, H-02 and consumer tooling** wait for API 6 (D20). The pin review owns the ABI and failure-host migration,
+  restore and provenance, compatible native policy and the native and package replays in the
+  [consumption contract](../../Build/Build_Consumption.md).
+- The [cross-repository test ledger](https://github.com/RedSalamanders/RedHome/blob/main/Specs/Plans/WIP/Convergence_2026-11-17/DeferredTests.md)
+  preserves the D21 replay outcomes at their own source revisions.
