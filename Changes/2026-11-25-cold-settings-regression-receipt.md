@@ -1,0 +1,1 @@
+- Require the cold settings recovery scenario in hosted RedMonitor regression receipts.
