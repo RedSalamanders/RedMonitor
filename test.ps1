@@ -159,6 +159,7 @@ try{
         @{name='client-contract';exe='ClientContractTests.exe';argument=$null},
         @{name='settings-contract';exe='SettingsContractTests.exe';argument=$null},
         @{name='settings-watcher';exe='SettingsContractTests.exe';argument='--settings-watch-self-test'})
+    if($build.viewerTestsEnabled){$scenarios+=@{name='settings-cold-recovery';exe='SettingsContractTests.exe';argument='--settings-cold-recovery-self-test'}}
     if($IncludeLiveEtw){$scenarios+=@{name='transport-roundtrip';exe='TransportRoundtripTests.exe';argument=$null}}
     $scenarios+=@{name='installed-production-metadata';exe='ClientContractTests.exe';argument=$null;
         arguments=@($(if($build.viewerTestsEnabled -or $Configuration -ne 'Release'){'--expect-development'}else{'--expect-production'}),(Join-Path $output 'RedMonitor.exe'))}

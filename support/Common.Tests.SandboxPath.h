@@ -242,6 +242,41 @@ inline constexpr std::wstring_view kTestSandboxDirectoryName{L"RedSalamander.Per
     return ! root.empty() && GetDriveTypeW(root.c_str()) == DRIVE_FIXED;
 }
 
+[[nodiscard]] inline bool IsAuthorizedLocalTestSandboxPath(const std::filesystem::path& candidate, std::error_code& ec) noexcept
+{
+    ec.clear();
+    const auto normalized = candidate.lexically_normal().make_preferred();
+    if (! normalized.is_absolute() || HasTestSandboxAlternateDataStreamSyntax(normalized))
+    {
+        ec = std::make_error_code(std::errc::invalid_argument);
+        return false;
+    }
+
+    wchar_t executable[32768]{};
+    const DWORD length = GetModuleFileNameW(nullptr, executable, static_cast<DWORD>(std::size(executable)));
+    if (length == 0 || length >= std::size(executable))
+    {
+        ec = std::make_error_code(std::errc::permission_denied);
+        return false;
+    }
+
+    auto outputRoot = std::filesystem::path(executable).parent_path();
+    while (! outputRoot.empty() && outputRoot.filename() != L".build" && outputRoot != outputRoot.parent_path())
+    {
+        outputRoot = outputRoot.parent_path();
+    }
+
+    const std::wstring prefix = outputRoot.native() + L"\\";
+    const auto& selected      = normalized.native();
+    if (outputRoot.filename() != L".build" || selected.size() <= prefix.size() ||
+        CompareStringOrdinal(selected.data(), static_cast<int>(prefix.size()), prefix.data(), static_cast<int>(prefix.size()), TRUE) != CSTR_EQUAL)
+    {
+        ec = std::make_error_code(std::errc::permission_denied);
+        return false;
+    }
+    return IsExistingTestSandboxPathReparseFree(normalized, ec);
+}
+
 [[nodiscard]] inline std::optional<std::filesystem::path> GetDedicatedExternalTestSandboxBase(const std::filesystem::path& candidate,
                                                                                               std::wstring_view expectedDirectoryName) noexcept
 {

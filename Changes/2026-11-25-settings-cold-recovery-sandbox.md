@@ -1,0 +1,1 @@
+- Isolate RedMonitor's cold settings recovery tests under their repository-owned run directory.

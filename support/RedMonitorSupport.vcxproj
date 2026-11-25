@@ -11,6 +11,7 @@
  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
  <Import Project="..\Build\RedMonitor.DxUi.props" Condition="'$(CiSdkContract)'=='LocalUnpinnedAbiV1'" />
 
+ <ItemDefinitionGroup><ClCompile><PreprocessorDefinitions Condition="'$(RedMonitorViewerTestsEnabled)'=='true'">ENABLE_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile></ItemDefinitionGroup>
 <ItemGroup><ClCompile Include="LocalizationManager.cpp" /><ClCompile Include="MinimumOsVersion.cpp" /><ClCompile Include="PerfJsonl.cpp" /><ClCompile Include="SettingsStore.cpp" /><ClCompile Include="ThemeDefinitionIo.cpp" /><ClCompile Include="ThemeExpression.cpp" /></ItemGroup>
  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -69,5 +69,7 @@ shutdown. Language also takes effect at the next start. Legacy fallback files ar
   load or at the last save. For an existing file, a delete-access guard denies writes while the transaction
   rechecks and replaces the accepted name. A different version or an unavailable guard returns a revision
   conflict. A new settings file uses non-replacing publication so a competing creation is preserved.
-- A test-enabled build running under an authorized test root uses a settings folder below that root, so harness runs
-  never touch the user's file.
+- The test-enabled viewer and settings support library honor the repository-local run directory assigned by
+  `test.ps1`. The settings store validates ownership and rejects reparse points before it resolves a fixture path.
+  A configured invalid test root refuses settings access. The legacy marked external root still works when the
+  caller supplies it without a repository-local root.
