@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Give RedMonitor its own settings profile, preserve legacy viewer preferences during guarded first-run import, and add Open Settings File to the File menu.
 - Require the cold settings recovery scenario in hosted RedMonitor regression receipts.
 - Isolate RedMonitor's cold settings recovery tests under their repository-owned run directory.
 - Settings: Preserve readable incompatible profiles. Recover malformed JSON with a guarded backup and install defaults at the vacant canonical path.
