@@ -44,6 +44,8 @@ The production viewer rejects the test switch before accessing user settings.
 Use `RedMonitor.exe --warp --chrome-selftest` on a test-enabled profile to verify the non-activating
 chrome scenario and assert that the log view created a WARP device. The probe uses in-memory
 settings defaults and writes its results under the selected repository evidence directory.
+With `--monitor-scrollback-selftest`, it dispatches the owned viewport's queued paint after navigating to scrollback.
+The results must contain a measured scrollback slice and the required frame metrics before the run passes.
 
 `test.ps1` also accepts an explicit local SDK Release record and independently retained SHA-256 through
 `-LocalSdkBuildReceipt` and `-LocalSdkBuildSha256`, with `-SkipBuild`. The shared live runtime reader must
