@@ -1,5 +1,6 @@
 #define REDSAL_DEFINE_TRACE_PROVIDER
 #include "Helpers.h"
+#include "PathUtils.h"
 #include "SettingsStore.h"
 #include "SettingsWatcher.h"
 #include "TestSupport.Tests.Runner.h"
@@ -87,7 +88,7 @@ namespace
 [[nodiscard]] bool CheckColdSettingsRecovery()
 {
     constexpr wchar_t rootVariable[] = L"REDMONITOR_TEST_ROOT";
-    constexpr wchar_t appId[]        = L"RedMonitorColdRecoveryFixture";
+    constexpr wchar_t appId[]        = L"RedSalamanderMonitor";
     wchar_t rootText[32768]{};
     const DWORD rootLength = GetEnvironmentVariableW(rootVariable, rootText, static_cast<DWORD>(std::size(rootText)));
     if (rootLength == 0 || rootLength >= std::size(rootText))
@@ -112,8 +113,10 @@ namespace
         std::fputs("Settings were not redirected to the owned run directory.\n", stderr);
         return false;
     }
+    const std::filesystem::path extendedDirectory(Common::Paths::ToExtendedWin32Path(ownedDirectory.native()));
+    const std::filesystem::path extendedProfile(Common::Paths::ToExtendedWin32Path(profile.native()));
     std::error_code error;
-    if (! std::filesystem::create_directories(ownedDirectory, error))
+    if (! std::filesystem::create_directories(extendedDirectory, error))
     {
         std::fputs("Cold settings recovery needs a fresh fixture directory.\n", stderr);
         return false;
@@ -121,14 +124,15 @@ namespace
 
     const auto write = [&](std::string_view text)
     {
-        std::ofstream stream(profile, std::ios::binary | std::ios::trunc);
+        std::ofstream stream(extendedProfile, std::ios::binary | std::ios::trunc);
         stream << text;
         stream.close();
         return stream.good();
     };
     const auto read = [](const std::filesystem::path& path)
     {
-        std::ifstream stream(path, std::ios::binary);
+        const std::filesystem::path extended(Common::Paths::ToExtendedWin32Path(path.native()));
+        std::ifstream stream(extended, std::ios::binary);
         return std::string(std::istreambuf_iterator<char>(stream), {});
     };
     constexpr std::string_view malformed{"{ incomplete"};
@@ -143,7 +147,7 @@ namespace
     const auto backupCount  = [&](bool requireMalformedBytes)
     {
         size_t count = 0;
-        for (const auto& entry : std::filesystem::directory_iterator(ownedDirectory))
+        for (const auto& entry : std::filesystem::directory_iterator(extendedDirectory))
         {
             if (entry.path().filename().native().starts_with(backupPrefix) && (! requireMalformedBytes || read(entry.path()) == malformed))
             {
