@@ -142,7 +142,7 @@ namespace
     const auto legacyDirectory = scratch / L"RedSalamander" / L"Settings";
     const auto legacy          = legacyDirectory / L"RedSalamanderMonitor-7.0.settings.json";
     const std::filesystem::path extendedLegacy(Common::Paths::ToExtendedWin32Path(legacy.native()));
-    constexpr std::string_view legacyBytes = R"({"schemaVersion":16,"monitor":{"menu":{"showIds":true}},
+    constexpr std::string_view legacyBytes = R"({"schemaVersion":16,"monitor":{"menu":{"showIds":false}},
         "ui":{"language":"fr-FR","confirmRecycle":true},"plugins":{"legacyProbe":123},"futureLegacy":"unrelated"})";
     if (! std::filesystem::create_directories(extendedLegacy.parent_path(), error) || ! writeFile(legacy, legacyBytes))
     {
@@ -161,25 +161,25 @@ namespace
 
     Settings imported;
     if (TryLoadSettingsNoRecovery(appId, imported) != S_FALSE || LoadSettingsWithRecoveryInfo(appId, imported, nullptr) != S_OK || ! imported.monitor ||
-        ! imported.monitor->menu.showIds || imported.persistence.expectedFileStamp.has_value())
+        imported.monitor->menu.showIds || imported.persistence.expectedFileStamp.has_value())
     {
         std::fputs("Cold import must read viewer data and expect a vacant destination.\n", stderr);
         return false;
     }
-    constexpr std::string_view winner = R"({"schemaVersion":16,"monitor":{"menu":{"showIds":false}},"futureViewer":"keep"})";
+    constexpr std::string_view winner = R"({"schemaVersion":16,"monitor":{"menu":{"showIds":true}},"futureViewer":"keep"})";
     if (! write(winner) || SaveSettings(appId, imported) != HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH) || read(profile) != winner)
     {
         std::fputs("Migration must preserve a competing canonical creation.\n", stderr);
         return false;
     }
     Settings current;
-    if (LoadSettings(appId, current) != S_OK || ! current.monitor || current.monitor->menu.showIds || SaveSettings(appId, current) != S_OK ||
+    if (LoadSettings(appId, current) != S_OK || ! current.monitor || ! current.monitor->menu.showIds || SaveSettings(appId, current) != S_OK ||
         read(profile).find("futureViewer") == std::string::npos)
     {
         std::fputs("Canonical settings must win and round-trip their unknown root members.\n", stderr);
         return false;
     }
-    if (! std::filesystem::remove(extendedProfile, error) || LoadSettings(appId, imported) != S_OK || ! imported.monitor || ! imported.monitor->menu.showIds ||
+    if (! std::filesystem::remove(extendedProfile, error) || LoadSettings(appId, imported) != S_OK || ! imported.monitor || imported.monitor->menu.showIds ||
         ! imported.ui || imported.ui->language != L"fr-FR" || read(legacy) != legacyBytes)
     {
         std::fputs("A successful cold import must retain the read-only legacy bytes.\n", stderr);
@@ -203,7 +203,16 @@ namespace
         std::fputs("A malformed legacy file must stay in place while the new profile receives readable defaults.\n", stderr);
         return false;
     }
-    if (! std::filesystem::remove(extendedLegacy, error) || ! std::filesystem::remove(extendedProfile, error) || LoadSettings(appId, imported) != S_FALSE ||
+    const auto legacyMain = legacyDirectory / L"RedSalamander-7.0.settings.json";
+    const std::filesystem::path extendedMain(Common::Paths::ToExtendedWin32Path(legacyMain.native()));
+    if (! std::filesystem::remove(extendedLegacy, error) || ! std::filesystem::remove(extendedProfile, error) || ! writeFile(legacyMain, legacyBytes) ||
+        LoadSettings(appId, imported) != S_OK || ! imported.monitor || imported.monitor->menu.showIds || imported.ui ||
+        read(profile).find("fr-FR") != std::string::npos || read(legacyMain) != legacyBytes)
+    {
+        std::fputs("Import from the former main profile must keep only the historical Monitor section.\n", stderr);
+        return false;
+    }
+    if (! std::filesystem::remove(extendedMain, error) || ! std::filesystem::remove(extendedProfile, error) || LoadSettings(appId, imported) != S_FALSE ||
         TryLoadSettingsNoRecovery(appId, current) != S_OK)
     {
         std::fputs("A first run without any profile must create readable viewer defaults.\n", stderr);

@@ -21,6 +21,9 @@ When the canonical profile is absent, Release tries `RedSalamanderMonitor-7.0.se
 `RedSalamanderMonitor.settings.json` under `%LOCALAPPDATA%\RedSalamander\Settings\`. Debug first tries the
 legacy Debug profile, then the independent Release profile, then the same legacy Release candidates.
 
+If those profiles are absent, the matching legacy main RedSalamander profile can supply its historical `monitor`
+section. Import from the main profile is limited to that section.
+
 The viewer imports only settings it owns. It preserves source files byte for byte for rollback, including
 malformed and read-only files. Missing or unusable inputs yield viewer defaults. The first write requires
 a vacant canonical path and preserves a concurrent creation. A readable winning profile takes precedence.

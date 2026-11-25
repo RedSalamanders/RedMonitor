@@ -5792,10 +5792,18 @@ enum class SettingsProfile
     General,
     Monitor,
     MonitorImport,
+    EmbeddedMonitorImport,
 };
 
 constexpr std::array<std::string_view, 6> kMonitorTopLevelMembers{"$schema", "schemaVersion", "windows", "theme", "monitor", "ui"};
 constexpr std::array<std::string_view, 1> kMonitorWindowMembers{"MonitorWindow"};
+constexpr auto kLegacyMainProfiles = std::to_array<std::wstring_view>({
+#ifdef _DEBUG
+    L"RedSalamander-debug.settings.json",
+#endif
+    L"RedSalamander-7.0.settings.json",
+    L"RedSalamander.settings.json",
+});
 
 [[nodiscard]] SettingsProfile GetSettingsProfile(std::wstring_view appId, const std::filesystem::path& path) noexcept
 {
@@ -5804,7 +5812,13 @@ constexpr std::array<std::string_view, 1> kMonitorWindowMembers{"MonitorWindow"}
         return SettingsProfile::General;
     }
     const auto canonical = GetSettingsPath(appId);
-    return Common::Paths::NormalizedWindowsPathEqualsNoCase(path.native(), canonical.native()) ? SettingsProfile::Monitor : SettingsProfile::MonitorImport;
+    if (Common::Paths::NormalizedWindowsPathEqualsNoCase(path.native(), canonical.native()))
+    {
+        return SettingsProfile::Monitor;
+    }
+    const auto filename = path.filename().native();
+    return std::ranges::find(kLegacyMainProfiles, std::wstring_view(filename)) != kLegacyMainProfiles.end() ? SettingsProfile::EmbeddedMonitorImport
+                                                                                                            : SettingsProfile::MonitorImport;
 }
 
 [[nodiscard]] HRESULT ResolveSettingsLoadPath(std::wstring_view appId, std::filesystem::path& outPath, bool allowMonitorImport = true) noexcept
@@ -5853,6 +5867,15 @@ constexpr std::array<std::string_view, 1> kMonitorWindowMembers{"MonitorWindow"}
         if (! legacyDirectory.empty())
         {
             for (const auto* file : {L"RedSalamanderMonitor-7.0.settings.json", L"RedSalamanderMonitor.settings.json"})
+            {
+                const auto legacy = legacyDirectory / file;
+                if (IsSettingsFilePresent(legacy))
+                {
+                    outPath = legacy;
+                    return S_OK;
+                }
+            }
+            for (const auto file : kLegacyMainProfiles)
             {
                 const auto legacy = legacyDirectory / file;
                 if (IsSettingsFilePresent(legacy))
@@ -6175,7 +6198,7 @@ void RecordSectionRecovery(SettingsLoadRecoveryInfo* recovery, SettingsLoadRecov
     parsed.persistence.expectedFileStamp   = sourceStamp;
     parsed.persistence.sourceSchemaVersion = schemaVersion;
 
-    if (profile != SettingsProfile::MonitorImport)
+    if (profile == SettingsProfile::General || profile == SettingsProfile::Monitor)
     {
         const HRESULT preserveUnknownHr = PreserveUnknownTopLevelMembers(root, parsed, profile);
         if (FAILED(preserveUnknownHr))
@@ -6186,11 +6209,14 @@ void RecordSectionRecovery(SettingsLoadRecoveryInfo* recovery, SettingsLoadRecov
 
     if (profile != SettingsProfile::General)
     {
-        ParseWindows(root, parsed);
-        std::erase_if(parsed.windows, [](const auto& placement) { return placement.first != L"MonitorWindow"; });
-        ParseTheme(root, parsed);
         ParseMonitor(root, parsed);
-        ParseUi(root, parsed);
+        if (profile != SettingsProfile::EmbeddedMonitorImport)
+        {
+            ParseWindows(root, parsed);
+            std::erase_if(parsed.windows, [](const auto& placement) { return placement.first != L"MonitorWindow"; });
+            ParseTheme(root, parsed);
+            ParseUi(root, parsed);
+        }
         out = std::move(parsed);
         if (recovery)
         {
@@ -6434,7 +6460,8 @@ HRESULT LoadSettingsWithRecoveryInfo(std::wstring_view appId, Settings& out, Set
     const auto loadResolved = [&out, appId, recovery](const std::filesystem::path& resolved)
     {
         const SettingsProfile profile = GetSettingsProfile(appId, resolved);
-        return LoadSettingsFromResolvedPath(resolved, out, profile != SettingsProfile::MonitorImport, true, recovery, profile);
+        const bool allowBackup        = profile == SettingsProfile::General || profile == SettingsProfile::Monitor;
+        return LoadSettingsFromResolvedPath(resolved, out, allowBackup, true, recovery, profile);
     };
     HRESULT loadHr = loadResolved(path);
     if (loadHr == HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH))
