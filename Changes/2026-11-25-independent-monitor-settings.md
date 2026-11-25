@@ -1,1 +1,0 @@
-- Give RedMonitor its own settings profile, preserve legacy viewer preferences during guarded first-run import, and add Open Settings File to the File menu.
