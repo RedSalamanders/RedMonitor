@@ -3883,13 +3883,16 @@ LRESULT RunMonitorChromeSelfTest(HWND hWnd)
             ::SendMessageW(hWnd, WM_COMMAND, MAKEWPARAM(IDM_OPTION_AUTO_SCROLL, 0), 0);
             passed &= require(L"scrollback disables auto-scroll via command", ! g_colorView.GetAutoScroll());
 
+            bool paintRequested = false;
             if (g_hColorView)
             {
                 ::SendMessageW(g_hColorView.get(), WM_VSCROLL, MAKEWPARAM(SB_PAGEUP, 0), 0);
-                ::RedrawWindow(g_hColorView.get(), nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+                // Request a paint even if page-up's update region was already consumed.
+                paintRequested =
+                    ::RedrawWindow(g_hColorView.get(), nullptr, nullptr, RDW_INVALIDATE | RDW_INTERNALPAINT | RDW_UPDATENOW | RDW_ALLCHILDREN) != FALSE;
             }
 
-            passed &= require(L"scrollback renders after page-up input", ! g_colorView.GetAutoScroll());
+            passed &= require(L"scrollback paint requested after page-up", paintRequested && ! g_colorView.GetAutoScroll());
 
             ::SendMessageW(hWnd, WM_COMMAND, MAKEWPARAM(IDM_OPTION_AUTO_SCROLL, 0), 0);
             passed &= require(L"scrollback restores auto-scroll via command", g_colorView.GetAutoScroll());
