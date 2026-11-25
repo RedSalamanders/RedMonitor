@@ -6000,11 +6000,12 @@ void RecordSectionRecovery(SettingsLoadRecoveryInfo* recovery, SettingsLoadRecov
     if (! doc)
     {
         LogJsonParseError(L"settings file", path, err);
+        const bool allocationFailed = err.code == YYJSON_READ_ERROR_MEMORY_ALLOCATION;
         return RecoverSettingsLoadFailure(path,
                                           out,
-                                          SettingsLoadRecoveryReason::InvalidJson,
-                                          HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                                          backupBadFile,
+                                          allocationFailed ? SettingsLoadRecoveryReason::ReadFailed : SettingsLoadRecoveryReason::InvalidJson,
+                                          allocationFailed ? E_OUTOFMEMORY : HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
+                                          backupBadFile && ! allocationFailed,
                                           fallbackToDefaults,
                                           recovery,
                                           sourceStamp,
@@ -6022,7 +6023,7 @@ void RecordSectionRecovery(SettingsLoadRecoveryInfo* recovery, SettingsLoadRecov
                                           out,
                                           SettingsLoadRecoveryReason::InvalidRoot,
                                           HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                                          backupBadFile,
+                                          false,
                                           fallbackToDefaults,
                                           recovery,
                                           sourceStamp,
@@ -6038,7 +6039,7 @@ void RecordSectionRecovery(SettingsLoadRecoveryInfo* recovery, SettingsLoadRecov
                                           out,
                                           SettingsLoadRecoveryReason::MissingSchemaVersion,
                                           HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                                          backupBadFile,
+                                          false,
                                           fallbackToDefaults,
                                           recovery,
                                           sourceStamp,
@@ -6070,7 +6071,7 @@ void RecordSectionRecovery(SettingsLoadRecoveryInfo* recovery, SettingsLoadRecov
                                           out,
                                           SettingsLoadRecoveryReason::UnsupportedSchemaVersion,
                                           HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                                          backupBadFile,
+                                          false,
                                           fallbackToDefaults,
                                           recovery,
                                           sourceStamp,
@@ -6098,7 +6099,7 @@ void RecordSectionRecovery(SettingsLoadRecoveryInfo* recovery, SettingsLoadRecov
                                           out,
                                           SettingsLoadRecoveryReason::LegacyShape,
                                           HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                                          backupBadFile,
+                                          false,
                                           fallbackToDefaults,
                                           recovery,
                                           sourceStamp,
@@ -6270,7 +6271,21 @@ void DebugUseFixedSettingsBackupTimestampForTest(bool enabled) noexcept
 
 HRESULT LoadSettings(std::wstring_view appId, Settings& out) noexcept
 {
-    return LoadSettingsWithRecoveryInfo(appId, out, nullptr);
+    SettingsLoadRecoveryInfo recovery;
+    const HRESULT loaded = LoadSettingsWithRecoveryInfo(appId, out, &recovery);
+    if (loaded == S_FALSE && recovery.reason == SettingsLoadRecoveryReason::InvalidJson && recovery.backedUp &&
+        ! out.persistence.expectedFileStamp.has_value() && out.persistence.savePermission == SettingsSavePermission::Automatic &&
+        Common::Paths::NormalizedWindowsPathEqualsNoCase(recovery.settingsPath.native(), GetSettingsPath(appId).native()))
+    {
+        // The guarded backup removed the diagnosed revision. This save expects a missing name.
+        const HRESULT installed = SaveSettings(appId, out);
+        if (FAILED(installed))
+        {
+            Debug::Warning(
+                L"Settings template could not be installed for '{}' (hr=0x{:08X}).", recovery.settingsPath.c_str(), static_cast<unsigned long>(installed));
+        }
+    }
+    return loaded;
 }
 
 HRESULT LoadSettingsWithRecoveryInfo(std::wstring_view appId, Settings& out, SettingsLoadRecoveryInfo* recovery) noexcept

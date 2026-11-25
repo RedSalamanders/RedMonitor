@@ -34,13 +34,15 @@ RedSalamander Preferences that it inherited with the private `support/` snapshot
 
 ## Unusable files
 
-- A file that cannot be read or parsed, or has no or an unsupported schema version, is not applied: RedMonitor starts
-  with default settings and records the reason (`SettingsLoadRecoveryReason`).
+- RedMonitor starts with default settings when the selected profile cannot be used and records the reason
+  (`SettingsLoadRecoveryReason`). Readable JSON outside the settings contract stays at its path.
 - An invalid file-actions, user-menu or shortcuts section takes its defaults while the rest of the file applies, and
   its original member is kept unchanged across a save.
-- The unusable file is moved aside to `<file name>.bad.<UTC yyyyMMddTHHmmssZ>` in the same folder (with a numeric
+- A file with malformed JSON is moved aside to `<file name>.bad.<UTC yyyyMMddTHHmmssZ>` in the same folder (with a numeric
   suffix when that name exists), guarded by the identity stamp read at load, so a file changed since then is never
   moved.
+- A successful backup of the canonical profile allows a defaults template at that name. The write requires the name
+  to still be absent. A concurrent file wins, and a fallback profile keeps its separate path.
 - While the unusable file is still in place, defaults are never saved over it: saving then requires an explicit
   replacement, which moves the file to such a backup first.
 
