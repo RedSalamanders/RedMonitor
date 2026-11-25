@@ -154,6 +154,13 @@ Headless console cases do not take desktop focus. UI keyboard/clipboard/IME/AT f
 to the time and a desktop lease with verified restoration. Screenshots are deterministic application
 harness captures with invented data and source/build/scenario provenance; never desktop screenshots.
 
+Use root `performance-paired.ps1 -BaselineRevision <commit> -CandidateRevision <commit>` for the fixed native
+x64 Release WARP chrome, synthetic 512-event latency burst and scrollback fixture. The runner builds two exact
+sources with matching engine and dependency pins. It retains the randomized ABBA or BAAB schedule, build
+receipts, raw frame and latency results, and each block's timing differences under `.build/paired/`.
+For diagnostic A/A, supply one revision for both roles and add `-CalibrationAA`. The product review evaluates
+the fixture timing alongside the wider resource and performance criteria.
+
 Release performance uses paired/alternating baseline and candidate on the same fixture and machine.
 Record append/filter/retention/export snapshot latency, frame p95/p99, private bytes, working set,
 handles, CPU, wakeups and event loss. An unpaired measurement is diagnostic only. Investigate repeatable
