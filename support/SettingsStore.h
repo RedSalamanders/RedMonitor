@@ -948,6 +948,8 @@ struct SettingsLoadRecoveryInfo
     std::vector<ConnectionProfileIdMigration> connectionProfileIdMigrations;
 };
 
+inline constexpr std::wstring_view kMonitorSettingsAppId = L"RedMonitor";
+
 COMMON_API std::filesystem::path GetSettingsPath(std::wstring_view appId) noexcept;
 COMMON_API std::filesystem::path GetSettingsSchemaPath(std::wstring_view appId) noexcept;
 

@@ -43,8 +43,8 @@ Source, dependencies and generated outputs stay independent of sibling repositor
 from `.build/<platform>/<configuration>/RedMonitor.exe`. ETW session permissions may require
 Performance Log Users membership or elevation; opening text files does not require ETW access.
 
-This is an active extraction. Legacy settings app ID, single-instance identity and resource-owner
-names are retained for RedSalamander compatibility. Consumer adoption and qualification are tracked explicitly. See [capabilities](capabilities.json), [usage](docs/README.md),
+This is an active extraction. RedMonitor owns its settings profile and preserves legacy settings during migration.
+Single-instance and resource-owner identities support RedSalamander compatibility. Consumer adoption and qualification are tracked explicitly. See [capabilities](capabilities.json), [usage](docs/README.md),
 [specifications](Specs/README.md), and the [complete WIP plan](Specs/Plans/WIP/RedMonitorExtraction_2026-10-21.md).
 MIT source origin and private support imports are recorded in [SourceImport](Specs/SourceImport/source-origin.json).
 

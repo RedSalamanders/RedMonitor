@@ -133,7 +133,7 @@ std::atomic_bool g_useFixedSettingsBackupTimestampForTest{false};
     return root.lexically_normal();
 }
 
-[[nodiscard]] std::filesystem::path GetUnifiedTestSettingsDirectoryPathFromEnvironment() noexcept
+[[nodiscard]] std::filesystem::path GetUnifiedTestSettingsDirectoryPathFromEnvironment(std::wstring_view owner) noexcept
 {
     const std::wstring rootText = GetEnvironmentString(kUnifiedTestRootEnvVar);
     const std::wstring runId    = GetEnvironmentString(kUnifiedTestRunIdEnvVar);
@@ -150,7 +150,7 @@ std::atomic_bool g_useFixedSettingsBackupTimestampForTest{false};
         return {};
     }
 
-    return root / kRunsDirName / runId / kScratchDirName / kSettingsStoreScratchDirName / kCompanyDirectoryName / kSettingsDirectoryName;
+    return root / kRunsDirName / runId / kScratchDirName / kSettingsStoreScratchDirName / owner / kSettingsDirectoryName;
 }
 #endif
 
@@ -5589,7 +5589,7 @@ void MaybeStallSettingsRecoveryBeforeBackupForTest() noexcept
 }
 #endif
 
-[[nodiscard]] std::filesystem::path GetSettingsDirectoryPath() noexcept
+[[nodiscard]] std::filesystem::path GetSettingsDirectoryPath(std::wstring_view owner = kCompanyDirectoryName) noexcept
 {
 #ifdef ENABLE_TESTS
     const std::wstring localTestRoot = GetEnvironmentString(kLocalTestRootEnvVar);
@@ -5601,14 +5601,14 @@ void MaybeStallSettingsRecoveryBeforeBackupForTest() noexcept
         {
             return {};
         }
-        auto directory = root.lexically_normal() / kSettingsStoreScratchDirName / kCompanyDirectoryName / kSettingsDirectoryName;
+        auto directory = root.lexically_normal() / kSettingsStoreScratchDirName / owner / kSettingsDirectoryName;
         return Common::Testing::IsExistingTestSandboxPathReparseFree(directory, error) ? std::move(directory) : std::filesystem::path{};
     }
     if (! GetEnvironmentString(kUnifiedTestRootEnvVar).empty())
     {
         // A configured test root is a trust boundary. Invalid or unauthorized
         // test configuration must fail closed instead of touching user settings.
-        return GetUnifiedTestSettingsDirectoryPathFromEnvironment();
+        return GetUnifiedTestSettingsDirectoryPathFromEnvironment(owner);
     }
 #endif
 
@@ -5639,7 +5639,7 @@ void MaybeStallSettingsRecoveryBeforeBackupForTest() noexcept
         base = std::filesystem::path(buffer);
     }
 
-    base /= kCompanyDirectoryName;
+    base /= owner;
     base /= kSettingsDirectoryName;
     return base;
 }
@@ -5717,7 +5717,8 @@ std::filesystem::path GetSettingsPath(std::wstring_view appId) noexcept
         return {};
     }
 
-    const std::filesystem::path base = GetSettingsDirectoryPath();
+    const bool monitorProfile = appId == kMonitorSettingsAppId;
+    const auto base           = GetSettingsDirectoryPath(monitorProfile ? kMonitorSettingsAppId : std::wstring_view{kCompanyDirectoryName});
     if (base.empty())
     {
         return {};
@@ -5726,7 +5727,7 @@ std::filesystem::path GetSettingsPath(std::wstring_view appId) noexcept
 #ifdef _DEBUG
     return base / GetDebugSettingsFileName(appId);
 #else
-    return base / GetVersionedSettingsFileName(appId);
+    return base / (monitorProfile ? GetLegacySettingsFileName(appId) : GetVersionedSettingsFileName(appId));
 #endif
 }
 
@@ -5786,12 +5787,82 @@ std::string_view GetSettingsStoreSchemaJsonUtf8() noexcept
 
 namespace
 {
-[[nodiscard]] HRESULT ResolveSettingsLoadPath(std::wstring_view appId, std::filesystem::path& outPath) noexcept
+enum class SettingsProfile
+{
+    General,
+    Monitor,
+    MonitorImport,
+};
+
+constexpr std::array<std::string_view, 6> kMonitorTopLevelMembers{"$schema", "schemaVersion", "windows", "theme", "monitor", "ui"};
+constexpr std::array<std::string_view, 1> kMonitorWindowMembers{"MonitorWindow"};
+
+[[nodiscard]] SettingsProfile GetSettingsProfile(std::wstring_view appId, const std::filesystem::path& path) noexcept
+{
+    if (appId != kMonitorSettingsAppId)
+    {
+        return SettingsProfile::General;
+    }
+    const auto canonical = GetSettingsPath(appId);
+    return Common::Paths::NormalizedWindowsPathEqualsNoCase(path.native(), canonical.native()) ? SettingsProfile::Monitor : SettingsProfile::MonitorImport;
+}
+
+[[nodiscard]] HRESULT ResolveSettingsLoadPath(std::wstring_view appId, std::filesystem::path& outPath, bool allowMonitorImport = true) noexcept
 {
     outPath = GetSettingsPath(appId);
     if (outPath.empty())
     {
         return E_FAIL;
+    }
+
+    if (appId == kMonitorSettingsAppId)
+    {
+        const auto extended = Common::Paths::ToExtendedWin32Path(outPath.native());
+        if (GetFileAttributesW(extended.c_str()) != INVALID_FILE_ATTRIBUTES)
+        {
+            return S_OK;
+        }
+        const DWORD error = GetLastError();
+        if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND)
+        {
+            return HRESULT_FROM_WIN32(error);
+        }
+        if (! allowMonitorImport)
+        {
+            return S_FALSE;
+        }
+
+        const auto legacyDirectory = GetSettingsDirectoryPath();
+#ifdef _DEBUG
+        const auto releaseProfile = outPath.parent_path() / GetLegacySettingsFileName(appId);
+        if (! legacyDirectory.empty())
+        {
+            const auto legacyDebug = legacyDirectory / L"RedSalamanderMonitor-debug.settings.json";
+            if (IsSettingsFilePresent(legacyDebug))
+            {
+                outPath = legacyDebug;
+                return S_OK;
+            }
+        }
+        if (IsSettingsFilePresent(releaseProfile))
+        {
+            outPath = releaseProfile;
+            return S_OK;
+        }
+#endif
+        if (! legacyDirectory.empty())
+        {
+            for (const auto* file : {L"RedSalamanderMonitor-7.0.settings.json", L"RedSalamanderMonitor.settings.json"})
+            {
+                const auto legacy = legacyDirectory / file;
+                if (IsSettingsFilePresent(legacy))
+                {
+                    outPath = legacy;
+                    return S_OK;
+                }
+            }
+        }
+        return S_FALSE;
     }
 
 #ifdef _DEBUG
@@ -5870,7 +5941,7 @@ void ResetSettingsLoadRecoveryInfo(SettingsLoadRecoveryInfo* recovery) noexcept
     return S_OK;
 }
 
-[[nodiscard]] HRESULT PreserveUnknownTopLevelMembers(yyjson_val* root, Settings& settings) noexcept
+[[nodiscard]] HRESULT PreserveUnknownTopLevelMembers(yyjson_val* root, Settings& settings, SettingsProfile profile) noexcept
 {
     yyjson_val* key      = nullptr;
     yyjson_obj_iter iter = yyjson_obj_iter_with(root);
@@ -5888,7 +5959,9 @@ void ResetSettingsLoadRecoveryInfo(SettingsLoadRecoveryInfo* recovery) noexcept
             continue;
         }
         const std::string_view keyView(keyText, yyjson_get_len(key));
-        if (IsKnownSettingsTopLevelMember(keyView))
+        const bool known = profile == SettingsProfile::Monitor ? std::ranges::find(kMonitorTopLevelMembers, keyView) != kMonitorTopLevelMembers.end()
+                                                               : IsKnownSettingsTopLevelMember(keyView);
+        if (known)
         {
             continue;
         }
@@ -5994,8 +6067,12 @@ void RecordSectionRecovery(SettingsLoadRecoveryInfo* recovery, SettingsLoadRecov
     return S_FALSE;
 }
 
-[[nodiscard]] HRESULT LoadSettingsFromResolvedPath(
-    const std::filesystem::path& path, Settings& out, bool backupBadFile, bool fallbackToDefaults, SettingsLoadRecoveryInfo* recovery) noexcept
+[[nodiscard]] HRESULT LoadSettingsFromResolvedPath(const std::filesystem::path& path,
+                                                   Settings& out,
+                                                   bool backupBadFile,
+                                                   bool fallbackToDefaults,
+                                                   SettingsLoadRecoveryInfo* recovery,
+                                                   SettingsProfile profile) noexcept
 {
     std::string bytes;
     std::optional<SettingsFileStamp> sourceStamp;
@@ -6098,10 +6175,29 @@ void RecordSectionRecovery(SettingsLoadRecoveryInfo* recovery, SettingsLoadRecov
     parsed.persistence.expectedFileStamp   = sourceStamp;
     parsed.persistence.sourceSchemaVersion = schemaVersion;
 
-    const HRESULT preserveUnknownHr = PreserveUnknownTopLevelMembers(root, parsed);
-    if (FAILED(preserveUnknownHr))
+    if (profile != SettingsProfile::MonitorImport)
     {
-        return preserveUnknownHr;
+        const HRESULT preserveUnknownHr = PreserveUnknownTopLevelMembers(root, parsed, profile);
+        if (FAILED(preserveUnknownHr))
+        {
+            return preserveUnknownHr;
+        }
+    }
+
+    if (profile != SettingsProfile::General)
+    {
+        ParseWindows(root, parsed);
+        std::erase_if(parsed.windows, [](const auto& placement) { return placement.first != L"MonitorWindow"; });
+        ParseTheme(root, parsed);
+        ParseMonitor(root, parsed);
+        ParseUi(root, parsed);
+        out = std::move(parsed);
+        if (recovery)
+        {
+            recovery->hr           = S_OK;
+            recovery->settingsPath = path;
+        }
+        return S_OK;
     }
 
     yyjson_val* extensions = GetObj(root, "extensions");
@@ -6285,17 +6381,29 @@ void DebugUseFixedSettingsBackupTimestampForTest(bool enabled) noexcept
 HRESULT LoadSettings(std::wstring_view appId, Settings& out) noexcept
 {
     SettingsLoadRecoveryInfo recovery;
-    const HRESULT loaded = LoadSettingsWithRecoveryInfo(appId, out, &recovery);
-    if (loaded == S_FALSE && recovery.reason == SettingsLoadRecoveryReason::InvalidJson && recovery.backedUp &&
-        ! out.persistence.expectedFileStamp.has_value() && out.persistence.savePermission == SettingsSavePermission::Automatic &&
-        Common::Paths::NormalizedWindowsPathEqualsNoCase(recovery.settingsPath.native(), GetSettingsPath(appId).native()))
+    const HRESULT loaded         = LoadSettingsWithRecoveryInfo(appId, out, &recovery);
+    const auto canonical         = GetSettingsPath(appId);
+    const bool canonicalSource   = Common::Paths::NormalizedWindowsPathEqualsNoCase(recovery.settingsPath.native(), canonical.native());
+    const bool backedUpCanonical = loaded == S_FALSE && recovery.reason == SettingsLoadRecoveryReason::InvalidJson && recovery.backedUp && canonicalSource;
+    const bool initializeMonitor =
+        appId == kMonitorSettingsAppId && SUCCEEDED(loaded) && (recovery.reason == SettingsLoadRecoveryReason::SettingsFileMissing || ! canonicalSource);
+    if ((backedUpCanonical || initializeMonitor) && ! out.persistence.expectedFileStamp.has_value() &&
+        out.persistence.savePermission == SettingsSavePermission::Automatic)
     {
-        // The guarded backup removed the diagnosed revision. This save expects a missing name.
+        // The canonical name was absent, or the guarded backup removed the diagnosed revision.
         const HRESULT installed = SaveSettings(appId, out);
         if (FAILED(installed))
         {
-            Debug::Warning(
-                L"Settings template could not be installed for '{}' (hr=0x{:08X}).", recovery.settingsPath.c_str(), static_cast<unsigned long>(installed));
+            if (initializeMonitor && installed == HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH))
+            {
+                Settings current;
+                if (TryLoadSettingsNoRecovery(appId, current) == S_OK)
+                {
+                    out = std::move(current);
+                    return S_OK;
+                }
+            }
+            Debug::Warning(L"Settings profile could not be initialized for '{}' (hr=0x{:08X}).", canonical.c_str(), static_cast<unsigned long>(installed));
         }
     }
     return loaded;
@@ -6323,7 +6431,12 @@ HRESULT LoadSettingsWithRecoveryInfo(std::wstring_view appId, Settings& out, Set
         return resolveHr;
     }
 
-    HRESULT loadHr = LoadSettingsFromResolvedPath(path, out, true, true, recovery);
+    const auto loadResolved = [&out, appId, recovery](const std::filesystem::path& resolved)
+    {
+        const SettingsProfile profile = GetSettingsProfile(appId, resolved);
+        return LoadSettingsFromResolvedPath(resolved, out, profile != SettingsProfile::MonitorImport, true, recovery, profile);
+    };
+    HRESULT loadHr = loadResolved(path);
     if (loadHr == HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH))
     {
         // The source changed after it was read but before recovery could back it up. Reload the
@@ -6347,7 +6460,7 @@ HRESULT LoadSettingsWithRecoveryInfo(std::wstring_view appId, Settings& out, Set
             }
             return retryResolveHr;
         }
-        loadHr = LoadSettingsFromResolvedPath(path, out, true, true, recovery);
+        loadHr = loadResolved(path);
     }
     if (SUCCEEDED(loadHr))
     {
@@ -6361,13 +6474,13 @@ HRESULT TryLoadSettingsNoRecovery(std::wstring_view appId, Settings& out) noexce
     out = Settings{};
 
     std::filesystem::path path;
-    const HRESULT resolveHr = ResolveSettingsLoadPath(appId, path);
+    const HRESULT resolveHr = ResolveSettingsLoadPath(appId, path, false);
     if (resolveHr != S_OK)
     {
         return resolveHr;
     }
 
-    const HRESULT loadHr = LoadSettingsFromResolvedPath(path, out, false, false, nullptr);
+    const HRESULT loadHr = LoadSettingsFromResolvedPath(path, out, false, false, nullptr, GetSettingsProfile(appId, path));
     if (SUCCEEDED(loadHr))
     {
         PrepareLoadedSettingsForSaveTarget(appId, path, out);
@@ -6384,7 +6497,7 @@ HRESULT TryGetSettingsFileStamp(std::wstring_view appId, SettingsFileStamp& out)
     }
 
     std::filesystem::path path;
-    const HRESULT resolveHr = ResolveSettingsLoadPath(appId, path);
+    const HRESULT resolveHr = ResolveSettingsLoadPath(appId, path, false);
     if (resolveHr != S_OK)
     {
         out = SettingsFileStamp{};
@@ -6400,7 +6513,7 @@ HRESULT BackupSettingsForExplicitReplacement(std::wstring_view appId,
 {
     backupPath.clear();
     std::filesystem::path path;
-    const HRESULT resolveHr = ResolveSettingsLoadPath(appId, path);
+    const HRESULT resolveHr = ResolveSettingsLoadPath(appId, path, false);
     if (resolveHr != S_OK)
     {
         if (resolveHr == S_FALSE && expectedStamp.has_value())
@@ -6488,6 +6601,23 @@ namespace
 }
 } // namespace
 
+template <size_t Count> void RetainSettingsMembers(yyjson_mut_val* object, const std::array<std::string_view, Count>& members) noexcept
+{
+    if (! yyjson_mut_is_obj(object))
+    {
+        return;
+    }
+    auto iter = yyjson_mut_obj_iter_with(object);
+    while (const auto* key = yyjson_mut_obj_iter_next(&iter))
+    {
+        const std::string_view name(yyjson_mut_get_str(key), yyjson_mut_get_len(key));
+        if (std::ranges::find(members, name) == members.end())
+        {
+            static_cast<void>(yyjson_mut_obj_iter_remove(&iter));
+        }
+    }
+}
+
 HRESULT SaveSettingsImpl(std::wstring_view appId, Settings& settings, bool writeBaseSchema, SettingsFileStamp* writtenStamp = nullptr) noexcept
 {
     if (settings.persistence.savePermission != SettingsSavePermission::Automatic)
@@ -6495,7 +6625,7 @@ HRESULT SaveSettingsImpl(std::wstring_view appId, Settings& settings, bool write
         return HRESULT_FROM_WIN32(ERROR_REVISION_MISMATCH);
     }
 
-    if (settings.connections)
+    if (appId != kMonitorSettingsAppId && settings.connections)
     {
         const HRESULT connectionIdsHr = ValidateConnectionProfileIds(settings.connections.value());
         if (FAILED(connectionIdsHr))
@@ -8751,6 +8881,12 @@ HRESULT SaveSettingsImpl(std::wstring_view appId, Settings& settings, bool write
                 yyjson_mut_obj_add_val(doc, batchRenameObj, "previewGridLayout", layoutArr);
             }
         }
+    }
+
+    if (appId == kMonitorSettingsAppId)
+    {
+        RetainSettingsMembers(root, kMonitorTopLevelMembers);
+        RetainSettingsMembers(yyjson_mut_obj_get(root, "windows"), kMonitorWindowMembers);
     }
 
     if (const HRESULT opaqueHr = AppendOpaqueTopLevelMembers(doc, root, settings); FAILED(opaqueHr))

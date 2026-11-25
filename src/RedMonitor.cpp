@@ -2361,10 +2361,10 @@ void SaveMonitorSettings(HWND hWnd, bool retainAuthoredPlacement) noexcept
     g_settings.monitor->filter.mask   = g_filterMask & kMonitorFilterAllMask;
     g_settings.monitor->filter.preset = PresetFromLegacy(g_lastFilterPreset);
 
-    const HRESULT saveHr = Common::Settings::SaveSettings(kAppId, g_settings);
+    const HRESULT saveHr = Common::Settings::SaveSettings(Common::Settings::kMonitorSettingsAppId, g_settings);
     if (FAILED(saveHr))
     {
-        const std::filesystem::path settingsPath = Common::Settings::GetSettingsPath(kAppId);
+        const auto settingsPath = Common::Settings::GetSettingsPath(Common::Settings::kMonitorSettingsAppId);
         DBGOUT_ERROR(L"SaveSettings failed (hr=0x{:08X}) path={}\n", static_cast<unsigned long>(saveHr), settingsPath.wstring());
     }
 }
@@ -2751,6 +2751,37 @@ void CloseMonitorFileOpenWorker() noexcept
         Debug::Error(L"Monitor file open worker start failed: 0x{:08X}", static_cast<uint32_t>(hr));
         return hr;
     }
+}
+
+void DoOpenSettingsFile(HWND owner)
+{
+    if (g_monitorChromeSelfTest.enabled)
+    {
+        return;
+    }
+
+    const auto path = Common::Settings::GetSettingsPath(Common::Settings::kMonitorSettingsAppId);
+    HRESULT result  = E_FAIL;
+    if (! path.empty())
+    {
+        SHELLEXECUTEINFOW info{};
+        info.cbSize = sizeof(info);
+        info.fMask  = SEE_MASK_FLAG_NO_UI;
+        info.hwnd   = owner;
+        info.lpVerb = L"open";
+        info.lpFile = path.c_str();
+        info.nShow  = SW_SHOWNORMAL;
+        if (ShellExecuteExW(&info))
+        {
+            return;
+        }
+        const DWORD error = GetLastError();
+        result            = HRESULT_FROM_WIN32(error == ERROR_SUCCESS ? ERROR_OPEN_FAILED : error);
+    }
+
+    const auto caption = LoadStringResource(g_hInstance, IDS_CAPTION_ERROR);
+    const auto message = FormatStringResource(g_hInstance, IDS_MSG_OPEN_SETTINGS_FAILED_FMT, path.native(), static_cast<unsigned long>(result));
+    ShowModalMessageDialog(g_hInstance, owner, caption.c_str(), message.c_str());
 }
 
 bool DoFileOpen(HWND owner)
@@ -3573,6 +3604,7 @@ LRESULT RunMonitorChromeSelfTest(HWND hWnd)
     passed &= require(L"toolbar new label", g_toolbarNewButton && ! g_toolbarNewButton->GetText().empty());
     passed &= require(L"toolbar open label", g_toolbarOpenButton && ! g_toolbarOpenButton->GetText().empty());
     passed &= require(L"toolbar save label", g_toolbarSaveButton && ! g_toolbarSaveButton->GetText().empty());
+    passed &= require(L"settings file command in File menu", ! GetMenuCommandLabel(hWnd, IDM_FILE_OPEN_SETTINGS).empty());
     passed &= require(L"toolbar copy label", g_toolbarCopyButton && ! g_toolbarCopyButton->GetText().empty());
     passed &= require(L"toolbar show ids toggle sync", g_toolbarShowIdsToggle && g_toolbarShowIdsToggle->IsChecked() == g_showIds);
     passed &= require(L"status section count", g_statusStrip && g_statusStrip->GetSectionCount() == 5u);
@@ -4355,7 +4387,7 @@ static int RunApplication(HINSTANCE hInstance, int nCmdShow)
 
     if (! g_monitorChromeSelfTest.enabled)
     {
-        Common::Settings::LoadSettings(kAppId, g_settings);
+        Common::Settings::LoadSettings(Common::Settings::kMonitorSettingsAppId, g_settings);
     }
     Localization::RegisterResourceOwner(kAppId, hInstance);
     Localization::ApplyLanguagePreference(GetLanguagePreferenceFromSettings(g_settings));
@@ -4570,7 +4602,7 @@ HWND MonitorWindow::Create(HINSTANCE hInstance, int nCmdShow)
 
     if (! g_monitorChromeSelfTest.enabled)
     {
-        const auto path       = Common::Settings::GetSettingsPath(kAppId);
+        const auto path       = Common::Settings::GetSettingsPath(Common::Settings::kMonitorSettingsAppId);
         const HRESULT watched = _settingsWatcher.Start(hWnd, path.parent_path());
         if (FAILED(watched))
         {
@@ -4685,13 +4717,13 @@ void ReloadMonitorSettings(HWND hWnd, bool& retainAuthoredPlacement) noexcept
 {
     using namespace Common::Settings;
     SettingsFileStamp observed;
-    if (TryGetSettingsFileStamp(kAppId, observed) != S_OK || g_settings.persistence.expectedFileStamp == observed)
+    if (TryGetSettingsFileStamp(kMonitorSettingsAppId, observed) != S_OK || g_settings.persistence.expectedFileStamp == observed)
     {
         return;
     }
 
     Settings loaded;
-    if (TryLoadSettingsNoRecovery(kAppId, loaded) != S_OK || loaded.persistence.expectedFileStamp != observed)
+    if (TryLoadSettingsNoRecovery(kMonitorSettingsAppId, loaded) != S_OK || loaded.persistence.expectedFileStamp != observed)
     {
         return;
     }
@@ -4907,6 +4939,7 @@ LRESULT OnCommandMainWindow(HWND hWnd, UINT id, UINT codeNotify, HWND hwndCtl)
             UpdateStatusBar();
             break;
         case IDM_FILE_OPEN: DoFileOpen(hWnd); break;
+        case IDM_FILE_OPEN_SETTINGS: DoOpenSettingsFile(hWnd); break;
         case IDM_FILE_SAVE_AS: DoFileSaveAs(hWnd); break;
         case IDM_EDIT_COPY: g_colorView.CopySelection(); break;
         case IDM_EDIT_FIND: g_colorView.ShowFind(); break;

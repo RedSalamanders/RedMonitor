@@ -55,6 +55,7 @@ BEGIN
         MENUITEM "&New\tCtrl+N",                IDM_FILE_NEW
         MENUITEM "&Open...\tCtrl+O",            IDM_FILE_OPEN
         MENUITEM "Save &As...",                 IDM_FILE_SAVE_AS
+        MENUITEM "Open Settin&gs File", IDM_FILE_OPEN_SETTINGS
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       IDM_EXIT
     END
@@ -250,6 +251,7 @@ BEGIN
     IDS_NOT_RUNNING         "RedSalamander Bug Reporter (RedSalamanderMonitor.exe) is not running. RedSalamander will not be able to handle potential crashes. Please restart RedSalamander."
     IDS_CAPTION_ERROR "Error"
     IDS_CAPTION_OPEN "Open"
+    IDS_MSG_OPEN_SETTINGS_FAILED_FMT "Could not open the settings file.\r\n\r\n{0}\r\n\r\nWindows reported error 0x{1:08X}."
     IDS_CAPTION_SAVE "Save"
     IDS_CAPTION_PRINT "Print"
     IDS_CAPTION_ETW_WARNING "ETW Listener Warning"

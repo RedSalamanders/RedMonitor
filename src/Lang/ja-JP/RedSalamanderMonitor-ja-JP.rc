@@ -12,6 +12,7 @@ BEGIN
         MENUITEM "新しい(&N)\tCtrl+N",                IDM_FILE_NEW
         MENUITEM "開く(&O)...\tCtrl+O",            IDM_FILE_OPEN
         MENUITEM "名前を付けて保存(&A)...",                 IDM_FILE_SAVE_AS
+        MENUITEM "設定ファイルを開く(&G)", IDM_FILE_OPEN_SETTINGS
         MENUITEM SEPARATOR
         MENUITEM "終了(&X)",                       IDM_EXIT
     END
@@ -103,6 +104,7 @@ BEGIN
     IDS_NOT_RUNNING         "RedSalamander Bug Reporter (RedSalamanderMonitor.exe) が実行されていません。 RedSalamander は潜在的なクラッシュに対処できません。 RedSalamander を再起動してください。"
     IDS_CAPTION_ERROR "エラー"
     IDS_CAPTION_OPEN "開く"
+    IDS_MSG_OPEN_SETTINGS_FAILED_FMT "設定ファイルを開けませんでした。\r\n\r\n{0}\r\n\r\nWindows エラー 0x{1:08X}。"
     IDS_CAPTION_SAVE "保存"
     IDS_CAPTION_PRINT "印刷する"
     IDS_CAPTION_ETW_WARNING "ETW リスナーの警告"
