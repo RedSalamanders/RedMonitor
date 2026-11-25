@@ -3253,6 +3253,28 @@ void UpdateStatusBar()
 }
 
 #if defined(ENABLE_TESTS)
+bool DispatchMonitorFixturePaint(HWND window) noexcept
+{
+    if (! window || ! ::RedrawWindow(window, nullptr, nullptr, RDW_INVALIDATE | RDW_INTERNALPAINT | RDW_NOCHILDREN))
+    {
+        return false;
+    }
+
+    MSG paint{};
+    if (! ::PeekMessageW(&paint, window, WM_PAINT, WM_PAINT, PM_REMOVE))
+    {
+        return false;
+    }
+    if (paint.message == WM_QUIT)
+    {
+        ::PostQuitMessage(static_cast<int>(paint.wParam));
+        return false;
+    }
+
+    ::DispatchMessageW(&paint);
+    return paint.hwnd == window;
+}
+
 std::wstring BuildMonitorEtwBurstMessage(size_t index, size_t payloadChars)
 {
     std::wstring message = std::format(L"Monitor selftest ETW batch event {}", index);
@@ -3753,6 +3775,10 @@ LRESULT RunMonitorChromeSelfTest(HWND hWnd)
         passed &= require(L"toolbar hides via command", g_hToolbar && ! ::IsWindowVisible(g_hToolbar.get()));
         ::SendMessageW(hWnd, WM_COMMAND, MAKEWPARAM(IDM_VIEW_TOOLBAR, 0), 0);
         RedrawMonitorChrome(hWnd);
+        if (g_hToolbar && g_toolbarDxHost.DebugGetRenderCount() == toolbarRenderBefore)
+        {
+            static_cast<void>(DispatchMonitorFixturePaint(g_hToolbar.get()));
+        }
         passed &= require(L"toolbar re-shows via command", g_hToolbar && ::IsWindowVisible(g_hToolbar.get()));
         passed &= require(L"toolbar rerenders after re-show", g_toolbarDxHost.DebugGetRenderCount() > toolbarRenderBefore);
         Debug::Perf::EmitDurationUs(L"monitor.ui.toolbar_toggle_us",
@@ -3883,16 +3909,14 @@ LRESULT RunMonitorChromeSelfTest(HWND hWnd)
             ::SendMessageW(hWnd, WM_COMMAND, MAKEWPARAM(IDM_OPTION_AUTO_SCROLL, 0), 0);
             passed &= require(L"scrollback disables auto-scroll via command", ! g_colorView.GetAutoScroll());
 
-            bool paintRequested = false;
+            bool paintDispatched = false;
             if (g_hColorView)
             {
                 ::SendMessageW(g_hColorView.get(), WM_VSCROLL, MAKEWPARAM(SB_PAGEUP, 0), 0);
-                // Request a paint even if page-up's update region was already consumed.
-                paintRequested =
-                    ::RedrawWindow(g_hColorView.get(), nullptr, nullptr, RDW_INVALIDATE | RDW_INTERNALPAINT | RDW_UPDATENOW | RDW_ALLCHILDREN) != FALSE;
+                paintDispatched = DispatchMonitorFixturePaint(g_hColorView.get());
             }
 
-            passed &= require(L"scrollback paint requested after page-up", paintRequested && ! g_colorView.GetAutoScroll());
+            passed &= require(L"scrollback paint dispatched after page-up", paintDispatched && ! g_colorView.GetAutoScroll());
 
             ::SendMessageW(hWnd, WM_COMMAND, MAKEWPARAM(IDM_OPTION_AUTO_SCROLL, 0), 0);
             passed &= require(L"scrollback restores auto-scroll via command", g_colorView.GetAutoScroll());
