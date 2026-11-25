@@ -68,6 +68,7 @@ constexpr size_t kMaxSettingsFileBytes = 16u * 1024u * 1024u; // 16 MiB safety l
 
 constexpr wchar_t kSettingsStoreSchemaFileName[] = L"SettingsStore.schema.json";
 #ifdef ENABLE_TESTS
+constexpr wchar_t kLocalTestRootEnvVar[]         = L"REDMONITOR_TEST_ROOT";
 constexpr wchar_t kUnifiedTestRootEnvVar[]       = L"REDSALAMANDER_TEST_ROOT";
 constexpr wchar_t kUnifiedTestRunIdEnvVar[]      = L"REDSALAMANDER_TEST_RUN_ID";
 constexpr wchar_t kRunsDirName[]                 = L"runs";
@@ -5591,6 +5592,18 @@ void MaybeStallSettingsRecoveryBeforeBackupForTest() noexcept
 [[nodiscard]] std::filesystem::path GetSettingsDirectoryPath() noexcept
 {
 #ifdef ENABLE_TESTS
+    const std::wstring localTestRoot = GetEnvironmentString(kLocalTestRootEnvVar);
+    if (! localTestRoot.empty())
+    {
+        std::error_code error;
+        const std::filesystem::path root(localTestRoot);
+        if (! Common::Testing::IsAuthorizedLocalTestSandboxPath(root, error))
+        {
+            return {};
+        }
+        auto directory = root.lexically_normal() / kSettingsStoreScratchDirName / kCompanyDirectoryName / kSettingsDirectoryName;
+        return Common::Testing::IsExistingTestSandboxPathReparseFree(directory, error) ? std::move(directory) : std::filesystem::path{};
+    }
     if (! GetEnvironmentString(kUnifiedTestRootEnvVar).empty())
     {
         // A configured test root is a trust boundary. Invalid or unauthorized

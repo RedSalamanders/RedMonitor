@@ -6,7 +6,11 @@
 #include "TestSupport/TestSupport.Tests.FailureReports.h"
 
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <string>
+#include <string_view>
 
 namespace
 {
@@ -79,6 +83,94 @@ namespace
     std::puts("PASS: settings watcher follows directory creation, posts file changes, and stops before window teardown");
     return true;
 }
+
+[[nodiscard]] bool CheckColdSettingsRecovery()
+{
+    constexpr wchar_t rootVariable[] = L"REDMONITOR_TEST_ROOT";
+    constexpr wchar_t appId[]        = L"RedMonitorColdRecoveryFixture";
+    wchar_t rootText[32768]{};
+    const DWORD rootLength = GetEnvironmentVariableW(rootVariable, rootText, static_cast<DWORD>(std::size(rootText)));
+    if (rootLength == 0 || rootLength >= std::size(rootText))
+    {
+        std::fputs("Cold settings recovery requires an owned run directory.\n", stderr);
+        return false;
+    }
+
+    const auto restoreRoot = wil::scope_exit([&] { SetEnvironmentVariableW(rootVariable, rootText); });
+    using namespace Common::Settings;
+    if (! SetEnvironmentVariableW(rootVariable, L"relative-settings-test-root") || ! GetSettingsPath(appId).empty() ||
+        ! SetEnvironmentVariableW(rootVariable, rootText))
+    {
+        std::fputs("An invalid settings test root must fail closed.\n", stderr);
+        return false;
+    }
+
+    const auto profile        = GetSettingsPath(appId);
+    const auto ownedDirectory = std::filesystem::path(rootText).lexically_normal() / L"settings-store" / L"RedSalamander" / L"Settings";
+    if (profile.empty() || ! Common::Testing::TestSandboxPathEquals(profile.parent_path(), ownedDirectory))
+    {
+        std::fputs("Settings were not redirected to the owned run directory.\n", stderr);
+        return false;
+    }
+    std::error_code error;
+    if (! std::filesystem::create_directories(ownedDirectory, error))
+    {
+        std::fputs("Cold settings recovery needs a fresh fixture directory.\n", stderr);
+        return false;
+    }
+
+    const auto write = [&](std::string_view text)
+    {
+        std::ofstream stream(profile, std::ios::binary | std::ios::trunc);
+        stream << text;
+        stream.close();
+        return stream.good();
+    };
+    const auto read = [](const std::filesystem::path& path)
+    {
+        std::ifstream stream(path, std::ios::binary);
+        return std::string(std::istreambuf_iterator<char>(stream), {});
+    };
+    constexpr std::string_view malformed{"{ incomplete"};
+    Settings settings;
+    if (! write(malformed) || LoadSettings(appId, settings) != S_FALSE || TryLoadSettingsNoRecovery(appId, settings) != S_OK)
+    {
+        std::fputs("Malformed settings must be backed up before a readable template is installed.\n", stderr);
+        return false;
+    }
+
+    const auto backupPrefix = profile.filename().native() + L".bad.";
+    const auto backupCount  = [&](bool requireMalformedBytes)
+    {
+        size_t count = 0;
+        for (const auto& entry : std::filesystem::directory_iterator(ownedDirectory))
+        {
+            if (entry.path().filename().native().starts_with(backupPrefix) && (! requireMalformedBytes || read(entry.path()) == malformed))
+            {
+                ++count;
+            }
+        }
+        return count;
+    };
+    if (backupCount(false) != 1u || backupCount(true) != 1u)
+    {
+        std::fputs("The recovery backup must hold the exact malformed bytes.\n", stderr);
+        return false;
+    }
+
+    for (const auto incompatible : {std::string_view{R"(["foreign settings"])"}, std::string_view{R"({"schemaVersion":999,"source":"foreign"})"}})
+    {
+        if (! write(incompatible) || LoadSettings(appId, settings) != S_FALSE || SaveSettings(appId, settings) == S_OK || read(profile) != incompatible ||
+            backupCount(false) != 1u)
+        {
+            std::fputs("Readable incompatible settings must stay in place and refuse automatic save.\n", stderr);
+            return false;
+        }
+    }
+
+    std::puts("PASS: cold settings recovery stays in the owned run directory, backs up malformed bytes, and preserves readable incompatible profiles");
+    return true;
+}
 } // namespace
 
 int main(int argc, char** argv)
@@ -88,6 +180,8 @@ int main(int argc, char** argv)
         return RedSalamander::TestSupport::RunFailureReportRoutingSelfTest();
     if (argc == 2 && std::strcmp(argv[1], "--settings-watch-self-test") == 0)
         return CheckSettingsWatcher() ? 0 : 1;
+    if (argc == 2 && std::strcmp(argv[1], "--settings-cold-recovery-self-test") == 0)
+        return CheckColdSettingsRecovery() ? 0 : 1;
     const auto path = Common::Settings::GetSettingsPath(L"RedSalamanderMonitor");
 #if defined(_DEBUG)
     constexpr auto expected = L"RedSalamanderMonitor-debug.settings.json";

@@ -52,23 +52,9 @@ inline std::filesystem::path AcquireTestDirectory(const TestDirectoryOptions& op
         }
         root /= std::filesystem::path(L"runs") / run / L"scratch" / L"redmonitor";
     }
-    else
+    else if (! Common::Testing::IsAuthorizedLocalTestSandboxPath(root, error))
     {
-        wchar_t executable[32768]{};
-        const DWORD executableLength = GetModuleFileNameW(nullptr, executable, static_cast<DWORD>(std::size(executable)));
-        auto outputRoot              = std::filesystem::path(executable).parent_path();
-        while (! outputRoot.empty() && outputRoot.filename() != L".build" && outputRoot != outputRoot.parent_path())
-        {
-            outputRoot = outputRoot.parent_path();
-        }
-        const std::wstring prefix   = outputRoot.native() + L"\\";
-        const std::wstring selected = root.native();
-        if (executableLength == 0 || executableLength >= std::size(executable) || outputRoot.filename() != L".build" || selected.size() <= prefix.size() ||
-            CompareStringOrdinal(selected.data(), static_cast<int>(prefix.size()), prefix.data(), static_cast<int>(prefix.size()), TRUE) != CSTR_EQUAL)
-        {
-            error = std::make_error_code(std::errc::permission_denied);
-            return {};
-        }
+        return {};
     }
     for (const auto segment : {options.harnessSegment, options.leafSegment})
     {
