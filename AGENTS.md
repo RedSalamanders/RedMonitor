@@ -36,6 +36,12 @@ Use focused `ej/` branches after the initial import.
   A successful compile or pending CI is not a runtime pass. Preserve failed receipts.
 - Update docs and source provenance when moving ownership. Record the change as the Changes workflow below says.
 
+<!-- BEGIN SHARED NATIVE BUILD POLICY -->
+## Shared native build policy (2026-10-28)
+
+The [shared native build profiles](https://github.com/RedSalamanders/.github/blob/e513a50b3aea60d86f41054188537fb7b418bac6/Specs/NativeBuildProfiles.md) define the common six-profile baseline and product exceptions.
+<!-- END SHARED NATIVE BUILD POLICY -->
+
 ## Drive-root output policy
 
 Do not create scratch, caches, evidence, copied checkouts, or other output directories directly at a drive root.
