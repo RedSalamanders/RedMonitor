@@ -3,6 +3,7 @@
 Entries are generated from [Changes](Changes/README.md). Existing release notes remain in their original locations.
 
 ## Unreleased
+- Align the vcpkg registry, tool and shared CI engine with the reviewed convergence pins.
 - Adopt the shared native build profile reference in the root development guidance.
 - Give RedMonitor its own settings profile, preserve legacy viewer preferences during guarded first-run import, and add Open Settings File to the File menu.
 - Require the cold settings recovery scenario in hosted RedMonitor regression receipts.
